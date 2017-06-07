@@ -1,0 +1,3 @@
+gpu-28-1.local
+/var/spool/slurmd/job15478629/slurm_script: line 13: jupyter-notebook: command not found
+slurmstepd: error: *** JOB 15468017 ON gpu-28-1 CANCELLED AT 2017-06-07T16:04:39 DUE TO TIME LIMIT ***

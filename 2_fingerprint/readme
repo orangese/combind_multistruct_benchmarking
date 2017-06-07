@@ -1,0 +1,23 @@
+Created by Joe Paggi 2016.
+
+This code is a variant of binana that:
+   Accepts a wide array of input file types
+   Runs significantly faster
+   Has easier to parse output
+
+   Accepts any of the following inputs:
+	A ligand-protein complex
+	A protein and a glide pose viewer file
+	A ligand and protein file with ligand in binding pose
+
+   Reports floating point scores for some interaction types
+   ... Can adjust output in residue.py
+   
+This code is invoked by calling fuzzyifp.py, see this file for input parameters.
+
+Tech debt / future changes that need to be made:
+  1) Improve code for adding bonds, I think the best option is to use bonds given in .mae instead of inferring them
+  2) Update scoring functions, most are pretty arbitrary at this point
+  3) Improve documentation
+  4) Add functionality for detecting water mediated contacts
+  5) General refactoring
