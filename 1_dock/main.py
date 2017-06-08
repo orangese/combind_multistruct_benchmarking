@@ -15,7 +15,7 @@ SCHRODINGER = "/share/PI/rondror/software/schrodinger2016-1"
 GLIDE = "/share/PI/rondror/software/schrodinger2016-1/glide"
 
 DATA = "/scratch/PI/rondror/docking_data"
-DOCKING_SCRIPT = "/share/PI/rondror/docking_code/1_prep_structures/dock_ligand_dir_to_grid_dir.sh" 
+DOCKING_SCRIPT = "/share/PI/rondror/docking_code/1_dock/dock_ligand_dir_to_grid_dir.sh" 
 
 os.chdir(DATA)
 

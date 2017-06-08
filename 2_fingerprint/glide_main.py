@@ -9,7 +9,7 @@ def grouper(n, iterable, fillvalue=None):
     args = [iter(iterable)] * n
     return itertools.izip_longest(*args, fillvalue=fillvalue) #NOTE: izip_longest is zip_longest in python2
 
-SCRIPT = '/share/PI/rondror/docking_code/2_make_fingerprints/fuzzyifp.py'
+SCRIPT = '/share/PI/rondror/docking_code/2_fingerprint/fuzzyifp.py'
 SCHRODINGER = '/share/PI/rondror/software/schrodinger2017-1/run'
 
 glideDir = sys.argv[1]

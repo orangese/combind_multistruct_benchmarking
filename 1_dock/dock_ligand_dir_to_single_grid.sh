@@ -1,6 +1,6 @@
 #!/bin/bash
 HERE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-GSCRIPT=/scratch/PI/rondror/docking-julia/1_prep_structures/glide_SP.sh
+GSCRIPT=/share/PI/rondror/docking_code/1_dock/glide_SP.sh
 grid=$1
 LIGANDS=$2
 OUT=$3
