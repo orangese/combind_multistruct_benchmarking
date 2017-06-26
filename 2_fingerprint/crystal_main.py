@@ -4,7 +4,7 @@ import sys
 import time
 
 SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1/run"
-FUZZY_SCRIPT = "/share/PI/rondror/docking_code/2_fingerprint/fuzzyifp.py"
+FUZZY_SCRIPT = "/share/PI/rondror/jbelk/docking_code/2_fingerprint/fuzzyifp.py"
 
 DATA = "/scratch/PI/rondror/docking_data/"
 dataset = sys.argv[1]

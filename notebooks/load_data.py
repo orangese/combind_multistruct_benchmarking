@@ -6,7 +6,7 @@ from math import exp
 import numpy as np
 import os.path
 
-os.chdir("/scratch/PI/rondror/docking-julia/3_score_poses")
+os.chdir("../3_score/")
 from fingerprint import FuzzyFingerPrint
 from ligand import Ligand
 from cluster import Cluster
