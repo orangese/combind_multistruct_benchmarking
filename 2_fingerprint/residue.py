@@ -18,15 +18,12 @@ class Residue(PDB):
         self.atoms = []
         self.aromatics = []
 
-        self.interactions = {
-            'h_donor'     : [],
-            'h_acceptor'  : [],
-            'contact'     : [],
-            'contact_orig': [],
-            'pi_stack'    : [],
-            'pi_t'        : [],
-            'pi_cation'   : []
-            }
+	self.h_donor = 0
+	self.h_acceptor = 0
+	self.electrostatics = 0
+	self.lj = 0
+
+        self.to_print = []
 
     def copy_of(self):
         """
@@ -38,26 +35,22 @@ class Residue(PDB):
         new.assign()
         return new
 
-    def add_h_donor(self, donor, acceptor):
-        self.interactions['h_donor'] += [(donor, acceptor)]
+    def add_electrostatic_potential(self, score):
+        self.electrostatics += score
 
-    def add_h_acceptor(self, donor, acceptor):
-        self.interactions['h_acceptor'] += [(donor, acceptor)]
+    # not sure what to do about the repulsive part -- 0 for now
+    def add_lj_potential(self, score):
+        if score < 0: self.lj += score
 
-    def add_pi_stack(self, atom_list1, atom_list2):
-        self.interactions['pi_stack'] += [(atom_list1, atom_list2)]
-        
-    def add_pi_t(self, atom_list1, atom_list2):
-        self.interactions['pi_t'] += [(atom_list1, atom_list2)]
+    def debug_h(self, lig_a, res_a, h_a, is_donor, score):
+        if score > 0.3:
+	    self.to_print.append((lig_a.atom_id, res_a.atom_id, h_a.atom_id, is_donor, score))
 
-    def add_contact(self, res_atom, lig_atom):
-        self.interactions['contact'] += [(res_atom, lig_atom)]
-        
-    def add_contact_orig(self, res_atom, lig_atom):
-        self.interactions['contact_orig'] += [Contact(res_atom, lig_atom)]
-    
-    def add_pi_cation(self, atom_list1, atom_list2):
-        self.interactions['pi_cation'] += [(atom_list1, atom_list2)]
+    def add_h_bond(self, score, is_donor):
+        if is_donor:
+            self.h_donor += score
+        else:
+            self.h_acceptor += score
 
     def add_atom(self, atom):
         if self.num != -1: assert self.num == atom.residue_id
@@ -70,61 +63,18 @@ class Residue(PDB):
     def interacting_atoms(self):
         return set([atom for interaction in self.interactions.values() for x in interaction for atom in x.atoms()])
     
-    def fingerprint(self, combinedStruct):
-        
-        minimizer = Minimizer(struct=combinedStruct, max_steps = 0)
-        
-        #NOTE: getNBEnergyFromTwoAtomLists is zero-indexed!
-        #NOTE: THE API IS RIDICULOUSLY DUMB - getNBEnergyFromTwoAtomLists returns (L-J, Columbic) NOT THE OTHER WAY AROUND
-        #EVEN THOUGH THAT'S WHAT THE DOCUMENTATION SAID
-        
-        h_donor_energy = [minimizer.getNBEnergyForTwoAtomLists([one-1], [two-1])[1]
-                          for one, two in self.interactions['h_donor']]
-        #print("H DONOR:")
-       	#print(self.interactions['h_donor'])
-        #print(h_donor_energy)
-        
-        h_acceptor_energy = [minimizer.getNBEnergyForTwoAtomLists([one-1], [two-1])[1]
-                             for one, two in self.interactions['h_acceptor']]
-        #print("H ACCEPTOR:")
-        #print(self.interactions['h_acceptor'])
-        #print(h_acceptor_energy)
-        
-        pi_stack_energy = [minimizer.getNBEnergyForTwoAtomLists([x-1 for x in one], [x-1 for x in two])[1]
-                           for one, two in self.interactions['pi_stack']]
-        #print("PI STACK:")
-        #print(self.interactions['pi_stack'])
-        #print(pi_stack_energy)
-        
-        pi_t_energy = [minimizer.getNBEnergyForTwoAtomLists([x-1 for x in one], [x-1 for x in two])[1]
-                       for one, two in self.interactions['pi_t']]
-        #print("PI T:")
-        #print(self.interactions['pi_t'])
-        #print(pi_t_energy)
-        
-        pi_cation_energy = [minimizer.getNBEnergyForTwoAtomLists([x-1 for x in one], [x-1 for x in two])[1]
-                            for one, two in self.interactions['pi_cation']]
-        #print("PI CATION:")
-        #print(self.interactions['pi_cation'])
-        #print(pi_cation_energy)
-        
-        contact_energy = [minimizer.getNBEnergyForTwoAtomLists([one-1], [two-1])[1]
-                          for one, two in self.interactions['contact']]
-        #print("CONTACT:")
-        #print(self.interactions['contact'])
-        #print(contact_energy)
+    ## hbonds get scaled x10
+    ## potentials get capped to +- 10
+    def fingerprint(self):#, combinedStruct):
+        return [
+                   10*self.h_donor, 
+                   10*self.h_acceptor, 
+                   min(max(self.electrostatics, -10), 10), 
+                   min(max(self.lj, -10), 10)
+               ] # + self.to_print
 
-        #DO NOT REMOVE
-        #So I checked and the atom mapping from original contacts -> new contacts is right, it's just that the 
-        #getNBEnergyForTwoAtomLists function gives me a different answer
-        #NOTE: The signs returned by contact orig and contact are the same -> good sanity check, just in diff units?
-        #print("CONTACT ORIG:")
-        #print([(y.atoms()[0].atom_id, y.atoms()[1].atom_id) for y in self.interactions['contact_orig']])
-        #print([(y.atoms()[0].charge, y.atoms()[1].charge) for y in self.interactions['contact_orig']])
-        #print(map(lambda x: x.coulumbic(), self.interactions['contact_orig']))
-
-        return [sum(h_donor_energy), sum(h_acceptor_energy), sum(pi_stack_energy), sum(pi_t_energy), sum(pi_cation_energy),
-               sum(contact_energy)]
+    def debug_fp(self):
+        return self.debug_h
 
     def assign(self):
         self._assign_bonds()

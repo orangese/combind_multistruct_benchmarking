@@ -80,7 +80,7 @@ class Receptor(PDB):
         Alternatively we could make a fp class and add a method 
         that lets us add things as we go???
         """
-        return {num: resi.fingerprint(self.st) for num, resi in self.residues.items() if any(resi.fingerprint(self.st))}
+        return {num: resi.fingerprint() for num, resi in self.residues.items() if any(resi.fingerprint())}
 
     def assign(self):
         for residue in self.residues.values(): residue.assign()

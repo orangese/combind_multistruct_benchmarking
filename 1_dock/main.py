@@ -54,7 +54,12 @@ for struct in structures:#Go through the given structures, performing the comman
         currentDirectories = [name for name in os.listdir(".") if os.path.isdir(name)]
         if("raw_pdbs" not in currentDirectories):
             raise Exception("Error: -s (strip structures) requires the folder raw_pdbs to be the parent structure directory")
-        stripstructures.strip()
+        os.system('mkdir stripped')
+	os.system('cp raw_pdbs/*.pdb stripped/')
+	os.chdir('stripped')
+	stripstructures.strip()
+	os.system('rm *.pdb')
+	os.chdir('..')
 
     if("p" in toRun):#Process Structures assumes that there exists a "stripped" folder in the parent struct directory
         print("!Processing Stripped Files")
@@ -63,9 +68,9 @@ for struct in structures:#Go through the given structures, performing the comman
             raise Exception("Error: -p (process structures) requires the folder stripped to be the parent structure directory")
         os.system("mkdir processed")
 	os.system("cp stripped/*.mae processed/")
-	os.chdir("./stripped") # why are we moving into the stripped directory?
+	os.chdir("./processed")
         pool = mp.Pool(numCores)
-        processed.process(pool)
+        processed.process(pool) # this function (1) assumes you're in the processed dir (2) copies files from stripped
         os.system("rm temp*")
 	os.chdir("..")
 
@@ -91,11 +96,14 @@ for struct in structures:#Go through the given structures, performing the comman
         print(os.system("ls grids"))
 	currentInFiles = [f for f in os.listdir("./grids") if os.path.isfile(os.path.join("./grids", f))]
         currentInFiles = map(lambda x: os.path.splitext(x)[0], currentInFiles)
-        os.chdir("./grids")
+	os.chdir("./grids")
         pool = mp.Pool(numCores)
+        print(currentInFiles)
         gridgen.generateIn(currentInFiles,pool)
-        currentInFiles = map(lambda x: x + ".in", currentInFiles)
-        results = pool.map(gridgen.runGlide, currentInFiles)
+        print(os.system("ls"))
+	currentInFiles = map(lambda x: x + ".in", currentInFiles)
+        print(currentInFiles)
+	results = pool.map(gridgen.runGlide, currentInFiles)
 
         os.system("rm *.log")
         os.system("rm *.mae")
@@ -110,6 +118,6 @@ for struct in structures:#Go through the given structures, performing the comman
         os.chdir("..")
 
     if("d" in toRun):#Submit the docking run
-        os.system("mkdir glide")
+        os.system("mkdir new_glide")
         print("!Submitting docking run")
-        os.system(DOCKING_SCRIPT + " " + os.getcwd()+"/grids " + os.getcwd() +"/ligands " + os.getcwd() + "/glide/")
+        os.system(DOCKING_SCRIPT + " " + os.getcwd()+"/grids " + os.getcwd() +"/ligands " + os.getcwd() + "/new_glide/")

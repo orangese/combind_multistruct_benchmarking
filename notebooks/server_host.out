@@ -1,3 +1,14 @@
 gpu-28-1.local
-/var/spool/slurmd/job15478629/slurm_script: line 13: jupyter-notebook: command not found
-slurmstepd: error: *** JOB 15468017 ON gpu-28-1 CANCELLED AT 2017-06-07T16:04:39 DUE TO TIME LIMIT ***
+[I 09:53:18.381 NotebookApp] Serving notebooks from local directory: /share/PI/rondror/jbelk/docking_code/notebooks
+[I 09:53:18.381 NotebookApp] 0 active kernels 
+[I 09:53:18.381 NotebookApp] The Jupyter Notebook is running at: http://localhost:8893/?token=51962ffa1ebb069cda0e30a7718d38af66cbcf54d6241bf1
+[I 09:53:18.381 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[C 09:53:18.517 NotebookApp] 
+    
+    Copy/paste this URL into your browser when you connect for the first time,
+    to login with a token:
+        http://localhost:8893/?token=51962ffa1ebb069cda0e30a7718d38af66cbcf54d6241bf1
+[W 09:54:17.705 NotebookApp] 404 GET /nbextensions/widgets/notebook/js/extension.js?v=20170626095308 (127.0.0.1) 105.11ms referer=http://localhost:8893/notebooks/TrmD_analysis.ipynb
+[I 09:54:18.079 NotebookApp] Kernel started: bb8d1c1b-8bdb-4555-9bee-f8368938b761
+[W 09:54:44.435 NotebookApp] delete /CDK2_analysis.ipynb
+[W 09:54:44.457 NotebookApp] delete /B2AR_analysis.ipynb

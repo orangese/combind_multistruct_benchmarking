@@ -25,24 +25,25 @@ def generateInHelper(struct_base):
 
     asl_searcher = AslLigandSearcher()
     ligands = asl_searcher.search(struct)
-    if(len(ligands) > 1):
-        assert True, 'There are %r ligand sized molecules' % len(ligands)
-    if(len(ligands) == 0):
-        assert True, 'Could not find a ligand'
+#    if(len(ligands) > 1):
+#        assert True, 'There are %r ligand sized molecules' % len(ligands)
+#    if(len(ligands) == 0):
+#        assert True, 'Could not find a ligand'
+    if len(ligands) == 1:
+        ligand = ligands[0].mol_num
 
-    ligand = ligands[0].mol_num
+        position_sum = [0, 0, 0]
+        for atom in struct.molecule[ligand].atom:
+            position_sum = [i+j for i, j in zip(position_sum, atom.xyz)]
+        center = map(lambda x: x / float(len(struct.molecule[ligand].atom)), position_sum)
 
-    position_sum = [0, 0, 0]
-    for atom in struct.molecule[ligand].atom:
-        position_sum = [i+j for i, j in zip(position_sum, atom.xyz)]
-    center = map(lambda x: x / float(len(struct.molecule[ligand].atom)), position_sum)
-
-    out = open("{}.in".format(struct_base), 'w')
-    out.write('GRID_CENTER '     + ','.join(map(str, center)) + '\n')
-    out.write('GRIDFILE '        + struct_base                + '.zip\n')
-    out.write('LIGAND_MOLECULE ' + str(ligand)                + '\n')
-    out.write('RECEP_FILE '      + struct_base                + '.mae\n')
-    out.close()
+        out = open("{}.in".format(struct_base), 'w')
+        out.write('GRID_CENTER '     + ','.join(map(str, center)) + '\n')
+        out.write('GRIDFILE '        + struct_base                + '.zip\n')
+        out.write('LIGAND_MOLECULE ' + str(ligand)                + '\n')
+        out.write('RECEP_FILE '      + struct_base                + '.mae\n')
+        out.close()
+    else: print 'WARNING: no ligand found for struct ' + struct_base + '. Grid not generated.'
 
     return True
 

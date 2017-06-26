@@ -17,7 +17,7 @@ class FuzzyIFP:
             'electrostatic_dist_cutoff': 4.0,
             'hydrophobic_dist_cutoff': 4.5,
             'hydrogen_bond_dist_cutoff': 4.0,
-            'hydrogen_bond_angle_cutoff': 40.0,
+            'hydrogen_bond_angle_cutoff': 90.0,
             'pi_padding_dist': 0.75,
             'pi_pi_interacting_dist_cutoff': 7.5,
             'pi_stacking_angle_tolerance':30.0,
@@ -74,7 +74,11 @@ class FuzzyIFP:
         return Interactions(self.receptor, lig, self.params).get_fp()
 
     def fingerprint_complex(self):
-        lig = self.receptor.export_ligand(self.params['ligand'])
+        lig = Ligand()
+        st = structure.StructureReader(self.params['ligand']).next()
+        minimize_structure(st, max_steps = 0)
+        lig.load_mae(st)
+        #lig = self.receptor.export_ligand(self.params['ligand'])
         return Interactions(self.receptor, lig, self.params).get_fp()
                      
     def set_user_params(self, args):

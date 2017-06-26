@@ -23,6 +23,21 @@ from schrodinger.structure import get_pyatom_from_cppatom
 
 RESIDUE_THRESH = 5 #Value is in angstroms
 
+# values taken from Autodock 3.0.5 user guide
+# http://autodock.scripps.edu/faqs-help/manual/autodock-3-user-s-guide/AutoDock3.0.5_UserGuide.pdf
+# (C_{12} [kcal mol^-1 A^12], C_6 [kcal mol^-1 A^6])
+LJ_consts = {
+                'C':(2516582.400, 1228.800000),
+                'N':(540675.281, 588.245000),
+                'O':(230584.301, 429.496730),
+                'S':(3355443.200, 1638.400000),
+                'H':(81.920, 2.560000)
+            }
+
+#e_r_water = 80.1 # at 20 C, wikipedia relative permittivity page
+#e_0 = 8.85418782**(-12) # m^-3 kg^-1 s^4 A^2 amps not angstroms!
+#electrostatic_const = 1/(4*math.pi*e_r_water*e_0)
+
 class Interactions:
     """
     Class used to create a fingerprint given a receptor, ligand and parameters
@@ -39,10 +54,7 @@ class Interactions:
         self.close_pdb = self.get_close_pdb(receptor.st, ligand.st)
         
         #Initialize the interactions that we care about in our fingerprint
-        self.get_hbond()
-        self.get_pi()
-        self.get_pi_cation()
-        self.get_contacts()
+        self.get_potentials()
         
         #Calculate our fingerprint - definitions in Residue class
         self.fp = self.close_pdb.fingerprint()
@@ -80,199 +92,53 @@ class Interactions:
         
         close_pdb.seperate_atoms(self.receptor, self.ligand)
         return close_pdb
-
+    
     '''
-    Adds contacts between atoms that are < 4.5 A from each other
+        e_r_water = 80.1 # at 20 C, wikipedia relative permittivity page
+        e_0 = 8.85418782*10**(-12) # m^-3 kg^-1 s^4 A^2 amps not angstroms!
+        electrostatic_const = 1/(4*math.pi*e_r_water*e_0)
+        elem_charge = 1.602*10**(-19)
+        angs = 10**(-10)
+        kcal_per_mol = (6.022*10**(23)/4184.0)*elem_charge**2 * electrostatic_const/angs
+        const = 4.1446 # final answer is in units of kcal/mol, just like LJ
     '''
-    def get_contacts(self):
+    def get_potentials(self):
         for lig_atom in self.ligand.all_atoms():
             for residue in self.close_pdb.residues.values():
                 for res_atom in residue.atoms:
-                    if res_atom.dist_to(lig_atom) > self.parameters['hydrophobic_dist_cutoff']: continue
-                    residue.add_contact_orig(res_atom, lig_atom)
-                    residue.add_contact(self.close_pdb.origAtomToCombined[str(res_atom.coordinates)],
-                                        self.close_pdb.origAtomToCombined[str(lig_atom.coordinates)])
+                    r = lig_atom.dist_to(res_atom)
 
-    '''
-    Adds H donors/acceptors to the close_pdb object
-    
-    H donors/acceptors have to be bonded to [N, O] atoms, within dist_cutoff and within angle_cutoff
-    
-    If the hydrogen is in the receptor, then we say it's a donor
-    If the hydrogen is in the ligand, then we say it's a acceptor
-    
-    Dist < hydrogen_bond_dist_cutoff
-    Angle < hydrogen_bond_angle_cutoff
-    '''
-    def get_hbond(self):
-        #The Schrodinger API lets us find H bonds using the combined structure numbering, no old->new ID conversion is needed
-        hbonds = get_hydrogen_bonds(self.close_pdb.st, atoms1=self.close_pdb.receptorAtoms,
-                                    atoms2=self.close_pdb.ligandAtoms)
-        
-        for atom1, atom2 in hbonds:
-            atom1_num = atom1.index
-            atom2_num = atom2.index
-            
-            resNum1 = self.close_pdb.atomIDToRes[atom1_num]
-            resNum2 = self.close_pdb.atomIDToRes[atom2_num]
-            
-            if resNum1 in self.close_pdb.residues:
-                self.close_pdb.residues[resNum1].add_h_donor(atom1_num, atom2_num)
+                    # 1: LJ potential
+                    (C12L, C6L) = LJ_consts.get(lig_atom.element,(0,0))
+                    (C12R, C6R) = LJ_consts.get(res_atom.element,(0,0))
+                    residue.add_lj_potential( (C12L*C12R)**0.5/r**12 - (C6L*C6R)**0.5/r**6 )
+
+                    # 2: electrostatic potential 
+                    const = 4.1446
+                    q1 = res_atom.formal_charge + res_atom.charge
+                    q2 = lig_atom.formal_charge + lig_atom.charge
+                    residue.add_electrostatic_potential(q1*q2*const/r)
+
+		    # 3: hydrogen bonds
+                    if lig_atom.element in ('N', 'O') and res_atom.element in ('N', 'O'):
+
+                        # find the hydrogen
+                        receptor_hydrogens = [atom for atom in list(res_atom.connected_atoms) if atom.element == 'H']
+                        ligand_hydrogens = [atom for atom in list(lig_atom.connected_atoms) if atom.element == 'H']
+
+                        (best_h, min_dist, donor) = (None, 10.0, None)
+                        for h in receptor_hydrogens + ligand_hydrogens:
+                            dist = max(lig_atom.dist_to(h), res_atom.dist_to(h))
+                            if dist < min_dist:
+                                (best_h, min_dist, donor) = (h, dist, h in receptor_hydrogens)
+
+                        if best_h == None: 
+                            continue
                 
-            if resNum2 in self.close_pdb.residues:
-                self.close_pdb.residues[resNum2].add_h_acceptor(atom1_num, atom2_num)
-                
-        '''
-        for lig_atom in self.ligand.all_atoms():
-            if lig_atom.element not in ('N', 'O'): continue
-
-            for residue in self.close_pdb.residues.values():
-                for res_atom in residue.atoms:
-                    if res_atom.element not in ('N', 'O'): continue
-                    dist = res_atom.dist_to(lig_atom)
-                    if dist > self.parameters['hydrogen_bond_dist_cutoff']: continue
-                    receptor_hydrogens = [atom for atom in list(res_atom.connected_atoms) if atom.element == 'H']
-                    ligand_hydrogens = [atom for atom in list(lig_atom.connected_atoms) if atom.element == 'H']
-
-                    for h in receptor_hydrogens:
                         angle = math.fabs(180 - func.angle_between_three_points(lig_atom.coordinates,
-                                                                                h.coordinates, res_atom.coordinates) * 180 / math.pi)
-                        if angle <= self.parameters['hydrogen_bond_angle_cutoff']:
-                            residue.add_h_donor(res_atom, lig_atom, h)
+                                                                                best_h.coordinates, res_atom.coordinates) * 180 / math.pi)
+                    
+                        score = ( 1/(1+math.exp(4*(min_dist-2.6))) )*( 1/(1+math.exp((angle-60)/10)) )
+                        residue.add_h_bond(score,donor)
+                        #residue.debug_h(lig_atom,res_atom,best_h,donor,score)
                             
-                    for h in ligand_hydrogens:
-                        angle = math.fabs(180 - func.angle_between_three_points(lig_atom.coordinates,
-                                                                                h.coordinates, res_atom.coordinates) * 180 / math.pi)
-                        if angle <= self.parameters['hydrogen_bond_angle_cutoff']:
-                            residue.add_h_acceptor(lig_atom, res_atom, h)
-        '''
-
-    '''
-    Adds potential pi-pi stacks to the close_pdb object
-    Potential pi-pi stacks are simply evaluated on center distances < pi_pi_interacting_dist_cutoff
-    
-    Note that validity of pi-pi stacks are evaluated in the residue class and are seperated into
-    sandwich/parallel and T-shaped stacks in the feature vector
-    '''
-    def get_pi(self):
-        #Schrodinger API needs seperate structures, do the old->new conversion
-        #NOTE: THIS CONTAINS CUSTOM CODE THAT I (THOMAS) PUT IN TO RETURN ATOMS INSTEAD OF STRUCTS
-        pipis = interactions.find_pi_pi_interactions(self.close_pdb.receptorOnlySt, struct2=self.ligand.st)
-        
-        for ringAtoms1, ringAtoms2, face_to_face in pipis:
-            #NOTE: STRUCTURES RETURNED ARE STRUCTURE ATOMS: 
-            #http://content.schrodinger.com/Docs/r2017-1/python_api/api/schrodinger.structure._StructureAtom-class.html
-            
-            struct1_atoms = []
-            for x in ringAtoms1:
-                x = get_pyatom_from_cppatom(x)
-                #Convert from receptor and ligand specific numbering to the combined receptor + ligand numbering
-                atomInd = self.close_pdb.origAtomToCombined[str(Point(_StructureAtom._getX(x), _StructureAtom._getY(x),
-                                                                      _StructureAtom._getZ(x)))]
-                struct1_atoms.append(atomInd)
-                
-            struct2_atoms = []
-            for x in ringAtoms2:
-                x = get_pyatom_from_cppatom(x)
-                #Convert from receptor and ligand specific numbering to the combined receptor + ligand numbering
-                atomInd = self.close_pdb.origAtomToCombined[str(Point(_StructureAtom._getX(x), _StructureAtom._getY(x),
-                                                                      _StructureAtom._getZ(x)))]
-                struct2_atoms.append(atomInd)
-            
-            struct1_res = set([self.close_pdb.atomIDToRes[x] for x in struct1_atoms])
-            struct2_res = set([self.close_pdb.atomIDToRes[x] for x in struct2_atoms])
-                        
-            for res1 in struct1_res:
-                if res1 in self.close_pdb.residues:
-                    if face_to_face:
-                        self.close_pdb.residues[res1].add_pi_stack(struct1_atoms, struct2_atoms)
-                    else:
-                        self.close_pdb.residues[res1].add_pi_t(struct1_atoms, struct2_atoms)
-                    
-            for res2 in struct2_res:
-                if res2 in self.close_pdb.residues:
-                    if face_to_face:
-                        self.close_pdb.residues[res2].add_pi_stack(struct1_atoms, struct2_atoms)
-                    else:
-                        self.close_pdb.residues[res2].add_pi_t(struct1_atoms, struct2_atoms)
-
-        
-        '''
-        for aromatic1 in self.ligand.aromatics:
-            for residue in self.close_pdb.residues.values():
-                for aromatic2 in residue.aromatics:
-                    if aromatic1.center.dist_to(aromatic2.center) < self.parameters['pi_pi_interacting_dist_cutoff']:
-                        residue.add_pi(aromatic2, aromatic1)
-        '''
-
-    '''
-    Adds pi-cation interactions to the close_pdb() object
-    
-    Filtered by L2 distance between center of ligand and aromatic ring; projected distance of ligand on ring
-    '''
-    def get_pi_cation(self):
-        '''
-        for residue in self.close_pdb.residues.values():
-            #Evaluate potential aromatic (from receptor) - cation (from ligand) interactions
-            for aromatic in residue.aromatics:
-                for atom in self.ligand.atoms:
-                    if atom.formal_charge <= 0.1: continue #Cation must be negatively charged
-                    if atom.coordinates.dist_to(aromatic.center) < self.parameters['cation_pi_dist_cutoff']:
-                        charge_projected = func.project_point_onto_plane(atom.coordinates,aromatic.plane_coeff)
-                        if charge_projected.dist_to(aromatic.center) < aromatic.radius + self.parameters['pi_padding_dist']:
-                            residue.add_pi_cation(aromatic, atom)
-
-            #Evaluate potential cation (from receptor) - aromatic (from ligand) interactions
-            for atom in residue.atoms:
-                if atom.formal_charge <= 0.1: continue #Cation must be negatively charged
-                for aromatic in self.ligand.aromatics:
-                    if atom.coordinates.dist_to(aromatic.center) < self.parameters['cation_pi_dist_cutoff']:
-                        charge_projected = func.project_point_onto_plane(atom.coordinates,aromatic.plane_coeff)
-                        if charge_projected.dist_to(aromatic.center) < aromatic.radius + self.parameters['pi_padding_dist']:
-                            residue.add_pi_cation(aromatic, atom)
-        '''        
-        picats = interactions.find_pi_cation_interactions(self.close_pdb.receptorOnlySt, struct2=self.ligand.st)
-        
-        for catAtom, ringAtoms in picats:
-            #NOTE: STRUCTURES RETURNED ARE STRUCTURE ATOMS: 
-            #http://content.schrodinger.com/Docs/r2017-1/python_api/api/schrodinger.structure._StructureAtom-class.html
-            
-            struct1_atoms = []
-            for x in [catAtom]:
-                x = get_pyatom_from_cppatom(x);
-                atomInd = self.close_pdb.origAtomToCombined[str(Point(_StructureAtom._getX(x), _StructureAtom._getY(x),
-                                                                      _StructureAtom._getZ(x)))]
-                struct1_atoms.append(atomInd)
-                
-            struct2_atoms = []
-            for x in ringAtoms:
-                x = get_pyatom_from_cppatom(x);
-                atomInd = self.close_pdb.origAtomToCombined[str(Point(_StructureAtom._getX(x), _StructureAtom._getY(x),
-                                                                      _StructureAtom._getZ(x)))]
-                struct2_atoms.append(atomInd)
-            
-            struct1_res = set([self.close_pdb.atomIDToRes[x] for x in struct1_atoms])
-            struct2_res = set([self.close_pdb.atomIDToRes[x] for x in struct2_atoms])
-                        
-            for res1 in struct1_res:
-                if res1 in self.close_pdb.residues:
-                    self.close_pdb.residues[res1].add_pi_cation(struct1_atoms, struct2_atoms)
-                    
-            for res2 in struct2_res:
-                if res2 in self.close_pdb.residues:
-                    self.close_pdb.residues[res2].add_pi_cation(struct1_atoms, struct2_atoms)
-                    
-    '''#Included in the contact term! Also, gives crap results.                        
-    def get_salt_bridge(self):
-        #Schrodinger API lets us use combined atom number, no conversion needed
-        for atom1, atom2 in SaltBridgeFinder.find(self.close_pdb.st, group1=self.close_pdb.receptorAtoms,
-                                                  group2=self.close_pdb.ligandAtoms):            
-            resNum1 = self.close_pdb.atomIDToRes[atom1]
-            resNum2 = self.close_pdb.atomIDToRes[atom2]
-            
-            if resNum1 in self.close_pdb.residues:
-                self.close_pdb.residues[resNum1].add_salt_bridge(atom1, atom2)
-            
-            if resNum2 in self.close_pdb.residues:
-                self.close_pdb.residues[resNum2].add_salt_bridge(atom1, atom2)
-    '''

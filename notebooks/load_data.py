@@ -4,7 +4,6 @@ import tqdm
 import itertools
 from math import exp
 import numpy as np
-import sys
 import os.path
 
 os.chdir("/scratch/PI/rondror/docking-julia/3_score_poses")
@@ -16,17 +15,7 @@ from rmsd import RMSD
 
 
 def load_data(data_set_dir, rmsd_file, ligands_dir, grids_dir, glide_dir, crystal_fp_file, docking_fp_dir):
-    #data_set_dir = '/scratch/PI/rondror/docking-julia/data/' + receptor + '/'   
     os.chdir(data_set_dir)
-
-    sar_structures = 'all'
-    #rmsd_file = 'rmsd.csv'
-
-    #ligands_dir = data_set_dir + 'ligands/'
-    #grids_dir = data_set_dir + 'grids/'
-    #glide_dir = data_set_dir + 'glide/'
-    #crystal_fp_file = data_set_dir + 'crystalfifps/fuzzy_ifp.fp'
-    #docking_fp_dir = data_set_dir + 'glide_ifp/'
 
     # if not all structures (grids or ligands) are desired, remove them here
     gridstructs = [d for d in os.listdir(grids_dir) if os.path.isdir(os.path.join(grids_dir, d))]
@@ -38,13 +27,13 @@ def load_data(data_set_dir, rmsd_file, ligands_dir, grids_dir, glide_dir, crysta
     all_gridstructs_upper = map(lambda x : x.upper(), gridstructs)
     ligstructs.sort(key=lambda lig: all_gridstructs_upper.index(lig.upper()) if lig.upper() in all_gridstructs_upper else len(all_gridstructs_upper) + 1)
     
-    crystals = load_crystals(crystal_fp_file, all_gridstructs_upper)
+    crystals = load_crystals(crystal_fp_file)#, all_gridstructs_upper)
     glides = load_glides(gridstructs, docking_fp_dir, glide_dir, rmsd_file)
     
     return (crystals, glides)
 
 
-def load_crystals(crystal_fp_file, all_gridstructs_upper):
+def load_crystals(crystal_fp_file):#, all_gridstructs_upper):
     crystals = {} # PDB id : Pose
     for line in open(crystal_fp_file):
         if len(line) < 2:
@@ -52,15 +41,15 @@ def load_crystals(crystal_fp_file, all_gridstructs_upper):
 
         struct, ifp = line.strip().split(';')
 
-        if struct.upper() in all_gridstructs_upper:
-            fp = FuzzyFingerPrint.compact_parser(ifp, struct.upper())
-            crystals[struct.upper()] = Pose(0.0, fp, 0, 0)
+        #if struct.upper() in all_gridstructs_upper:
+        fp = FuzzyFingerPrint.compact_parser(ifp, struct.upper())
+        crystals[struct.upper()] = Pose(0.0, fp, 0, 0)
 
     #Check to see if we are missing any crystal fingerprints
-    crystalFPDiff = set(all_gridstructs_upper).difference(set(map(lambda x: x.upper(), crystals.keys())))
+    #crystalFPDiff = set(all_gridstructs_upper).difference(set(map(lambda x: x.upper(), crystals.keys())))
 
-    if(len(crystalFPDiff) != 0):
-        print("Missing the following Crysal Fingerprints! Check " + crystal_fp_file)
+    #if(len(crystalFPDiff) != 0):
+    #    print("Missing the following Crysal Fingerprints! Check " + crystal_fp_file)
         #print(list(crystalFPDiff))
         #exit()
     return crystals
@@ -77,6 +66,7 @@ def load_gscores(gridstructs, glide_dir):
             #Go through all possible permutations for file capitalization
             #NOTE: Files still have to be in the {}_ligand-to-{} format!
             cap_permutations = [(ligand, grid), (ligand.upper(), grid.upper()), (ligand.upper(), grid.lower()), (ligand.lower(), grid.upper()), (ligand.lower(), grid.lower())]
+            s_file = None
             for tLigand, tGrid in cap_permutations:
                 fnm = glide_dir + "{}_ligand-to-{}/{}_ligand-to-{}.rept".format(tLigand, tGrid, tLigand, tGrid)
                 try:
@@ -84,7 +74,8 @@ def load_gscores(gridstructs, glide_dir):
                     break
                 except:
                     pass
-
+            if s_file == None:
+                print 'Did not find ', tLigand, tGrid
             line = s_file.readline().strip().split()
             while not line or line[0] != '1' or (len(line) != 19 and (len(line) > 1 and line[1] != "1" and len(line) != 18)): # hack - why is title blank sometimes?
                 line = s_file.readline().strip().split()
@@ -134,6 +125,8 @@ def load_glides(gridstructs, docking_fp_dir, glide_dir, rmsd_file):
                     pass
 
             for pose_num, line in enumerate(s_file):
+                if pose_num > 50:
+                    break
                 try:
                     ifp = line.strip()
                 except Exception as e:

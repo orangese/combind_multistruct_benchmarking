@@ -25,11 +25,15 @@ def extract(struct_base):
     if(len(ligands) == 0):
         assert True, 'Could not find a ligand'
 
+    
     print(struct_base + " " + str(ligands))
-    ligand = ligands[0]
-    st_writer = StructureWriter("{}/{}_ligand.mae".format(outdir, struct_base))
-    st_writer.append(ligand.st)
-    st_writer.close()
+    try:
+        ligand = ligands[0]
+        st_writer = StructureWriter("{}/{}_ligand.mae".format(outdir, struct_base))
+        st_writer.append(ligand.st)
+        st_writer.close()
+    except:
+        print 'No ligand found for struct ' + struct_base
 
     # ligand.write("{}/{}_ligand.mae".format(outdir, struct_base))
 

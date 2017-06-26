@@ -8,7 +8,7 @@ exp_ligands/:
     $PDBID_ligand.mae: if we are given a D3R dataset, the script will automatically grab the SMILE strings in the dataset and convert them to mae ligand files
     NOTE: Some of these ligand names have "_" in them, which messes up the script - therefore, all "_" before "*_ligand.mae" should be deleted
 
-stipped/:
+stripped/:
     $PDBID.pdb: the same files from raw_pdbs except that only one structure/ligand should be present, the waters should be removed, and the structures should all be aligned
 
 processed/:

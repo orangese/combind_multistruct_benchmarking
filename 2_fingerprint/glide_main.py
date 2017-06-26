@@ -1,3 +1,5 @@
+#!/share/PI/rondror/software/miniconda/bin/python
+
 import os
 import sys
 from os import listdir
@@ -11,16 +13,20 @@ def grouper(n, iterable, fillvalue=None):
 
 SCRIPT = '/share/PI/rondror/docking_code/2_fingerprint/fuzzyifp.py'
 SCHRODINGER = '/share/PI/rondror/software/schrodinger2017-1/run'
+DATA = '/scratch/PI/rondror/docking_data/'
 
-glideDir = sys.argv[1]
-ifpDir = sys.argv[2]
+dataset = sys.argv[1]
+
+glideDir = DATA + dataset + '/glide/'
+ifpDir = DATA + dataset + '/docking_fingerprints/'
 
 os.system("mkdir -p " + ifpDir)
+os.chdir(ifpDir)
 
 glideFolders = [f for f in listdir(glideDir)]
 
 for groupNum, folderGroup in enumerate(grouper(6, glideFolders)): #Fingerprint jobs are grouped into batches of 6
-    with open("fifpjob_batch_" + str(groupNum) + ".sh", "w") as f: #Write 6 jobs to a script
+    with open(dataset + str(groupNum) + ".sh", "w") as f: #Write 6 jobs to a script
         f.write("#!/bin/bash\n")
         for folder in folderGroup:
             if folder != None:
@@ -28,4 +34,4 @@ for groupNum, folderGroup in enumerate(grouper(6, glideFolders)): #Fingerprint j
 
         f.write("wait\n") #Wait for all forks for finish
 
-    os.system("sbatch --time=50:00:00 -c 6 -p rondror " + "fifpjob_batch_" + str(groupNum) + ".sh") #Submit the script
+    os.system("sbatch --time=50:00:00 -c 6 -p rondror " + dataset + str(groupNum) + ".sh") #Submit the script
