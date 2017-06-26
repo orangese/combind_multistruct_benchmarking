@@ -90,17 +90,18 @@ class Scores:
 
     def get_filtered_pose_pairs(self,l1,l2, rmsd_f, score_f, combo):
         all_scores = self.get_all_scores(l1,l2)
-
+        rmsds1 = self.get_rmsds(l1)
+        rmsds2 = self.get_rmsds(l2)
         out = []
-        for p1 in range(len(rmsds1)):
-            for p2 in range(len(rmsds2)):
+        for p1 in range(len(rmsds1)-1):
+            for p2 in range(len(rmsds2)-1):
                 if combo(rmsd_f(rmsds1[p1],rmsds2[p2]), score_f(all_scores[p1][p2])):
-                    out.append(p1, p2, rmsds1[p1], rmsds2[p2], all_scores[p1][p2])
+                    out.append((p1, p2, rmsds1[p1], rmsds2[p2], all_scores[p1][p2]))
         return out
 
     def get_interactions(self, l1, l2, p1, p2):
-        fp1 = self.glides[l1][self.struct].poses[p1]
-        fp2 = self.glides[l2][self.struct].poses[p2]
+        fp1 = self.glides[l1][self.struct].poses.get(p1, self.crystals[l1]).fp
+        fp2 = self.glides[l2][self.struct].poses.get(p2, self.crystals[l2]).fp
         return self.score_pose_pair(fp1,fp2,get_details=True)
 
     def find_mismatched_interactions(self, int1, int2):

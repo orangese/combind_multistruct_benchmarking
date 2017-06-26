@@ -21,8 +21,8 @@ def plot_all_poses(l1, l2, scores, lab, scores2=None, lab2=None):
     rmsds1 = scores.get_rmsds(l1)
     rmsds2 = scores.get_rmsds(l2)
 
-    for p1 in range(np.shape(scores)[0] - 1):
-        for p2 in range(np.shape(scores)[1] - 1):
+    for p1 in range(np.shape(all_scores)[0] - 1):
+        for p2 in range(np.shape(all_scores)[1] - 1):
             x = (rmsds1[p1] + rmsds2[p2])/2.0
             y = all_scores[p1][p2]
             plt.plot([x],[y],'r.')
@@ -117,9 +117,10 @@ def show_results_for_all_ligand_pairs(scores, scores2=None):
         for i2 in range(i1 + 1, len(scores.ligands)):
             count += 1
             
-            rmsds1 = scores.get_rmsds(ligands[i1])
-            rmsds2 = scores.get_rmsds(ligands[i2])
-            all_scores = scores.get_all_scores(ligands[i1], ligands[i2])
+            rmsds1 = scores.get_rmsds(scores.ligands[i1])[:-1]
+            rmsds2 = scores.get_rmsds(scores.ligands[i2])[:-1]
+            all_scores = scores.get_all_scores(scores.ligands[i1], scores.ligands[i2])
+            (p1, p2) = np.shape(all_scores)
             
             # 1: lowest/highest rmsd pair available
             min_rmsd = (np.min(rmsds1) + np.min(rmsds2))/2.0
@@ -130,18 +131,18 @@ def show_results_for_all_ligand_pairs(scores, scores2=None):
             plt.arrow(count,min_rmsd,0,max_rmsd - min_rmsd, fc='k', ec='k')
             
             # 2: our performance 1
-            pair = np.unravel_index(np.argmax(all_scores))
+            pair = np.unravel_index(np.argmax(all_scores[:-1][:-1]), (p1 - 1, p2 - 1))
             top_score = all_scores[pair]
             top_rmsd = (rmsds1[pair[0]] + rmsds2[pair[1]])/2.0
             plt.plot([count], [top_rmsd], marker='*', markersize=25, color="green")
             
-            pair_indices[count] = (ligands[i1], ligands[i2], top_rmsd)
+            pair_indices[count] = (scores.ligands[i1], scores.ligands[i2], top_rmsd, min_rmsd, pair)
             
             # 3: (optional) our performance 2
             if scores2 is not None:
-                all_scores2 = scores2.get_all_scores(ligands[i1], ligands[i2])
+                all_scores2 = scores2.get_all_scores(scores.ligands[i1], scores.ligands[i2])
             
-                pair2 = np.unravel_index(np.argmax(all_scores2))
+                pair2 = np.unravel_index(np.argmax(all_scores2[:-1][:-1]), (p1-1, p2-1))
                 top_rmsd2 = (rmsds1[pair2[0]] + rmsds2[pair2[1]])/2.0
                 plt.plot([count], [top_rmsd2], marker='*', markersize=25, color="blue")
             

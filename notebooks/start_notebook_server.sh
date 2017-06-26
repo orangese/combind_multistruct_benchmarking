@@ -3,6 +3,7 @@
 #SBATCH --mem=128GB
 #SBATCH --job-name=jupyter
 #SBATCH --tasks=4
+#SBATCH --tasks-per-socket=1
 ##SBATCH -N 1 -n 8
 ##SBATCH --qos=rondror_high --partition=rondror
 #SBATCH --partition=rondror
