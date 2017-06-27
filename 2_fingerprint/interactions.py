@@ -103,7 +103,7 @@ class Interactions:
         const = 4.1446 # final answer is in units of kcal/mol, just like LJ
     '''
     def get_potentials(self):
-	hydrogens = []
+	hydrogens = set()
         for lig_atom in self.ligand.all_atoms():
             for residue in self.close_pdb.residues.values():
                 for res_atom in residue.atoms:
@@ -136,7 +136,7 @@ class Interactions:
 			if best_h == None:
                             continue
                         else:
-                            hydrogens.append(best_h)
+                            hydrogens.add(best_h)
                          
                         angle = math.fabs(180 - func.angle_between_three_points(lig_atom.coordinates,
                                                                                 best_h.coordinates, res_atom.coordinates) * 180 / math.pi)
