@@ -132,22 +132,23 @@ class Interactions:
                             dist = max(lig_atom.dist_to(h), res_atom.dist_to(h))
                             if dist < min_dist:
                                 (best_h, min_dist, donor) = (h, dist, h in receptor_hydrogens)
-
-                        if best_h == None: 
+			
+			if best_h == None:
                             continue
-			else:
-			    hydrogens.append(best_h)
-					
+                        else:
+                            hydrogens.append(best_h)
+                         
                         angle = math.fabs(180 - func.angle_between_three_points(lig_atom.coordinates,
                                                                                 best_h.coordinates, res_atom.coordinates) * 180 / math.pi)
                     
                         score = ( 1/(1+math.exp(4*(min_dist-2.6))) )*( 1/(1+math.exp((angle-60)/10)) )
-			if best_h.score < score:
-                           best_h.score = score	
-			   best_h.donor = donor
-			   best_h.residue = residue			
-	for h in hydrogens:
-	    residue.add_h_bond(score,donor)
-                       
-			 #residue.debug_h(lig_atom,res_atom,best_h,donor,score)
-                            
+                        if best_h.score < score:
+                           best_h.score = score 
+                           best_h.donor = donor
+                           best_h.residue = residue
+    
+        for h in hydrogens:
+            h.residue.add_h_bond(h.score,h.donor) 
+                        
+                        #residue.debug_h(lig_atom,res_atom,best_h,donor,score)
+
