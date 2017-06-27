@@ -39,17 +39,26 @@ def plot_all_poses(l1, l2, scores, lab, scores2=None, lab2=None):
     #plt.gca().set_ylim([0,700])
     plt.show()
 
-def plot_final_rmsds(scores, lab='', scores2=None, lab2=None):
+def plot_final_rmsds(scores, lab='', scores2=None, lab2=''):
     fig, ax = plt.subplots()
     top_pose_rmsds = [scores.get_rmsds(l)[np.argmax(scores.get_final_scores(l)[:-1])] for l in scores.ligands]
-    plt.plot(top_pose_rmsds, marker='.', markersize=10, color="red")
+    plt.plot(top_pose_rmsds, marker='.', markersize=10, color="red",label=lab)
     min_rmsds = [np.min(scores.get_rmsds(l)[:-1]) for l in scores.ligands]
     plt.plot(min_rmsds, marker='d', markersize=10, color="black")
+
+    if scores2 is not None:
+        top_rmsds2 = [scores2.get_rmsds(l)[np.argmax(scores2.get_final_scores(l)[:-1])] for l in scores2.ligands]
+        plt.plot(top_rmsds2, marker='.', markersize=10, color='blue',label=lab2)
+        ave_change = sum([top_rmsds2[i] - top_pose_rmsds[i] for i in range(len(top_rmsds2))])/len(top_rmsds2)
+        print 'Average rmsd change = ' + str(ave_change)
+        print 'If that number is negative, scores2 is better than scores1!'    
+
+    plt.legend()
     ax.set_xticklabels(scores.ligands, minor=False, rotation='vertical')
     ax.set_xticks(np.arange(0,len(scores.ligands),1))
     plt.show()
 
-def plot_final_scores(scores, lab='', scores2=None, lab2=None):
+def plot_final_scores(scores, lab=''):
     top_pose_scores = [np.max(scores.get_final_scores(l)[:-1]) for l in scores.ligands]
     crystal_pose_scores = [scores.get_final_scores(l)[-1] for l in scores.ligands]
 
@@ -108,15 +117,14 @@ def get_structure_and_ligands(rmsd_matrix, rmsd_filter, structures):
     
     return (best_struct, [i[0] for i in lig], score)
 
-def show_results_for_all_ligand_pairs(scores, scores2=None):
+def show_results_for_all_ligand_pairs(scores, lab='', scores2=None, lab2=''):
     
-    count = -1
+    count = 0
     pair_indices = {}
- 
+    ave_change = 0
     for i1 in range(len(scores.ligands)):
         for i2 in range(i1 + 1, len(scores.ligands)):
-            count += 1
-            
+                        
             rmsds1 = scores.get_rmsds(scores.ligands[i1])[:-1]
             rmsds2 = scores.get_rmsds(scores.ligands[i2])[:-1]
             all_scores = scores.get_all_scores(scores.ligands[i1], scores.ligands[i2])
@@ -127,14 +135,14 @@ def show_results_for_all_ligand_pairs(scores, scores2=None):
             max_rmsd = (np.max(rmsds1) + np.max(rmsds2))/2.0
 
             plt.plot([count], [min_rmsd], marker='d', markersize=25, color="black")
-            plt.plot([count], [max_rmsd], marker='.', markersize=25, color="black")
+            plt.plot([count], [max_rmsd], marker='d', markersize=25, color="black")
             plt.arrow(count,min_rmsd,0,max_rmsd - min_rmsd, fc='k', ec='k')
             
             # 2: our performance 1
             pair = np.unravel_index(np.argmax(all_scores[:-1][:-1]), (p1 - 1, p2 - 1))
             top_score = all_scores[pair]
             top_rmsd = (rmsds1[pair[0]] + rmsds2[pair[1]])/2.0
-            plt.plot([count], [top_rmsd], marker='*', markersize=25, color="green")
+            plt.plot([count], [top_rmsd], marker='.', markersize=25, color="red")
             
             pair_indices[count] = (scores.ligands[i1], scores.ligands[i2], top_rmsd, min_rmsd, pair)
             
@@ -144,16 +152,26 @@ def show_results_for_all_ligand_pairs(scores, scores2=None):
             
                 pair2 = np.unravel_index(np.argmax(all_scores2[:-1][:-1]), (p1-1, p2-1))
                 top_rmsd2 = (rmsds1[pair2[0]] + rmsds2[pair2[1]])/2.0
-                plt.plot([count], [top_rmsd2], marker='*', markersize=25, color="blue")
+                plt.plot([count], [top_rmsd2], marker='.', markersize=25, color="blue")
+                ave_change += top_rmsd2 - top_rmsd
             
-    plt.arrow(-1,1,2+count,0,ls='--', fc='k', ec='k')
-    plt.arrow(-1,2,2+count,0,ls='--', fc='k', ec='k')
-    plt.arrow(-1,4,2+count,0,ls='--', fc='k', ec='k')
+            count += 1    
+    
+    ave_change /= float(count)
+
+    if scores2 is not None:
+        print 'Average rmsd change = ' + str(ave_change)
+        print 'If that number is negative, scores2 is better than scores1!'
+        
+    plt.arrow(-1,1,2+count,0, fc='k', ec='k')
+    plt.arrow(-1,2,2+count,0, fc='k', ec='k')
+    plt.arrow(-1,4,2+count,0, fc='k', ec='k')
 
     
     plt.ylabel('(rmsd1 + rmsd2)/2')
     plt.xlabel('ligand pair')
     plt.tick_params(axis='both', which='major', labelsize=30)
     
+    #plt.legend()
     plt.show()
     return pair_indices
