@@ -1,4 +1,4 @@
-How to make a new dataset, process all files, and get docking results.
+Make a new dataset, process all files, and get docking results.
 
 ## 1) Get structures from the Protein Data Bank (PDB)
 
@@ -18,12 +18,22 @@ The following can be done in one step with the command:
 
 `./main.py -splgd <receptor name>`.
 
+For example:
+
+`./main.py -splgd B2AR`
+
 There are five steps: Strip, Process, Ligands, Grids, and Dock. Each can be run independently with, for example:
 
 `./main.py -s <receptor name>`.
 
 ## 3) Compute RMSDs for all poses
 
+`python compute_rmsds.py <grid_path>`
 
+For example:
+
+`python compute_rmsds.py /scratch/PI/rondror/docking_data/B2AR/grids`
 
 ## 4) Evaluate docking quality
+
+Before proceeding to fingerprinting, make sure to check the docking results using the heatmap plot in `notebooks`. If there is not at least one receptor that generates good poses (at least one pose with an rmsd < 2A) for most ligands, do not continue! Either reconfigure glide to get better docking results or choose another receptor.
