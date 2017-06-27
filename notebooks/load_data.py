@@ -76,6 +76,7 @@ def load_gscores(gridstructs, glide_dir):
                     pass
             if s_file == None:
                 print 'Did not find ', tLigand, tGrid
+                continue
             line = s_file.readline().strip().split()
             while not line or line[0] != '1' or (len(line) != 19 and (len(line) > 1 and line[1] != "1" and len(line) != 18)): # hack - why is title blank sometimes?
                 line = s_file.readline().strip().split()
