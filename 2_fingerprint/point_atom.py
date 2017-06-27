@@ -152,6 +152,9 @@ class Atom:
         self.element = atom.element.strip()
         self.formal_charge = atom.formal_charge
         self.charge = atom.partial_charge
+	self.score = 0.0
+	self.residue = None
+	self.donor = False
     
     def ReadPDBLine(self, line):
         self.line = line

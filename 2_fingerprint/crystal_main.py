@@ -4,14 +4,14 @@ import sys
 import time
 
 SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1/run"
-FUZZY_SCRIPT = "/share/PI/rondror/jbelk/docking_code/2_fingerprint/fuzzyifp.py"
+FUZZY_SCRIPT = "/share/PI/rondror/jetynan/combind/2_fingerprint/fuzzyifp.py"
 
 DATA = "/scratch/PI/rondror/docking_data/"
 dataset = sys.argv[1]
 
 os.chdir(DATA + dataset)
 
-output_dir = 'structure_fingerprints'
+output_dir = 'structure_fingerprints2'
 OUTPUT = DATA + dataset + '/' + output_dir + '/ifp.fp'
 
 processed = [o for o in os.listdir("./processed/") if os.path.isfile(os.path.join("./processed/",o))]
