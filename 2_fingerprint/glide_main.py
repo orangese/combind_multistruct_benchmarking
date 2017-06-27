@@ -11,16 +11,23 @@ def grouper(n, iterable, fillvalue=None):
     args = [iter(iterable)] * n
     return itertools.izip_longest(*args, fillvalue=fillvalue) #NOTE: izip_longest is zip_longest in python2
 
-SCRIPT = '/share/PI/rondror/jbelk/docking_code/2_fingerprint/fuzzyifp.py'
+SCRIPT = os.getcwd() + '/fuzzyifp.py'
+
+print SCRIPT
+
 SCHRODINGER = '/share/PI/rondror/software/schrodinger2017-1/run'
 DATA = '/scratch/PI/rondror/docking_data/'
 
 dataset = sys.argv[1]
+output_dir = sys.argv[2]
 
 glideDir = DATA + dataset + '/glide/'
-ifpDir = DATA + dataset + '/docking_fingerprints/'
+ifpDir = DATA + dataset + '/' + output_dir + '/'
 
-os.system("mkdir -p " + ifpDir)
+if os.path.exists(output_dir):
+    raise Exception('specified output directory already exists. try again.')
+
+os.system("mkdir " + ifpDir)
 os.chdir(ifpDir)
 
 glideFolders = [f for f in listdir(glideDir)]

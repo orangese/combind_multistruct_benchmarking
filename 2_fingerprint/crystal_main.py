@@ -4,21 +4,28 @@ import sys
 import time
 
 SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1/run"
-FUZZY_SCRIPT = "/share/PI/rondror/jbelk/docking_code/2_fingerprint/fuzzyifp.py"
+FUZZY_SCRIPT = os.getcwd() + '/fuzzyifp.py'
+
+print '----------'
+print 'script location: ' + FUZZY_SCRIPT
+print 'check that that ^ points to your repository'
+print '----------'
 
 DATA = "/scratch/PI/rondror/docking_data/"
 dataset = sys.argv[1]
 
 os.chdir(DATA + dataset)
 
-output_dir = 'structure_fingerprints'
+output_dir = sys.argv[2]
 OUTPUT = DATA + dataset + '/' + output_dir + '/ifp.fp'
 
 processed = [o for o in os.listdir("./processed/") if os.path.isfile(os.path.join("./processed/",o))]
 ligands = [o for o in os.listdir("./ligands/") if os.path.isfile(os.path.join("./ligands/",o))]
 
-if not os.path.exists(output_dir):
-    os.system("mkdir " + output_dir)
+if os.path.exists(output_dir):
+    raise Exception('specified output directory already exists. try again.')
+
+os.system("mkdir " + output_dir)
 os.chdir(output_dir)
 
 for structFile in processed:
@@ -30,3 +37,5 @@ for structFile in processed:
         f.write("echo \"" + struct + ";" + '$OUTPUT\" >> ' + OUTPUT)
         
     os.system("sbatch --time=10:00:00 -n 1 -p rondror " + struct + '.sh')
+
+
