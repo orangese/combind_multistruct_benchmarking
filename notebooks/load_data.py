@@ -35,6 +35,11 @@ def load_data(data_set_dir, rmsd_file, ligands_dir, grids_dir, glide_dir, crysta
 def load_crystals(crystal_fp_file, grids):
     print 'Loading crystal structures...'
     crystals = {} # PDB id : Pose
+    
+    if not os.path.isfile(crystal_fp_file):
+        print 'Crystal structure fingerprint file not found.'
+        return {}
+
     for line in open(crystal_fp_file):
         if len(line) < 2:
             continue
@@ -48,7 +53,7 @@ def load_crystals(crystal_fp_file, grids):
     crystalFPDiff = set( grids ).difference(set( crystals.keys() ))
 
     if(len(crystalFPDiff) != 0):
-        print("Missing the following Crysal Fingerprints! Check " + crystal_fp_file)
+        print("Missing the following crystal structure fingerprints! Check " + crystal_fp_file)
         print(list(crystalFPDiff))
     return crystals
 
@@ -79,6 +84,7 @@ def load_gscores(gridstructs, glide_dir):
             else:
                 #print 'ligand, grid', ligand, grid, 'did not dock.'
                 failed_to_dock += 1
+                #gscores[ligand][grid].append(0)
                 continue
 
             s_file = open(glide_dir + l_to_g + '/' + l_to_g + '.rept')
@@ -115,6 +121,9 @@ def load_glides(gridstructs, docking_fp_dir, glide_dir, rmsd_file):
     gscores = load_gscores(gridstructs, glide_dir)
     rmsds = load_rmsds(rmsd_file)
             
+    missing_ifp = 0
+    total_ifp = 0
+
     glides = {}
     for ligand in gridstructs:
         glides[ligand] = {}
@@ -124,7 +133,7 @@ def load_glides(gridstructs, docking_fp_dir, glide_dir, rmsd_file):
                 # put in one filler pose
                 glides[ligand][grid].add_pose(Pose(100,None,0,0),0)
                 continue # ligand, grid, did not dock.
-
+            total_ifp += 1
             #Go through all possible permutations for file capitalization
             #NOTE: Files still have to be in the {}_ligand-to-{} format!            
             cap_permutations = [(ligand, grid), (ligand.upper(), grid.upper()), 
@@ -136,19 +145,29 @@ def load_glides(gridstructs, docking_fp_dir, glide_dir, rmsd_file):
                     break
                 except:
                     pass
+            else:
+                missing_ifp += 1
+                for pose_num in range(len(gscores[ligand][grid])):
+                    try:
+                        glides[ligand][grid].add_pose(Pose(rmsds[grid][ligand].get_rmsd(pose_num), None, pose_num, gscores[ligand][grid][pose_num]), pose_num) 
+                    except: pass
+                continue
 
             for pose_num, line in enumerate(s_file):
+                #total_ifp += 1
                 try:
                     ifp = line.strip()
                 except Exception as e:
                     print("Error: No fingerprint generated for pose " + line.strip() + " in " + fnm)
+                    #missing_ifp += 1
                     break
-
+ 
                 #if pose_num < 50: #ONLY IMPORT 50 POSES, REMOVE LATER
                 try:
                     glides[ligand][grid].add_pose(Pose(rmsds[grid][ligand].get_rmsd(pose_num),
                                                        FuzzyFingerPrint.compact_parser(ifp, ligand), pose_num,
                                                        gscores[ligand][grid][pose_num]), pose_num)
+                
                 except Exception as e:
                     print 'key error -- check capitalization of grids, ligands', e
                     print rmsds.keys()
@@ -156,5 +175,7 @@ def load_glides(gridstructs, docking_fp_dir, glide_dir, rmsd_file):
                     print rmsds[grid].keys()
                     print gscores[ligand].keys()
                     break
+    if missing_ifp == 0: print 'All ligands successfully fingerprinted. Nice!'
+    else: print str(missing_ifp) + ' of ' + str(total_ifp) + ' ligands failed to fingerprint.'
     return glides
 
