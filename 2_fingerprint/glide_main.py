@@ -22,7 +22,7 @@ output_dir = sys.argv[2]
 glideDir = DATA + dataset + '/glide/'
 ifpDir = DATA + dataset + '/' + output_dir + '/'
 
-if os.path.exists(output_dir):
+if os.path.exists(ifpDir):
     raise Exception('specified output directory already exists. try again.')
 
 os.system("mkdir " + ifpDir)

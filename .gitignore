@@ -4,3 +4,4 @@ notebooks/*.pyc
 2_fingerprint/*.pyc
 3_score/*.pyc
 notebooks/*.out
+notebooks/.ipynb_checkpoints/*
