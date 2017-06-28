@@ -4,12 +4,7 @@ import sys
 import time
 
 SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1/run"
-FUZZY_SCRIPT = os.getcwd() + '/fuzzyifp.py'
-
-print '----------'
-print 'script location: ' + FUZZY_SCRIPT
-print 'check that that ^ points to your repository'
-print '----------'
+FUZZY_SCRIPT = "/share/PI/rondror/$USER/combind/2_fingerprint/fuzzyifp.py"
 
 DATA = "/scratch/PI/rondror/docking_data/"
 dataset = sys.argv[1]

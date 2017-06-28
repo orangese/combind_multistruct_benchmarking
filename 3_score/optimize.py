@@ -18,6 +18,7 @@ class Scores:
         self.final_scores_for_each_ligand = self.rank_poses_based_on_all_other_ligands()
 
         self.all_rmsds = {}
+        self.all_gscores = {}
 
     def score_pose_pair(self, fp1, fp2, get_details=False):
         score = 0
@@ -81,6 +82,11 @@ class Scores:
         if l not in self.all_rmsds: 
             self.all_rmsds[l] = [self.glides[l][self.struct].poses[p].rmsd for p in range(self.num_poses[l])] + [0]
         return self.all_rmsds[l]
+
+    def get_gscores(self,l):
+        if l not in self.all_gscores:
+            self.all_gscores[l] = [self.glides[l][self.struct].poses[p].gscore for p in range(self.num_poses[l])]
+        return self.all_gscores[l]
 
     def get_all_scores(self,l1,l2):
         return self.all_scores[(l1,l2)] if (l1,l2) in self.all_scores else self.all_scores[(l2,l1)].T
