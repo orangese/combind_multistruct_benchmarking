@@ -103,6 +103,7 @@ class Interactions:
         const = 4.1446 # final answer is in units of kcal/mol, just like LJ
     '''
     def get_potentials(self):
+	hydrogens = set()
         for lig_atom in self.ligand.all_atoms():
             for residue in self.close_pdb.residues.values():
                 for res_atom in residue.atoms:
@@ -125,20 +126,29 @@ class Interactions:
                         # find the hydrogen
                         receptor_hydrogens = [atom for atom in list(res_atom.connected_atoms) if atom.element == 'H']
                         ligand_hydrogens = [atom for atom in list(lig_atom.connected_atoms) if atom.element == 'H']
-
+			
                         (best_h, min_dist, donor) = (None, 10.0, None)
                         for h in receptor_hydrogens + ligand_hydrogens:
                             dist = max(lig_atom.dist_to(h), res_atom.dist_to(h))
                             if dist < min_dist:
                                 (best_h, min_dist, donor) = (h, dist, h in receptor_hydrogens)
-
-                        if best_h == None: 
+			
+			if best_h == None:
                             continue
-                
+                        else:
+                            hydrogens.add(best_h)
+                         
                         angle = math.fabs(180 - func.angle_between_three_points(lig_atom.coordinates,
                                                                                 best_h.coordinates, res_atom.coordinates) * 180 / math.pi)
                     
                         score = ( 1/(1+math.exp(4*(min_dist-2.6))) )*( 1/(1+math.exp((angle-60)/10)) )
-                        residue.add_h_bond(score,donor)
+                        if best_h.score < score:
+                           best_h.score = score 
+                           best_h.donor = donor
+                           best_h.residue = residue
+    
+        for h in hydrogens:
+            h.residue.add_h_bond(h.score,h.donor) 
+                        
                         #residue.debug_h(lig_atom,res_atom,best_h,donor,score)
-                            
+

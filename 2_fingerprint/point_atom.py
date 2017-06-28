@@ -71,6 +71,9 @@ class Atom:
         self.formal_charge = 0
         self.charge = 0.0
         self.connected_atoms = set()
+	self.score = 0.0
+	self.residue = None
+	self.donor = False
 
     def copy_of(self):
         new = Atom()
