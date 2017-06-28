@@ -11,9 +11,7 @@ def grouper(n, iterable, fillvalue=None):
     args = [iter(iterable)] * n
     return itertools.izip_longest(*args, fillvalue=fillvalue) #NOTE: izip_longest is zip_longest in python2
 
-SCRIPT = os.getcwd() + '/fuzzyifp.py'
-
-print SCRIPT
+SCRIPT = '/share/PI/rondror/$USER/combind/2_fingerprint/fuzzyifp.py'
 
 SCHRODINGER = '/share/PI/rondror/software/schrodinger2017-1/run'
 DATA = '/scratch/PI/rondror/docking_data/'

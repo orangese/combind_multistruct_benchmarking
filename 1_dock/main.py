@@ -1,4 +1,4 @@
-#!/share/PI/rondror/software/schrodinger2016-1/run
+#!/share/PI/rondror/software/schrodinger2017-1/run
 print("!Importing necessary Schrodinger Libraries!")
 import sys
 import os
@@ -11,11 +11,11 @@ import ligprep #method extract is thread safe
 import gridgen #method runGlide is thread safe
 import processed #method process is thread safe
 
-SCHRODINGER = "/share/PI/rondror/software/schrodinger2016-1"
-GLIDE = "/share/PI/rondror/software/schrodinger2016-1/glide"
+SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1"
+GLIDE = "/share/PI/rondror/software/schrodinger2017-1/glide"
 
 DATA = "/scratch/PI/rondror/docking_data"
-DOCKING_SCRIPT = "/share/PI/rondror/jbelk/docking_code/1_dock/dock_ligand_dir_to_grid_dir.sh" 
+DOCKING_SCRIPT = "/share/PI/rondror/$USER/combind/1_dock/dock_ligand_dir_to_grid_dir.sh" 
 
 os.chdir(DATA)
 

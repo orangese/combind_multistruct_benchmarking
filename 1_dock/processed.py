@@ -1,7 +1,7 @@
 import os
 import multiprocessing as mp
 
-SCHRODINGER = "/share/PI/rondror/software/schrodinger2016-1"
+SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1"
 def process(pool):
     currentFiles = [f for f in os.listdir(".") if os.path.isfile(os.path.join(".", f))]
     currentFiles = map(lambda x: os.path.splitext(x)[0], currentFiles)
