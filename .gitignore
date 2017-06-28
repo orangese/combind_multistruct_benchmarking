@@ -3,3 +3,4 @@ notebooks/*.pyc
 1_dock/*.pyc
 2_fingerprint/*.pyc
 3_score/*.pyc
+notebooks/*.out
