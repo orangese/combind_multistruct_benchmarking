@@ -8,4 +8,4 @@ def process(pool):
     pool.map(processHelper, currentFiles)
 
 def processHelper(fileName):
-    os.system(SCHRODINGER + "/utilities/prepwizard -WAIT -f 3 -fix -samplewater -delwater_hbond_cutoff 2 -keepfarwat -captermini -j temp-" + fileName +" ../stripped/"+fileName+".mae "+fileName+".mae")
+    os.system(SCHRODINGER + "/utilities/prepwizard -WAIT -fillsidechains -f 3 -fix -samplewater -delwater_hbond_cutoff 2 -keepfarwat -captermini -j temp-" + fileName +" ../stripped/"+fileName+".mae "+fileName+".mae")
