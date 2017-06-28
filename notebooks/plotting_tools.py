@@ -61,6 +61,7 @@ def plot_final_rmsds(scores, lab='', scores2=None, lab2='', show_glide=False):
     plt.legend()
     ax.set_xticklabels(scores.ligands, minor=False, rotation='vertical')
     ax.set_xticks(np.arange(0,len(scores.ligands),1))
+    plt.gca().set_ylim([0,10])
     plt.show()
 
     return [(scores.ligands[i],top_pose_rmsds[i]) for i in range(len(scores.ligands))]
