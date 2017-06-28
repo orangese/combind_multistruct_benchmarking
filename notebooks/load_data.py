@@ -9,7 +9,7 @@ import os.path
 os.chdir("../3_score/")
 from fingerprint import FuzzyFingerPrint
 from ligand import Ligand
-from cluster import Cluster
+#from cluster import Cluster
 from pose import Pose
 from rmsd import RMSD
 
