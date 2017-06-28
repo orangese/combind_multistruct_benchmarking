@@ -1,4 +1,4 @@
-SCHRODINGER_RUN = "/share/PI/rondror/software/schrodinger2016-1/run"
+SCHRODINGER_RUN = "/share/PI/rondror/software/schrodinger2017-1/run"
 import subprocess
 
 class RMSD:

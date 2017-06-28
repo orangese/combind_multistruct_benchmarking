@@ -8,7 +8,7 @@ import ssl
 import multiprocessing as mp
 from tqdm import tqdm
 
-SCHRODINGER = "/share/PI/rondror/software/schrodinger2016-1"
+SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1"
 
 def sdToMae(f):
     os.system(SCHRODINGER + "/ligprep -WAIT -adjust_itc -epik -isd " + f + " -omae " + f[:-3] + ".mae")
@@ -82,7 +82,7 @@ def convertSmileFile(smileData):
     with open(smileID + ".smi", "w") as f:
         f.write(smileString + " \'" + smileID+"\'")
         newSmileString = smileString.replace("_","") #Remove all instances of "_" since the script looks for "_ligand" 
-    os.system("/share/PI/rondror/software/schrodinger2016-1/ligprep -WAIT -adjust_itc -epik -ismi " + smileID + ".smi -omae " + newSmileString + "_ligand.mae")
+    os.system("/share/PI/rondror/software/schrodinger2017-1/ligprep -WAIT -adjust_itc -epik -ismi " + smileID + ".smi -omae " + newSmileString + "_ligand.mae")
 
 def parseTextMapFile(inputFile):
     os.chdir("raw_pdbs")

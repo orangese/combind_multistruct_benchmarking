@@ -4,7 +4,7 @@ from schrodinger.structutils.analyze import AslLigandSearcher
 from schrodinger.structure import StructureWriter
 import os
 
-GLIDE = "/share/PI/rondror/software/schrodinger2016-1/glide"
+GLIDE = "/share/PI/rondror/software/schrodinger2017-1/glide"
 
 def generateIn(struct_bases, pool):
     pool.map(generateInHelper, struct_bases)
