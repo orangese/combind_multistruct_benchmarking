@@ -4,9 +4,9 @@ The goal of combind is data-driven pose prediction for small molecules.
 
 ## Project Structure
 
-Current project status and history can be found in the github issues, projects, pull requests, and wikiof this repository.
+Project status and history can be found in the github issues, projects, pull requests, and wiki of this repository.
 
-For information about previous versions of combind, please see the readme in drorlab/sar_workflow.
+For information about previous versions of combind, please see the readme in `drorlab/sar_workflow`.
 
 ## Running the Code
 
