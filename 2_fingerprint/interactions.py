@@ -9,6 +9,7 @@
 from pdb import PDB
 import math_functions as func
 from point_atom import Point, Atom
+from bonds import Hbond
 from receptor import Receptor
 from ligand import Ligand
 import textwrap
@@ -103,7 +104,7 @@ class Interactions:
         const = 4.1446 # final answer is in units of kcal/mol, just like LJ
     '''
     def get_potentials(self):
-	hydrogens = set()
+	hydrogen_bonds = set()
         for lig_atom in self.ligand.all_atoms():
             for residue in self.close_pdb.residues.values():
                 for res_atom in residue.atoms:
@@ -135,20 +136,21 @@ class Interactions:
 			
 			if best_h == None:
                             continue
-                        else:
-                            hydrogens.add(best_h)
+                        elif best_h.bond == None:
+			   best_h.bond = Hbond()
+                           hydrogen_bonds.add(best_h.bond)
                          
                         angle = math.fabs(180 - func.angle_between_three_points(lig_atom.coordinates,
                                                                                 best_h.coordinates, res_atom.coordinates) * 180 / math.pi)
                     
                         score = ( 1/(1+math.exp(4*(min_dist-2.6))) )*( 1/(1+math.exp((angle-60)/10)) )
-                        if best_h.score < score:
-                           best_h.score = score 
-                           best_h.donor = donor
-                           best_h.residue = residue
+                        if best_h.bond.score < score:
+                           best_h.bond.score = score 
+                           best_h.bond.donor = donor
+                           best_h.bond.residue = residue
     
-        for h in hydrogens:
-            h.residue.add_h_bond(h.score,h.donor) 
+        for hb in hydrogen_bonds:
+            hb.residue.add_h_bond(hb.score,hb.donor) 
                         
                         #residue.debug_h(lig_atom,res_atom,best_h,donor,score)
 

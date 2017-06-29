@@ -71,9 +71,7 @@ class Atom:
         self.formal_charge = 0
         self.charge = 0.0
         self.connected_atoms = set()
-	self.score = 0.0
-	self.residue = None
-	self.donor = False
+	self.bond = None
 
     def copy_of(self):
         new = Atom()
@@ -90,6 +88,7 @@ class Atom:
         new.element = self.element
         new.formal_charge = self.formal_charge
         new.charge = self.charge
+	new.bond = self.bond
         return new
 
     def dist_to(self, other):
