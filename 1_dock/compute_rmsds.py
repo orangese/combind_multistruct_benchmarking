@@ -1,12 +1,19 @@
+#!/share/PI/rondror/software/miniconda/bin/python
+
 import sys
 import os
 
 from rmsd import RMSD
 
-grids_dir = sys.argv[1]
+DATA = '/scratch/PI/rondror/docking_data/'
+dataset = sys.argv[1]
+grids_dir = DATA + dataset + '/grids'
+
 OUTPUT = 'rmsd.csv'
+
 os.chdir(grids_dir)
 os.chdir('..')
+
 structs = [d for d in os.listdir(grids_dir) if os.path.isdir(os.path.join(grids_dir, d))]
 
 def references(ligand):

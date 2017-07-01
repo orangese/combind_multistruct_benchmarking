@@ -93,17 +93,13 @@ for struct in structures:#Go through the given structures, performing the comman
             raise Exception("Error: -g (generate grids) requires the folder processed to be the parent structure directory")
         os.system("mkdir grids")
         os.system("cp ./processed/* grids")
-        print(os.system("ls grids"))
-	currentInFiles = [f for f in os.listdir("./grids") if os.path.isfile(os.path.join("./grids", f))]
+        currentInFiles = [f for f in os.listdir("./grids") if os.path.isfile(os.path.join("./grids", f))]
         currentInFiles = map(lambda x: os.path.splitext(x)[0], currentInFiles)
 	os.chdir("./grids")
         pool = mp.Pool(numCores)
-        print(currentInFiles)
         gridgen.generateIn(currentInFiles,pool)
-        print(os.system("ls"))
-	currentInFiles = map(lambda x: x + ".in", currentInFiles)
-        print(currentInFiles)
-	results = pool.map(gridgen.runGlide, currentInFiles)
+        currentInFiles = map(lambda x: x + ".in", currentInFiles)
+        results = pool.map(gridgen.runGlide, currentInFiles)
 
         os.system("rm *.log")
         os.system("rm *.mae")
@@ -118,6 +114,7 @@ for struct in structures:#Go through the given structures, performing the comman
         os.chdir("..")
 
     if("d" in toRun):#Submit the docking run
-        os.system("mkdir new_glide")
         print("!Submitting docking run")
-        os.system(DOCKING_SCRIPT + " " + os.getcwd()+"/grids " + os.getcwd() +"/ligands " + os.getcwd() + "/new_glide/")
+        print(os.getcwd())
+        os.system('mkdir glide')
+        os.system(DOCKING_SCRIPT + " " + os.getcwd()+"/grids " + os.getcwd() +"/ligands " + os.getcwd() + "/glide/")
