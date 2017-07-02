@@ -12,7 +12,6 @@ import sys
 
 def strip():
     dirFiles = [f for f in listdir(".") if isfile(join("./", f)) and (f.endswith(".pdb") or f.endswith(".mae"))]
-    print(dirFiles)
     dirPath = os.getcwd()
     structs = []
     
@@ -31,27 +30,13 @@ def strip():
                 delAtomList.append(_StructureAtom.__int__(mol.atom[0]))
         struct.deleteAtoms(delAtomList)
         newStructs.append(struct)
-    
-    #for ind, struct in enumerate(newStructs):
-    #    if struct._getTitle() is not "":
-    #        st_writer = StructureWriter("./" + struct._getTitle() + ".mae")
-    #    else:
-    #        st_writer = StructureWriter("./" + os.path.splitext(dirFiles[ind])[0].upper() + ".mae")
-    #    st_writer.append(struct)
-    #    st_writer.close()
 
-
-
-    print("--Aligning structs...")
+    print("--Aligning structures...")
     structAlign = StructAlign()
     structAlign.align(newStructs[0], newStructs[1:len(structs)])
     
     for struct in newStructs:
-   #    if struct._getTitle() is not "":
         st_writer = StructureWriter("./" + struct._getTitle() + ".mae")
-   #    else:
-   #        st_writer = StructureWriter("./" + os.path.splitext(dirFiles[ind])[0].upper() + ".mae")
         st_writer.append(struct)
         st_writer.close()
-    
-
+ 
