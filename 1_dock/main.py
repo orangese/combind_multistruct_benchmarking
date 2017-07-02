@@ -9,7 +9,7 @@ import parsemap
 import stripstructures
 import ligprep #method extract is thread safe
 import gridgen #method runGlide is thread safe
-import processed #method process is thread safe
+import processing #method process is thread safe
 
 SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1"
 GLIDE = "/share/PI/rondror/software/schrodinger2017-1/glide"
@@ -41,58 +41,65 @@ for struct in structures:#Go through the given structures, performing the comman
 
     os.chdir("./"+struct)#Note: All work will be done with the current working directory in the current struct folder
 
-    if("r" in toRun):#Download Raw PDBs
+    #Download "raw" structures from the PDB
+    if("r" in toRun):
         print("!Downloading Raw PDB Files")
-        structFiles = ["raw_pdbs.txt"]
+        #Find potential files that could contain the structures
+        structFiles = [name for name in os.listdir(".") if os.path.isfile(name)]
+        structFiles = list(filter(lambda x: x.endswith(".txt"), structFiles))
+
+        #Use the first .txt file we find to download structures from
         os.system("mkdir raw_pdbs")
         os.system("mv " + structFiles[0] + " raw_pdbs")
         fileExtension = os.path.splitext(structFiles[0])[1]
-        if(fileExtension == ".xls" or fileExtension == ".xlsx"):
-            parsemap.parseExcelMapFile(structFiles[0], True)#True = parseSmiles
-        else:
-            parsemap.parseTextMapFile(structFiles[0])
+        parsemap.parseTextMapFile(structFiles[0])
 
-    if("s" in toRun):#Stripped assumes that there exists a folder called "raw_pdbs" in the parent struct directory
+    #Strip "raw" structures of waters and align them (not parallelized since alignment requires all structures)
+    if("s" in toRun):
         print("!Stripping Raw PDB Files")
         currentDirectories = [name for name in os.listdir(".") if os.path.isdir(name)]
+
+        #Stripped assumes that there exists a folder called "raw_pdbs" in the parent struct directory
         if("raw_pdbs" not in currentDirectories):
             raise Exception("Error: -s (strip structures) requires the folder raw_pdbs to be the parent structure directory")
+
         os.system('mkdir stripped')
-	os.system('cp raw_pdbs/*.pdb stripped/')
-	os.chdir('stripped')
-	stripstructures.strip()
-	os.system('rm *.pdb')
-	os.chdir('..')
+	    os.system('cp raw_pdbs/*.pdb stripped/')
+	    os.chdir('stripped')
+	    stripstructures.strip()
+	    os.system('rm *.pdb')
+	    os.chdir('..')
 
     if("p" in toRun):
-        os.system(PROCESSING_SCRIPT + " " + struct)
+        print("!Processing Structures")
+        processing.process()
 
     if("l" in toRun):#Extract Ligands, assumes processed folder exists
         print("!Extracting Ligands")
-        currentDirectories = [name for name in os.listdir(".") if os.path.isdir(name)]
-        if("processed" not in currentDirectories):
+
+        if("processed" not in  [name for name in os.listdir(".") if os.path.isdir(name)]):
             raise Exception("Error: -l (extract ligands) requires the folder processed to be the parent structure directory")
+
         os.system("mkdir ligands")
         processedFiles = [f for f in os.listdir("./processed") if os.path.isfile(os.path.join("./processed", f))]
         processedFiles = map(lambda x: os.path.splitext(x)[0], processedFiles)
-        pool = mp.Pool(numCores)
-        print(processedFiles)
-        results = pool.map(ligprep.extract, processedFiles)
+        #Extracting ligands is very lightweight so this is single-threaded
+        ligprep.extractLigands(processedFiles)
 
     if("g" in toRun):#Generate grids, assumes processed folder exists
         print("!Generating Grids")
-        currentDirectories = [name for name in os.listdir(".") if os.path.isdir(name)]
-        if("processed" not in currentDirectories):
+        if("processed" not in [name for name in os.listdir(".") if os.path.isdir(name)]):
             raise Exception("Error: -g (generate grids) requires the folder processed to be the parent structure directory")
+
         os.system("mkdir grids")
         os.system("cp ./processed/* grids")
         currentInFiles = [f for f in os.listdir("./grids") if os.path.isfile(os.path.join("./grids", f))]
         currentInFiles = map(lambda x: os.path.splitext(x)[0], currentInFiles)
-	os.chdir("./grids")
-        pool = mp.Pool(numCores)
-        gridgen.generateIn(currentInFiles,pool)
+	    os.chdir("./grids")
+
+        gridgen.generateIn(currentInFiles, pool)
         currentInFiles = map(lambda x: x + ".in", currentInFiles)
-        results = pool.map(gridgen.runGlide, currentInFiles)
+        results = gridgen.runGlides(currentInFiles)
 
         os.system("rm *.log")
         os.system("rm *.mae")
@@ -109,12 +116,11 @@ for struct in structures:#Go through the given structures, performing the comman
     if("d" in toRun):#Submit the docking run
         missing_glide = 0
         total_glide = 0
-        os.system('mkdir -p glide')       
-        for g_dir in os.listdir('glide'):
-            total_glide += 1
-            if not os.path.exists(os.getcwd()+'/glide/'+g_dir+'/'+g_dir+'_pv.maegz'):
-                missing_glide += 1
-        if total_glide > 0 and missing_glide == 0:
+        os.system('mkdir -p glide')
+
+        glidesExist = map(lambda x: os.path.exists(os.getcwd()+'/glide/'+x+'/'+x+'_pv.maegz'), os.listdir('glide'))
+
+        if len(os.listdir('glide')) > 0 and glidesExist.count(False) == 0:
             print 'Docking results already exist.'
         else:
             if missing_glide > 0: 
@@ -125,5 +131,4 @@ for struct in structures:#Go through the given structures, performing the comman
     if('m' in toRun):
         os.chdir(HERE)
         os.system('sbatch --time=2:00:00 --job-name=r-'+struct+' -n 1 -p rondror '+RMSD_SCRIPT+' '+struct+' '+HERE)
-
 
