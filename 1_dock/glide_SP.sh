@@ -11,18 +11,31 @@ SCHRODINGER=/share/PI/rondror/software/schrodinger2017-1
 cd /share/PI/rondror/$USER/combind/1_dock/
 HERE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-echo Writing docking results for ligand $LIGAND to grid $GRID to directory $GDIR$OUT
+echo $OUT
 
-mkdir $GDIR$OUT
-cp $GRID $GDIR$OUT/$OUT'_grid.zip'
-cp $LIGAND $GDIR$OUT/$OUT'_ligand.mae'
+if [ -e $GDIR$OUT/$OUT'_pv.maegz' ]
+then
+    echo $OUT already successfully docked
+else
+    if [ -d $GDIR$OUT ]
+    then
+        echo deleting failed docking attempt for $OUT
+        rm -r $GDIR$OUT
+    fi
 
-################################################################################
-cd $GDIR$OUT
+    echo attempting to dock $OUT
 
-# Create Glide input file
-sh /share/PI/rondror/$USER/combind/1_dock/SP-in-file.sh $OUT > $OUT.in
-# Run Glide
-$SCHRODINGER/glide $OUT.in -WAIT
+    mkdir $GDIR$OUT
+    cp $GRID $GDIR$OUT/$OUT'_grid.zip'
+    cp $LIGAND $GDIR$OUT/$OUT'_ligand.mae'
 
-cd -
+    ################################################################################
+    cd $GDIR$OUT
+
+    # Create Glide input file
+    sh /share/PI/rondror/$USER/combind/1_dock/SP-in-file.sh $OUT > $OUT.in
+    # Run Glide
+    $SCHRODINGER/glide $OUT.in -WAIT
+
+    cd -
+fi

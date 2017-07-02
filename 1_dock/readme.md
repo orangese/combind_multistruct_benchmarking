@@ -28,11 +28,9 @@ There are five steps: Strip, Process, Ligands, Grids, and Dock. Each can be run 
 
 ## 3) Compute RMSDs for all poses
 
-`python compute_rmsds.py <grid_path>`
+`./main.py -m <receptor name>`
 
-For example:
-
-`python compute_rmsds.py /scratch/PI/rondror/docking_data/B2AR/grids`
+RMSDs will be output to `/scratch/PI/rondror/docking_data/<receptor name>/rmsd.csv`.
 
 ## 4) Evaluate docking quality
 

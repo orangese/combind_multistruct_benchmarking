@@ -14,9 +14,12 @@ import processed #method process is thread safe
 SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1"
 GLIDE = "/share/PI/rondror/software/schrodinger2017-1/glide"
 
-DATA = "/scratch/PI/rondror/docking_data"
-DOCKING_SCRIPT = "/share/PI/rondror/$USER/combind/1_dock/dock_ligand_dir_to_grid_dir.sh" 
+HERE = os.getcwd() + '/'
 
+DATA = "/scratch/PI/rondror/docking_data"
+DOCKING_SCRIPT = HERE + "dock_ligand_dir_to_grid_dir.sh" 
+PROCESSING_SCRIPT = HERE + "processing_script.sh"
+RMSD_SCRIPT= HERE + 'compute_rmsds.py'
 os.chdir(DATA)
 
 commands = sys.argv[1]
@@ -61,18 +64,8 @@ for struct in structures:#Go through the given structures, performing the comman
 	os.system('rm *.pdb')
 	os.chdir('..')
 
-    if("p" in toRun):#Process Structures assumes that there exists a "stripped" folder in the parent struct directory
-        print("!Processing Stripped Files")
-        currentDirectories = [name for name in os.listdir(".") if os.path.isdir(name)]
-        if("stripped" not in currentDirectories):
-            raise Exception("Error: -p (process structures) requires the folder stripped to be the parent structure directory")
-        os.system("mkdir processed")
-	os.system("cp stripped/*.mae processed/")
-	os.chdir("./processed")
-        pool = mp.Pool(numCores)
-        processed.process(pool) # this function (1) assumes you're in the processed dir (2) copies files from stripped
-        os.system("rm temp*")
-	os.chdir("..")
+    if("p" in toRun):
+        os.system(PROCESSING_SCRIPT + " " + struct)
 
     if("l" in toRun):#Extract Ligands, assumes processed folder exists
         print("!Extracting Ligands")
@@ -93,17 +86,13 @@ for struct in structures:#Go through the given structures, performing the comman
             raise Exception("Error: -g (generate grids) requires the folder processed to be the parent structure directory")
         os.system("mkdir grids")
         os.system("cp ./processed/* grids")
-        print(os.system("ls grids"))
-	currentInFiles = [f for f in os.listdir("./grids") if os.path.isfile(os.path.join("./grids", f))]
+        currentInFiles = [f for f in os.listdir("./grids") if os.path.isfile(os.path.join("./grids", f))]
         currentInFiles = map(lambda x: os.path.splitext(x)[0], currentInFiles)
 	os.chdir("./grids")
         pool = mp.Pool(numCores)
-        print(currentInFiles)
         gridgen.generateIn(currentInFiles,pool)
-        print(os.system("ls"))
-	currentInFiles = map(lambda x: x + ".in", currentInFiles)
-        print(currentInFiles)
-	results = pool.map(gridgen.runGlide, currentInFiles)
+        currentInFiles = map(lambda x: x + ".in", currentInFiles)
+        results = pool.map(gridgen.runGlide, currentInFiles)
 
         os.system("rm *.log")
         os.system("rm *.mae")
@@ -118,6 +107,23 @@ for struct in structures:#Go through the given structures, performing the comman
         os.chdir("..")
 
     if("d" in toRun):#Submit the docking run
-        os.system("mkdir new_glide")
-        print("!Submitting docking run")
-        os.system(DOCKING_SCRIPT + " " + os.getcwd()+"/grids " + os.getcwd() +"/ligands " + os.getcwd() + "/new_glide/")
+        missing_glide = 0
+        total_glide = 0
+        os.system('mkdir -p glide')       
+        for g_dir in os.listdir('glide'):
+            total_glide += 1
+            if not os.path.exists(os.getcwd()+'/glide/'+g_dir+'/'+g_dir+'_pv.maegz'):
+                missing_glide += 1
+        if total_glide > 0 and missing_glide == 0:
+            print 'Docking results already exist.'
+        else:
+            if missing_glide > 0: 
+                print 'Missing ' + str(missing_glide) + ' of ' + str(total_glide) + ' docking results.'
+            print 'Submitting docking jobs...'
+            os.system(DOCKING_SCRIPT + " " + os.getcwd()+"/grids " + os.getcwd() +"/ligands " + os.getcwd() + "/glide/")
+
+    if('m' in toRun):
+        os.chdir(HERE)
+        os.system('sbatch --time=2:00:00 --job-name=r-'+struct+' -n 1 -p rondror '+RMSD_SCRIPT+' '+struct+' '+HERE)
+
+
