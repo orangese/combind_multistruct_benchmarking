@@ -3,16 +3,15 @@
 import sys
 import os
 
+sys.path.append(sys.argv[2])
 from rmsd import RMSD
 
 DATA = '/scratch/PI/rondror/docking_data/'
 dataset = sys.argv[1]
-grids_dir = DATA + dataset + '/grids'
 
 OUTPUT = 'rmsd.csv'
 
-os.chdir(grids_dir)
-os.chdir('..')
+os.chdir(DATA+dataset)
 
 structs = [d for d in os.listdir(grids_dir) if os.path.isdir(os.path.join(grids_dir, d))]
 

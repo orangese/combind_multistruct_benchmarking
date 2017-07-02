@@ -28,7 +28,7 @@ There are five steps: Strip, Process, Ligands, Grids, and Dock. Each can be run 
 
 ## 3) Compute RMSDs for all poses
 
-`./compute_rmsds.py <receptor name>`
+`./main.py -m <receptor name>`
 
 RMSDs will be output to `/scratch/PI/rondror/docking_data/<receptor name>/rmsd.csv`.
 
