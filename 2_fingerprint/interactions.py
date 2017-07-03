@@ -117,8 +117,8 @@ class Interactions:
 
                     # 2: electrostatic potential 
                     const = 4.1446
-                    q1 = res_atom.formal_charge + res_atom.charge
-                    q2 = lig_atom.formal_charge + lig_atom.charge
+                    q1 = res_atom.charge
+                    q2 = lig_atom.charge
                     residue.add_electrostatic_potential(q1*q2*const/r)
 
 		    # 3: hydrogen bonds

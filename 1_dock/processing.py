@@ -10,10 +10,12 @@ def processHelper(fileName):
     slurm.salloc(command, "1", "5:00:00") #(jobString, numProcessors, timeLimit)
 
 def process():   
-    currentFiles = [f for f in os.listdir(".") if os.path.isfile(os.path.join(".", f))]
-    currentFiles = map(lambda x: os.path.splitext(x)[0], currentFiles)
-
+    toProcess = [f[:4] for f in os.listdir("stripped") if not os.path.isfile('processed/'+f)]
+    print toProcess
+    os.system('mkdir -p processed')
+    os.chdir('processed')
     #Each thread has a very lightweight job (waiting on the salloc signal) so just launch len(currentFiles) threads
-    pool = Pool(len(currentFiles)) 
-    pool.map(processHelper, currentFiles)
-
+    pool = Pool(len(toProcess)) 
+    pool.map(processHelper, toProcess)
+    os.system('rm temp* rm *missing* rm *.out')
+    os.chdir('..')

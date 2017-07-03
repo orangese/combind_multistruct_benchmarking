@@ -3,8 +3,6 @@ import sys
 from schrodinger.structure import StructureReader
 from schrodinger.structutils.analyze import AslLigandSearcher
 from schrodinger.structure import StructureWriter
-from multiprocessing import Pool
-import slurm
 
 def extractLigands(structures):
     for struct_base in structures:

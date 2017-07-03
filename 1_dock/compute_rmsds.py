@@ -12,7 +12,7 @@ dataset = sys.argv[1]
 OUTPUT = 'rmsd.csv'
 
 os.chdir(DATA+dataset)
-
+grids_dir = DATA+dataset+'/grids'
 structs = [d for d in os.listdir(grids_dir) if os.path.isdir(os.path.join(grids_dir, d))]
 
 def references(ligand):
