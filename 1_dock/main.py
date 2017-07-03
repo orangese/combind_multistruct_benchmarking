@@ -2,7 +2,6 @@
 print("!Importing necessary Schrodinger Libraries!")
 import sys
 import os
-import multiprocessing as mp
 
 #Self-Defined Helper Libraries, Note: All functions in these libraries assume that you are in the parent directory for the given struct (ex. /docking/data/A2AR/)
 import parsemap
@@ -12,21 +11,16 @@ import gridgen #method runGlide is thread safe
 import processing #method process is thread safe
 
 SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1"
-GLIDE = "/share/PI/rondror/software/schrodinger2017-1/glide"
-
 HERE = os.getcwd() + '/'
 
 DATA = "/scratch/PI/rondror/docking_data"
 DOCKING_SCRIPT = HERE + "dock_ligand_dir_to_grid_dir.sh" 
-PROCESSING_SCRIPT = HERE + "processing_script.sh"
 RMSD_SCRIPT= HERE + 'compute_rmsds.py'
+
 os.chdir(DATA)
 
 commands = sys.argv[1]
 structures = sys.argv[2:]
-numCores = 4
-print("!Initializing: Found " + str(4) + " cores!")
-pool = mp.Pool(4)
 
 toRun = []
 if("a" in commands):
@@ -64,11 +58,11 @@ for struct in structures:#Go through the given structures, performing the comman
             raise Exception("Error: -s (strip structures) requires the folder raw_pdbs to be the parent structure directory")
 
         os.system('mkdir stripped')
-	    os.system('cp raw_pdbs/*.pdb stripped/')
-	    os.chdir('stripped')
-	    stripstructures.strip()
-	    os.system('rm *.pdb')
-	    os.chdir('..')
+	os.system('cp raw_pdbs/*.pdb stripped/')
+	os.chdir('stripped')
+	stripstructures.strip()
+	os.system('rm *.pdb')
+	os.chdir('..')
 
     if("p" in toRun):
         print("!Processing Structures")
@@ -91,40 +85,35 @@ for struct in structures:#Go through the given structures, performing the comman
         if("processed" not in [name for name in os.listdir(".") if os.path.isdir(name)]):
             raise Exception("Error: -g (generate grids) requires the folder processed to be the parent structure directory")
 
-        os.system("mkdir grids")
-        os.system("cp ./processed/* grids")
-        currentInFiles = [f for f in os.listdir("./grids") if os.path.isfile(os.path.join("./grids", f))]
-        currentInFiles = map(lambda x: os.path.splitext(x)[0], currentInFiles)
-	    os.chdir("./grids")
+        os.system("mkdir -p grids")
+        makeGrids = [x[:4] for x in os.listdir('processed') if not os.path.exists(os.getcwd()+'/grids/'+x[:4]+'/'+x[:4]+'.zip')]
+        print makeGrids 
+        for i in makeGrids:
+            os.system('cp ./processed/'+i+'.mae grids')
+        
+	os.chdir("./grids")
 
-        gridgen.generateIn(currentInFiles, pool)
-        currentInFiles = map(lambda x: x + ".in", currentInFiles)
-        results = gridgen.runGlides(currentInFiles)
+        gridgen.generateIn(makeGrids)
+        results = gridgen.runGlides([x+'.in' for x in makeGrids])
+        
+        os.system("rm *.log *.mae *.in gpu* *.json")
 
-        os.system("rm *.log")
-        os.system("rm *.mae")
-        os.system("rm *.in")
-
-        files = [f for f in os.listdir(".") if os.path.isfile(os.path.join(".", f))]
-
-        for f in files:
-            os.system("mkdir " + str(f[:-4]))
-            os.system("mv " + f + " ./" + f[:-4] + "/" + f)
+        for x in os.listdir('.'):
+            if x[-4:] == '.zip':
+                os.system("mkdir -p " + x[:-4])
+                os.system("mv " + x + " ./" + x[:-4] + "/")
 
         os.chdir("..")
 
     if("d" in toRun):#Submit the docking run
-        missing_glide = 0
-        total_glide = 0
         os.system('mkdir -p glide')
-
         glidesExist = map(lambda x: os.path.exists(os.getcwd()+'/glide/'+x+'/'+x+'_pv.maegz'), os.listdir('glide'))
 
         if len(os.listdir('glide')) > 0 and glidesExist.count(False) == 0:
             print 'Docking results already exist.'
         else:
-            if missing_glide > 0: 
-                print 'Missing ' + str(missing_glide) + ' of ' + str(total_glide) + ' docking results.'
+            if glidesExist.count(False) > 0: 
+                print 'Missing ' + str(glidesExist.count(False)) + ' of ' + str(len(glidesExist)) + ' docking results.'
             print 'Submitting docking jobs...'
             os.system(DOCKING_SCRIPT + " " + os.getcwd()+"/grids " + os.getcwd() +"/ligands " + os.getcwd() + "/glide/")
 
