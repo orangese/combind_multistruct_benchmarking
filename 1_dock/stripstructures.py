@@ -18,8 +18,15 @@ def strip():
     print("--Reading in structs...")
     for f in dirFiles:
         struct = StructureReader("./" + f).next()
+
+        #Delete all atoms that do not belong to chain A, removes multiple copies of the protein-ligand complex
+        nonAAtoms = [] 
+        for atom in struct.atom:
+            if atom._getAtomChain() != "A":
+                nonAAtoms.append(atom.__int__())
+        struct.deleteAtoms(nonAAtoms)
         structs.append(struct)
-    
+
     print("--Removing waters from structs...")
     newStructs = [] #List for structs without water
     for struct in structs:

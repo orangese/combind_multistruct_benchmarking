@@ -34,10 +34,24 @@ def generateInHelper(struct_base):
     out.write('RECEP_FILE '      + struct_base                + '.mae\n')
     out.close()
 
+def processSuccess(structure):
+    fileName = structure+".zip"
+    return fileName in os.listdir("./{}".format(structure)) #We're currently in grids
+
 def runGlidesHelper(inFile):
     slurm.salloc("{} -WAIT {}".format(GLIDE, inFile), "1", "1:00:00")
 
 def runGlides(inFiles):
     #Each thread has a very lightweight job (waiting on the salloc signal) so just launch len(inFiles) threads
     pool = Pool(len(inFiles))
-    pool.map(runGlidesHelper, inFiles)
+    
+    #Keep submitting jobs until they're all successful
+    while len(inFiles) != 0:
+        currentlyProcessing = inFiles
+        inFiles = []
+
+        for finishedStruct in pool.imap(runGlidesHelper, currentlyProcessing):
+            if not processSuccess(finishedStruct):
+                inFiles.append(finishedStruct)
+                print("{} did not gridgen successfully - resubmitting".format(finishedStruct))
+
