@@ -57,8 +57,8 @@ class PDB:
         """
         element1, element2 = sorted([element1.upper(), element2.upper()])
 
-        UNBONDABLE = ['H', 'CL', 'BR', 'F', 'O', 'P']
-        if element1 in UNBONDABLE and element2 in UNBONDABLE: return 0.0
+        #UNBONDABLE = ['H', 'CL', 'BR', 'F', 'O', 'P']
+        #if element1 in UNBONDABLE and element2 in UNBONDABLE: return 0.0
 
         match = lambda e1, e2: (e1 == element1 and e2 == element2)
         if match('C', 'C'): return 1.53
