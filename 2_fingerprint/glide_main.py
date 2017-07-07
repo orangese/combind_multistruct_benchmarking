@@ -19,24 +19,33 @@ DATA = '/scratch/PI/rondror/docking_data/'
 dataset = sys.argv[1]
 output_dir = sys.argv[2]
 
-glideDir = DATA + dataset + '/glide/'
-ifpDir = DATA + dataset + '/' + output_dir + '/'
+if sys.argv[1] == 'all':
+    datasets = os.listdir(DATA)
+else:
+    datasets = [sys.argv[1]]
 
-if os.path.exists(ifpDir):
-    raise Exception('specified output directory already exists. try again.')
+for dataset in datasets:
+    print dataset
+    
+    glideDir = DATA + dataset + '/glide/'
+    ifpDir = DATA + dataset + '/' + output_dir + '/'
 
-os.system("mkdir " + ifpDir)
-os.chdir(ifpDir)
+    if os.path.exists(ifpDir):
+        print dataset + ' already has that output directory. continuing...'
+        continue
 
-glideFolders = [f for f in listdir(glideDir)]
+    os.system("mkdir " + ifpDir)
+    os.chdir(ifpDir)
 
-for groupNum, folderGroup in enumerate(grouper(6, glideFolders)): #Fingerprint jobs are grouped into batches of 6
-    with open(dataset + str(groupNum) + ".sh", "w") as f: #Write 6 jobs to a script
-        f.write("#!/bin/bash\n")
-        for folder in folderGroup:
-            if folder != None:
-                f.write(SCHRODINGER + " " + SCRIPT + " -receptor " + glideDir+"/"+folder+"/"+folder+"_pv.maegz -input pose_viewer > " + ifpDir+"/"+folder+".fp &\n")
+    glideFolders = [f for f in listdir(glideDir)]
 
-        f.write("wait\n") #Wait for all forks for finish
+    for groupNum, folderGroup in enumerate(grouper(6, glideFolders)): #Fingerprint jobs are grouped into batches of 6
+        with open(dataset + str(groupNum) + ".sh", "w") as f: #Write 6 jobs to a script
+            f.write("#!/bin/bash\n")
+            for folder in folderGroup:
+                if folder != None:
+                    f.write(SCHRODINGER + " " + SCRIPT + " -receptor " + glideDir+"/"+folder+"/"+folder+"_pv.maegz -input pose_viewer > " + ifpDir+"/"+folder+".fp &\n")
 
-    os.system("sbatch --time=50:00:00 -c 6 -p rondror " + dataset + str(groupNum) + ".sh") #Submit the script
+            f.write("wait\n") #Wait for all forks for finish
+
+        os.system("sbatch --time=01:00:00 -c 6 -p rondror " + dataset + str(groupNum) + ".sh") #Submit the script

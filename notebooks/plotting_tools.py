@@ -39,32 +39,35 @@ def plot_all_poses(l1, l2, scores, lab, scores2=None, lab2=None):
     #plt.gca().set_ylim([0,700])
     plt.show()
 
-def plot_final_rmsds(scores, lab='', scores2=None, lab2='', show_glide=False):
+def plot_final_rmsds(scores, title='', scores2=None, lab2=''):#, show_glide=False):
     fig, ax = plt.subplots()
 
     top_pose_rmsds = [scores.get_rmsds(l)[np.argmax(scores.get_final_scores(l)[:-1])] for l in scores.ligands]
-    plt.plot(top_pose_rmsds, marker='.', markersize=10, color="red",label=lab)
     min_rmsds = [np.min(scores.get_rmsds(l)[:-1]) for l in scores.ligands]
-    plt.plot(min_rmsds, marker='d', markersize=10, color="black")
+    plt.plot(min_rmsds, marker='d', markersize=10, color="black", label='best: '+str(np.mean(min_rmsds))[:4])
 
-    if show_glide:
+    if True:#show_glide:
         glide_rmsds = [scores.get_rmsds(l)[np.argmin(scores.get_gscores(l))] for l in scores.ligands]
-        plt.plot(glide_rmsds, marker='.', markersize=10, color='black')
+        plt.plot(glide_rmsds, marker='.', markersize=10, color='green', label='glide: '+str(np.mean(glide_rmsds))[:4])
+
+    plt.plot(top_pose_rmsds, marker='.', markersize=10, color="red",label='us: '+str(np.mean(top_pose_rmsds))[:4])
 
     if scores2 is not None:
         top_rmsds2 = [scores2.get_rmsds(l)[np.argmax(scores2.get_final_scores(l)[:-1])] for l in scores2.ligands]
-        plt.plot(top_rmsds2, marker='.', markersize=10, color='blue',label=lab2)
-        ave_change = sum([top_rmsds2[i] - top_pose_rmsds[i] for i in range(len(top_rmsds2))])/len(top_rmsds2)
-        print 'Average rmsd change = ' + str(ave_change)
-        print 'If that number is negative, scores2 is better than scores1!'    
+        plt.plot(top_rmsds2, marker='.', markersize=10, color='blue',label=lab2+str(np.mean(top_rmsds2))[:4])
 
     plt.legend()
     ax.set_xticklabels(scores.ligands, minor=False, rotation='vertical')
     ax.set_xticks(np.arange(0,len(scores.ligands),1))
     plt.gca().set_ylim([0,10])
+    
+    ax.set_title(title)
+    ax.set_xlabel('Ligands')
+    ax.set_ylabel('RMSD [A]')
+
     plt.show()
 
-    return [(scores.ligands[i],top_pose_rmsds[i]) for i in range(len(scores.ligands))]
+    return [(scores.ligands[i],top_pose_rmsds[i],min_rmsds[i],glide_rmsds[i]) for i in range(len(scores.ligands))]
 
 def plot_final_scores(scores, lab=''):
     top_pose_scores = [np.max(scores.get_final_scores(l)[:-1]) for l in scores.ligands]
