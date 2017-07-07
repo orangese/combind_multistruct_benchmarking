@@ -10,7 +10,7 @@ from ligand import Ligand
 import numpy as np
 from tqdm import tqdm
 from multiprocessing import Pool
-
+#text_file = '/scratch/PI/rondror/docking_data/AR/ifp_output.out'
 class FuzzyIFP:
     def __init__(self, args):
         self.params = {
@@ -33,7 +33,9 @@ class FuzzyIFP:
         self.receptor = Receptor()
         st = self.struct.next()
         minimize_structure(st, max_steps = 0) #Assigns partial charges
-        
+        #target=open(text_file,'a')
+        #target.write(' '.join([str(i) for i in args]))
+        #target.close()
         self.receptor.load_mae(st)
 
         if self.params['input'] == 'pose_viewer':

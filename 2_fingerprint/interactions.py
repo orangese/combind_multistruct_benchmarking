@@ -24,6 +24,8 @@ from schrodinger.structure import get_pyatom_from_cppatom
 
 RESIDUE_THRESH = 5 #Value is in angstroms
 
+#text_name = '/scratch/PI/rondror/docking_data/AR/ifp_output.out'
+
 # values taken from Autodock 3.0.5 user guide
 # http://autodock.scripps.edu/faqs-help/manual/autodock-3-user-s-guide/AutoDock3.0.5_UserGuide.pdf
 # (C_{12} [kcal mol^-1 A^12], C_6 [kcal mol^-1 A^6])
@@ -104,7 +106,15 @@ class Interactions:
         const = 4.1446 # final answer is in units of kcal/mol, just like LJ
     '''
     def get_potentials(self):
-	hydrogen_bonds = set()
+#        target=open(text_name,'a')
+
+#        for lig_atom in self.ligand.all_atoms():
+#            if lig_atom.atom_id == 15:
+#                missing_h = [i for i in self.ligand.all_atoms() if i.atom_id == 39][0]
+#                target.write('\n'+str(lig_atom.dist_to(missing_h)))
+#            target.write('\n ligand atom: '+str(lig_atom.atom_id)+lig_atom.element+' connected to '+str([(n.element, n.atom_id) for n in lig_atom.connected_atoms]))
+#        target.write('\n--------')
+        hydrogen_bonds = set()
         for lig_atom in self.ligand.all_atoms():
             for residue in self.close_pdb.residues.values():
                 for res_atom in residue.atoms:
@@ -142,15 +152,23 @@ class Interactions:
                          
                         angle = math.fabs(180 - func.angle_between_three_points(lig_atom.coordinates,
                                                                                 best_h.coordinates, res_atom.coordinates) * 180 / math.pi)
-                    
+                        #target.write('\n ligand : '+str(lig_atom.atom_id) + ' residue atom: '+str(res_atom.atom_id)+' residue:' + str(residue.num))
+                        #target.write('\nreceptor hydrogens: '+str(receptor_hydrogens))
+                        #target.write('\nligand hydrogens: '+str(ligand_hydrogens)) 
                         score = ( 1/(1+math.exp(4*(min_dist-2.6))) )*( 1/(1+math.exp((angle-60)/10)) )
+                        donor_str = ' True' if donor else ' False'
+                        #target.write('\nhydrogen detected\n'+str(score) + ' ' + str(best_h.atom_id) + donor_str)
                         if best_h.bond.score < score:
+                           #target.write('\nhydrogen beat previous score ' + str(score)+' residue:'+str(residue.num))
                            best_h.bond.score = score 
                            best_h.bond.donor = donor
                            best_h.bond.residue = residue
+                           
     
         for hb in hydrogen_bonds:
+            #target.write('\nadding hbond ' + str(hb.score) + ' '+str(hb.residue.num))
+            #print hb.score, hb.donor
             hb.residue.add_h_bond(hb.score,hb.donor) 
-                        
+        #target.close()                
                         #residue.debug_h(lig_atom,res_atom,best_h,donor,score)
 
