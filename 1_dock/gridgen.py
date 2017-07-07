@@ -35,11 +35,11 @@ def generateInHelper(struct_base):
     out.close()
 
 def processSuccess(structure):
-    fileName = structure+".zip"
-    return fileName in os.listdir("./{}".format(structure)) #We're currently in grids
+    return structure+".zip" in os.listdir(".") #We're currently in grids
 
 def runGlidesHelper(inFile):
     slurm.salloc("{} -WAIT {}".format(GLIDE, inFile), "1", "1:00:00")
+    return inFile.split(".")[0] #Return the sturcture name (before the .in extension)
 
 def runGlides(inFiles):
     #Each thread has a very lightweight job (waiting on the salloc signal) so just launch len(inFiles) threads
