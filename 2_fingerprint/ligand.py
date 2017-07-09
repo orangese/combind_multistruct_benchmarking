@@ -1,9 +1,5 @@
-from point_atom import Point, Atom
-from aromatic import Aromatic
-import math_functions as func
+from point_atom import Atom
 from pdb import PDB
-import textwrap
-import math
 
 class Ligand(PDB):
     """

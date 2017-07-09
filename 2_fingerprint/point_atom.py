@@ -7,9 +7,6 @@
 # The below is implemented by Joe Paggi and largely based on BINANA
 
 import math
-import os
-import sys
-import textwrap
 
 class Point:
     x=99999.0

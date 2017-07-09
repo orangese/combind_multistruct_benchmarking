@@ -6,14 +6,10 @@
 
 # The below is implemented by Joe Paggi and largely based on BINANA
 
-import textwrap
-import math_functions as func
 from point_atom import Point, Atom
-import math
 from pdb import PDB
 from residue import Residue
 from ligand import Ligand
-from schrodinger.structure import Structure
 import copy
 
 class Receptor(PDB):
@@ -54,33 +50,13 @@ class Receptor(PDB):
     def all_atoms(self):
         return [i for pdb in self.residues.values() + self.ligands.values() for i in pdb.all_atoms()]
 
-    def interacting_atoms(self):
-        return [i for resi in self.residues for i in self.residues[resi].interacting_atoms()]
-
-    def debug_aromatics(self):
-        return [i for resi in self.residues for i in self.residues[resi].atoms] + [aro.center for resi in self.residues.values() for aro in resi.aromatics]
-
-    def export_ligand(self, name):
-        """
-        This method is used for fingerprinting cocrystalized ligands.
-        Returns a ligand with resname name and removes it from the receptor
-        """
-        index = -1
-        for num, ligand in self.ligands.items():
-            if ligand.name == name:
-                assert index == -1, "More than one ligand named {}".format(name)
-                index = num
-        ligand = self.ligands[index]
-        del self.ligands[index]
-        return ligand
-
-    def fingerprint(self):
+    def fingerprint(self, ligand):
         """
         Let's deal with processing this in another class?? 
         Alternatively we could make a fp class and add a method 
         that lets us add things as we go???
         """
-        return {num: resi.fingerprint() for num, resi in self.residues.items() if any(resi.fingerprint())}
+        return {num: resi.fingerprint(ligand) for num, resi in self.residues.items() if any(resi.fingerprint(ligand))}
 
     def assign(self):
         for residue in self.residues.values(): residue.assign()

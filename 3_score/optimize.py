@@ -1,15 +1,12 @@
 import numpy as np
 
 class Scores:
-    def __init__(self, glides, crystals, ligands, structure, n, overlap=lambda x,y: x*y, weights={}):
+    def __init__(self, glides, crystals, ligands, structure, n):
         self.glides = glides
         self.crystals = crystals
         self.ligands = ligands
         self.struct = structure
 
-        self.overlap = overlap
-        self.w = weights
-        
         self.num_poses = {l: min(n,len(glides[l][structure].poses)) for l in ligands}
 
         # the crystal poses are the last row/column of each matrix here
@@ -20,18 +17,11 @@ class Scores:
         self.all_rmsds = {}
         self.all_gscores = {}
 
-    def score_pose_pair(self, fp1, fp2, get_details=False):
+    def score_pose_pair(self, fp1, fp2):
         score = 0
-        interactions = {}
         for r in fp1.feats:
             if r in fp2.feats:
-                for i in range(len(fp1.feats[r])):
-                    i_score = self.overlap(fp1.feats[r][i]*self.w.get(i,1),fp2.feats[r][i]*self.w.get(i,1))
-                    if get_details:
-                        interactions[(r,i)] = i_score
-                    score += i_score
-        if get_details:
-            return score, interactions
+                score += np.dot(fp1.feats[r], fp2.feats[r])
         return score
 
     def score_all_pairs_of_poses(self):

@@ -14,9 +14,16 @@ def sigmoid(x, center, compression):
     e = math.exp(compression * (x - center))
     return e / (1.0 + e) 
 
+def vector_addition(v1, v2):
+    return Point(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z)
+
 def vector_subtraction(vector1, vector2):
     return Point(vector1.x - vector2.x, vector1.y - vector2.y, vector1.z - vector2.z)
     
+def vector_average(v_ar):
+    n = float(len(v_ar))
+    return Point(sum([i.x for i in v_ar])/n, sum([i.y for i in v_ar])/n, sum([i.z for i in v_ar])/n)
+
 def CrossProduct(Pt1, Pt2): # never tested
     Response = Point(0,0,0)
     
