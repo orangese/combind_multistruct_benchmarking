@@ -12,7 +12,7 @@ class Residue(PDB):
         self.atoms = []
         self.aromatics = []
 
-        self.score_thresh = 0.1
+        self.score_thresh = 0.05
 
         self.all_interactions = []
         self.fp = [0,0,0,0]
@@ -66,7 +66,7 @@ class Residue(PDB):
         self.fp[0] = sum([hb.score() for hb in hbonds if hb.resIsHDonor])
         self.fp[1] = sum([hb.score() for hb in hbonds if not hb.resIsHDonor])
         self.fp[2] = sum([sb.score() for sb in sbs])
-        self.fp[3] = lj.score() if lj.score() >= self.score_thresh else 0
+        self.fp[3] = lj.score() if abs(lj.score()) >= self.score_thresh else 0
 
         self.all_interactions = hbonds + sbs
         
