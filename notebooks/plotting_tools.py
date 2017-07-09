@@ -39,12 +39,52 @@ def plot_all_poses(l1, l2, scores, lab, scores2=None, lab2=None):
     #plt.gca().set_ylim([0,700])
     plt.show()
 
-def plot_final_rmsds(scores, title='', scores2=None, lab2=''):#, show_glide=False):
+def plot_magnitudes(scores, title=''):
+    fig, ax = plt.subplots()
+
+    top_poses = [np.argmax(scores.get_final_scores(l)[:-1]) for l in scores.ligands]
+    top_pose_magnitudes = [0 for l in scores.ligands]    
+
+    highest_magnitude_poses = {}
+    for (i, l) in enumerate(scores.ligands):
+
+        fp_top = scores.glides[l][scores.struct].poses[top_poses[i]].fp
+        top_pose_magnitudes[i] = scores.score_pose_pair(fp_top, fp_top)
+
+        highest_magnitude_poses[l] = (-1, 0)
+        for p in range(scores.num_poses[l]):
+            fp = scores.glides[l][scores.struct].poses[p].fp
+            norm = scores.score_pose_pair(fp, fp)
+            if norm > highest_magnitude_poses[l][1]:
+                highest_magnitude_poses[l] = (p, norm)
+    
+    max_pose_magnitudes = [highest_magnitude_poses[l][1] for l in scores.ligands]
+    plt.plot(max_pose_magnitudes, marker='.', markersize=10, color='red', label='max norm')
+    plt.plot(top_pose_magnitudes, marker='.', markersize=10, color='blue',label='top norm')
+    
+    plt.legend()
+    ax.set_xticklabels(scores.ligands, minor=False, rotation='vertical')
+    ax.set_xticks(np.arange(0,len(scores.ligands),1))
+
+    ax.set_title(title)
+    ax.set_xlabel('Ligands')
+    ax.set_ylabel('Magnitude')
+
+    plt.show()
+
+    max_norm_rmsds = [scores.get_rmsds(l)[highest_magnitude_poses[l][0]] for l in scores.ligands]
+    plot_final_rmsds(scores, title=title, max_norm_rmsds=max_norm_rmsds)
+        
+
+def plot_final_rmsds(scores, title='', scores2=None, lab2='', max_norm_rmsds=None):#, show_glide=False):
     fig, ax = plt.subplots()
 
     top_pose_rmsds = [scores.get_rmsds(l)[np.argmax(scores.get_final_scores(l)[:-1])] for l in scores.ligands]
     min_rmsds = [np.min(scores.get_rmsds(l)[:-1]) for l in scores.ligands]
     plt.plot(min_rmsds, marker='d', markersize=10, color="black", label='best: '+str(np.mean(min_rmsds))[:4])
+
+    if max_norm_rmsds is not None:
+        plt.plot(max_norm_rmsds, marker='.', markersize=10, color='magenta', label='max norm: '+str(np.mean(max_norm_rmsds))[:4])
 
     if True:#show_glide:
         glide_rmsds = [scores.get_rmsds(l)[np.argmin(scores.get_gscores(l))] for l in scores.ligands]

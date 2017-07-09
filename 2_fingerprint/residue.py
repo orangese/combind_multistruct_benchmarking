@@ -1,11 +1,5 @@
 from pdb import PDB
-from aromatic import Aromatic, Pi, PiCation
-from non_aro_interactions import HBond, Contact
-import math_functions as func
-from point_atom import Point
-import math
-from schrodinger.structutils.minimize import Minimizer
-from schrodinger.structure import Structure
+from interactions import HBond, LJ, SaltBridge, valid_donor, valid_acceptor, valid_sb
 
 class Residue(PDB):
     """ A Residue is one of the standard AAs
@@ -18,12 +12,10 @@ class Residue(PDB):
         self.atoms = []
         self.aromatics = []
 
-	self.h_donor = 0
-	self.h_acceptor = 0
-	self.electrostatics = 0
-	self.lj = 0
+        self.score_thresh = 0.05
 
-        self.to_print = []
+        self.all_interactions = []
+        self.fp = [0,0,0,0]
 
     def copy_of(self):
         """
@@ -35,23 +27,6 @@ class Residue(PDB):
         new.assign()
         return new
 
-    def add_electrostatic_potential(self, score):
-        self.electrostatics += score
-
-    # not sure what to do about the repulsive part -- 0 for now
-    def add_lj_potential(self, score):
-        if score < 0: self.lj += score
-
-    def debug_h(self, lig_a, res_a, h_a, is_donor, score):
-        if score > 0.3:
-	    self.to_print.append((lig_a.atom_id, res_a.atom_id, h_a.atom_id, is_donor, score))
-
-    def add_h_bond(self, score, is_donor):
-        if is_donor:
-            self.h_donor += score
-        else:
-            self.h_acceptor += score
-
     def add_atom(self, atom):
         if self.num != -1: assert self.num == atom.residue_id
         self.num = atom.residue_id
@@ -60,21 +35,42 @@ class Residue(PDB):
     def all_atoms(self):
         return [atom for atom in self.atoms]
 
-    def interacting_atoms(self):
-        return set([atom for interaction in self.interactions.values() for x in interaction for atom in x.atoms()])
-    
-    ## hbonds get scaled x10
-    ## potentials get capped to +- 10
-    def fingerprint(self):#, combinedStruct):
-        return [
-                   10*self.h_donor, 
-                   10*self.h_acceptor, 
-                   min(max(self.electrostatics, -10), 10), 
-                   min(max(self.lj, -10), 10)
-               ] # + self.to_print
+    def fingerprint(self, ligand):
+        if sum(self.fp) != 0: return self.fp
+        
+        hbonds = {} # maps h id to hbond (one h bond per h)
+        sbs = []
+        lj = LJ()
 
-    def debug_fp(self):
-        return self.debug_h
+        for res_atom in self.atoms:
+            for lig_atom in ligand.all_atoms():
+
+                hb_options = []
+                if valid_donor(res_atom) and valid_acceptor(lig_atom):
+                    hb_options.extend([HBond(res_atom, lig_atom, n, True) for n in res_atom.connected_atoms if n.element == 'H'])
+                if valid_donor(lig_atom) and valid_acceptor(res_atom):
+                    hb_options.extend([HBond(lig_atom, res_atom, n, False) for n in lig_atom.connected_atoms if n.element == 'H'])
+
+                for hb in hb_options:
+                    if hb.h.atom_id not in hbonds or hbonds[hb.h.atom_id].score() < hb.score():
+                            hbonds[hb.h.atom_id] = hb
+                
+                if valid_sb(res_atom, lig_atom):
+                    sbs.append(SaltBridge(res_atom, lig_atom))
+
+                lj.add_score(res_atom, lig_atom)
+
+        hbonds = [hbonds[h] for h in hbonds.keys() if hbonds[h].score() >= self.score_thresh]
+        sbs = [i for i in sbs if i.score() >= self.score_thresh]
+
+        self.fp[0] = sum([hb.score() for hb in hbonds if hb.resIsHDonor])
+        self.fp[1] = sum([hb.score() for hb in hbonds if not hb.resIsHDonor])
+        self.fp[2] = sum([sb.score() for sb in sbs])
+        self.fp[3] = lj.score() if abs(lj.score()) >= self.score_thresh else 0
+
+        self.all_interactions = hbonds + sbs
+        
+        return self.fp
 
     def assign(self):
         self._assign_bonds()

@@ -1,57 +1,68 @@
 #!/share/PI/rondror/software/schrodinger2017-1/run
-# Change this to /share/PI/rondror/software/schrodinger2016-1/run? Testing new stuff out
-from interactions import Interactions
+#from interactions import Interactions
 import os
 from schrodinger import structure # Make sure you are using schrodinger python distribution!
 from schrodinger.structutils.minimize import minimize_structure
-from schrodinger.structutils.analyze import AslLigandSearcher
 from receptor import Receptor
+from point_atom import Atom
 from ligand import Ligand
-import numpy as np
-from tqdm import tqdm
-from multiprocessing import Pool
-#text_file = '/scratch/PI/rondror/docking_data/AR/ifp_output.out'
+
 class FuzzyIFP:
     def __init__(self, args):
         self.params = {
-            'electrostatic_dist_cutoff': 4.0,
-            'hydrophobic_dist_cutoff': 4.5,
-            'hydrogen_bond_dist_cutoff': 4.0,
-            'hydrogen_bond_angle_cutoff': 90.0,
-            'pi_padding_dist': 0.75,
-            'pi_pi_interacting_dist_cutoff': 7.5,
-            'pi_stacking_angle_tolerance':30.0,
-            'T_stacking_angle_tolerance': 30.0,
-            'T_stacking_closest_dist_cutoff': 5.0,
-            'cation_pi_dist_cutoff': 6.0,
+            'active_site_cutoff': '5', # angstroms
             'input': '',
             'receptor': '',
             'ligand': '',
-            'output_file': ''}
+            'output_file': '',
+            'verbose':''}
         self.set_user_params(args)
+        
         self.struct = structure.StructureReader(self.params['receptor'])
         self.receptor = Receptor()
         st = self.struct.next()
         minimize_structure(st, max_steps = 0) #Assigns partial charges
-        #target=open(text_file,'a')
-        #target.write(' '.join([str(i) for i in args]))
-        #target.close()
         self.receptor.load_mae(st)
+
+        target = open(self.params['verbose'],'a')
+        target.write('\nFingerprinting: ' + self.params['receptor'] + '\n')
+        target.close()
 
         if self.params['input'] == 'pose_viewer':
             self.fp = self.fingerprint_pose_viewer()
-        elif self.params['input'] == 'complex':
-            self.fp = [self.fingerprint_complex()]
         else:
             self.fp = [self.fingerprint_pair()]
         
-    def get_fingerprint(self, values):
-        index, mergedReceptor, lig = values
-        return (index, Interactions(mergedReceptor, lig, self.params).get_fp())
-    
+    def get_active_site(self, ligand, receptor):
+        active_site = Receptor()
+        #Only add residues that are within RESIDUE_THRESH of the ligand center coordinate
+        for residue in receptor.residues.values():
+            added = False
+            for ligand_atom in ligand.atoms:
+                for receptor_atom in residue.atoms:
+                    if ligand_atom.coordinates.dist_to(receptor_atom.coordinates) < self.params['active_site_cutoff']:
+                        assert not added
+                        active_site.add_residue(residue.copy_of())
+                        added = True
+                        break
+                if added: break
+         
+        active_site.assign()
+        
+        #Calculate Atom ID -> Res, based on the merged structure
+        active_site.st = receptor.st
+        atomIDToRes = {}
+        for atom in active_site.st.atom:
+            cur_atom = Atom()
+            cur_atom.from_schrod(atom)
+            atomIDToRes[cur_atom.atom_id] = cur_atom.residue_id
+        active_site.atomIDToRes = atomIDToRes
+        active_site.seperate_atoms(receptor, ligand)
+        return active_site
+
     def fingerprint_pose_viewer(self):
         fp = []
-        
+ 
         for pose_num, st in enumerate(self.struct):
             if pose_num > 50: #Only fingerprint poses 0->50, right now this is just a time saving measure
                 continue
@@ -63,26 +74,40 @@ class FuzzyIFP:
             
             lig = Ligand()
             lig.load_mae(st)
-            fp.append(Interactions(mergedReceptor, lig, self.params).get_fp())
+
+            active_site = self.get_active_site(lig, mergedReceptor)
+
+            fp.append(active_site.fingerprint(lig))
+
+            self.verbose_output(active_site, p_num=pose_num)
             
         return fp
-
 
     def fingerprint_pair(self):
         lig = Ligand()
         st = structure.StructureReader(self.params['ligand']).next()
         minimize_structure(st, max_steps = 0)
         lig.load_mae(st) #Assigns partial charges
-        return Interactions(self.receptor, lig, self.params).get_fp()
 
-    def fingerprint_complex(self):
-        lig = Ligand()
-        st = structure.StructureReader(self.params['ligand']).next()
-        minimize_structure(st, max_steps = 0)
-        lig.load_mae(st)
-        #lig = self.receptor.export_ligand(self.params['ligand'])
-        return Interactions(self.receptor, lig, self.params).get_fp()
-                     
+        active_site = self.get_active_site(lig, self.receptor)
+        
+        fp = active_site.fingerprint(lig)
+
+        self.verbose_output(active_site)
+        return fp
+
+    def verbose_output(self, active_site, p_num=None):
+        target = open(self.params['verbose'],'a')
+
+        if p_num is not None: target.write('\nPose Number '+str(p_num) + '\n')
+
+        for res in sorted(active_site.residues.keys()):
+            if len(active_site.residues[res].all_interactions) > 0:
+                target.write('\nResidue ' + str(res) + '\n')
+                for i in active_site.residues[res].all_interactions:
+                    target.write(str(i) + '\n')
+        target.close()
+
     def set_user_params(self, args):
         for index in range(len(args)):
             item = args[index]

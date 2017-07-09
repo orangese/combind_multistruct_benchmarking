@@ -44,7 +44,8 @@ for dataset in datasets:
             f.write("#!/bin/bash\n")
             for folder in folderGroup:
                 if folder != None:
-                    f.write(SCHRODINGER + " " + SCRIPT + " -receptor " + glideDir+"/"+folder+"/"+folder+"_pv.maegz -input pose_viewer > " + ifpDir+"/"+folder+".fp &\n")
+                    verbose_output = ifpDir + '/' + folder + '.out'
+                    f.write(SCHRODINGER + " " + SCRIPT + " -receptor " + glideDir+"/"+folder+"/"+folder+"_pv.maegz -input pose_viewer -verbose " + verbose_output + " > " + ifpDir+"/"+folder+".fp &\n")
 
             f.write("wait\n") #Wait for all forks for finish
 
