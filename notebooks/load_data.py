@@ -13,7 +13,7 @@ from pose import Pose
 from rmsd import RMSD
 
 
-def load_data(data_set_dir, rmsd_file, ligands_dir, grids_dir, glide_dir, crystal_fp_file, docking_fp_dir):
+def load_data(data_set_dir, rmsd_file, ligands_dir, grids_dir, glide_dir, crystal_fp_file, docking_fp_dir, w=[10,10,10,0,1]):
     os.chdir(data_set_dir)
 
     # if not all structures (grids or ligands) are desired, remove them here
@@ -26,13 +26,13 @@ def load_data(data_set_dir, rmsd_file, ligands_dir, grids_dir, glide_dir, crysta
     #all_gridstructs_upper = map(lambda x : x.upper(), gridstructs)
     ligstructs.sort(key=lambda lig: gridstructs.index(lig) if lig in gridstructs else len(gridstructs) + 1)
     
-    crystals = load_crystals(crystal_fp_file, gridstructs)
-    glides = load_glides(gridstructs, docking_fp_dir, glide_dir, rmsd_file)
+    crystals = load_crystals(crystal_fp_file, gridstructs, w=w)
+    glides = load_glides(gridstructs, docking_fp_dir, glide_dir, rmsd_file, w=w)
     
     return (crystals, glides)
 
 
-def load_crystals(crystal_fp_file, grids):
+def load_crystals(crystal_fp_file, grids, w=None):
     print 'Loading crystal structures...'
     crystals = {} # PDB id : Pose
     
@@ -46,7 +46,7 @@ def load_crystals(crystal_fp_file, grids):
 
         struct, ifp = line.strip().split(';')
 
-        fp = FuzzyFingerPrint.compact_parser(ifp, struct.upper())
+        fp = FuzzyFingerPrint.compact_parser(ifp, struct.upper(), w=w)
         crystals[struct.upper()] = Pose(0.0, fp, 0, 0)
 
     #Check to see if we are missing any crystal fingerprints
@@ -116,7 +116,7 @@ def load_rmsds(rmsd_file):
     return rmsds
 
 
-def load_glides(gridstructs, docking_fp_dir, glide_dir, rmsd_file):
+def load_glides(gridstructs, docking_fp_dir, glide_dir, rmsd_file, w=None):
     print 'Loading docking results...'
     gscores = load_gscores(gridstructs, glide_dir)
     rmsds = load_rmsds(rmsd_file)
@@ -165,15 +165,15 @@ def load_glides(gridstructs, docking_fp_dir, glide_dir, rmsd_file):
                 #if pose_num < 50: #ONLY IMPORT 50 POSES, REMOVE LATER
                 try:
                     glides[ligand][grid].add_pose(Pose(rmsds[grid][ligand].get_rmsd(pose_num),
-                                                       FuzzyFingerPrint.compact_parser(ifp, ligand), pose_num,
+                                                       FuzzyFingerPrint.compact_parser(ifp, ligand,w=w), pose_num,
                                                        gscores[ligand][grid][pose_num]), pose_num)
                 
                 except Exception as e:
-                    print 'key error -- check capitalization of grids, ligands', e
-                    print rmsds.keys()
-                    print gscores.keys()
-                    print rmsds[grid].keys()
-                    print gscores[ligand].keys()
+                    print e
+                    #print rmsds.keys()
+                    #print gscores.keys()
+                    #print rmsds[grid].keys()
+                    #print gscores[ligand].keys()
                     break
     if missing_ifp == 0: print 'All ligands successfully fingerprinted. Nice!'
     else: print str(missing_ifp) + ' of ' + str(total_ifp) + ' ligands failed to fingerprint.'

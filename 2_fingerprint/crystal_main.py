@@ -15,7 +15,6 @@ output_dir = sys.argv[2]
 
 for d in datasets:
     print d
-    if d == 'B2AR_new': continue
 
     os.chdir(DATA + d)
 
