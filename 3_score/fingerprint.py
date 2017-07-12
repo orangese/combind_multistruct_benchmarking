@@ -6,7 +6,7 @@ class FuzzyFingerPrint:
         self.feats = feats
     
     @classmethod
-    def compact_parser(cls, line, pdb=None, w=[10,10,10,1]):
+    def compact_parser(cls, line, pdb=None, w=[10,10,10,0,1]):
         feats = {i[0] : map(float, i[1:]) for i in map(lambda x: x.split(','), line.split(':'))}
 
         w = np.array(w)

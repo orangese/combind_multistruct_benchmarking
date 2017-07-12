@@ -85,17 +85,31 @@ class LJ: # Lennard Jones potential
             'H':(81.920, 2.560000)
         }
         self.total_score = 0
+        self.total_other_score = 0
 
     # add_score is called on all pairs of atoms (see residue.py)
     def add_score(self, atom1, atom2):
-        (C12_1, C6_1) = self.params.get(atom1.element,(0,0))
-        (C12_2, C6_2) = self.params.get(atom2.element,(0,0))
+        (C12_1, C6_1) = self.params.get(atom1.element,self.params['C'])
+        (C12_2, C6_2) = self.params.get(atom2.element,self.params['C'])
+        (C12, C6) = ((C12_1*C12_2)**0.5, (C6_1*C6_2)**0.5)
+
         r = atom1.dist_to(atom2)
+        
         # count only favorable (negative, vdW) interactions 
-        self.total_score += min(0, (C12_1*C12_2)**0.5/r**12 - (C6_1*C6_2)**0.5/r**6)
+        self.total_score += min(0, C12/r**12 - C6/r**6)
+
+        r_m = (2*C12/C6)**(0.16666667)
+        eps = -(C6**2)/(4*C12)
+        if r <= r_m:
+            self.total_other_score += eps
+        else:
+            self.total_other_score += C12/r**12 - C6/r**6
 
     def score(self): 
         return self.total_score
+
+    def other_score(self):
+        return self.total_other_score
 
     def __str__(self):
         return '\nLJ potential: ' + str(self.score())

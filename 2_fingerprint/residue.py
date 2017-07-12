@@ -15,7 +15,7 @@ class Residue(PDB):
         self.score_thresh = 0.05
 
         self.all_interactions = []
-        self.fp = [0,0,0,0]
+        self.fp = [0,0,0,0,0]
 
     def copy_of(self):
         """
@@ -67,6 +67,7 @@ class Residue(PDB):
         self.fp[1] = sum([hb.score() for hb in hbonds if not hb.resIsHDonor])
         self.fp[2] = sum([sb.score() for sb in sbs])
         self.fp[3] = lj.score() if abs(lj.score()) >= self.score_thresh else 0
+        self.fp[4] = lj.other_score() if abs(lj.other_score()) >= self.score_thresh else 0
 
         self.all_interactions = hbonds + sbs
         
