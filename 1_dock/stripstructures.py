@@ -19,12 +19,15 @@ def strip():
     for f in dirFiles:
         struct = StructureReader("./" + f).next()
 
-        #Delete all atoms that do not belong to chain A, removes multiple copies of the protein-ligand complex
-        nonAAtoms = [] 
-        for atom in struct.atom:
-            if atom._getAtomChain() != "A":
-                nonAAtoms.append(atom.__int__())
-        struct.deleteAtoms(nonAAtoms)
+        #If there are multiple chains in our PDB File, delete all non-A chains
+        chainNames = set([chain._getChainName() for chain in struct.chain])
+        if len(chainNames) > 1 and "A" in chainNames:
+            nonAAtoms = [] 
+            for atom in struct.atom:
+                if atom._getAtomChain() != "A":
+                    nonAAtoms.append(atom.__int__())
+            struct.deleteAtoms(nonAAtoms)
+
         structs.append(struct)
 
     print("--Removing waters from structs...")
