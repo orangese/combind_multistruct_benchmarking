@@ -22,7 +22,7 @@ def name(ligand, grid):
     return "{}-to-{}".format(ligand, grid)
 
 def glides(name):
-    return "glide/{}/{}_pv.maegz".format(name, name)
+    return "xglide/{}/{}_pv.maegz".format(name, name)
 
 rmsds = {}
 
