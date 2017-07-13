@@ -7,8 +7,6 @@ SCHRODINGER = '/share/PI/rondror/software/schrodinger2017-1'
 DATA_DIR = '/scratch/PI/rondror/docking_data'
 LIGANDS_DIR = 'ligands'
 GRIDS_DIR = 'grids'
-GLIDE_DIR = 'glide'
-XGLIDE_DIR = 'xglide'
 
 XGLIDE_IN = '''GRIDFILE   {}_grid.zip
 LIGANDFILE  {}_ligand.mae
@@ -70,6 +68,10 @@ def dockHelper(ligGrid):
 
 def dockDataset(dataset, xDock=True):
     print("Docking {}...".format(dataset))
+    if xDock:
+        GLIDE_DIR = 'xglide'
+    else:
+        GLIDE_DIR = 'glide'
 
     gridsDir = "{}/{}/{}".format(DATA_DIR, dataset, GRIDS_DIR)
 
@@ -94,3 +96,4 @@ def dockDataset(dataset, xDock=True):
             #Check to make sure that glide worked successfully
             if not glideExists(dataset, finishedLigand, finishedGrid):
                 toDock.append((finishedLigand, finishedGrid, xDock))
+                print("{} to {} failed! Resubmitting to the queue...".format(finishedLigand, finishedGrid))
