@@ -36,6 +36,15 @@ def glideExists(dataset, ligand, grid):
     return os.path.exists("{}/{}/{}/{}_ligand-to-{}/{}_ligand-to-{}_pv.maegz".format(
         DATA_DIR, dataset, GLIDE_DIR, ligand, grid, ligand, grid))
 
+def glideFailed(dataset, ligand, grid):
+    ligToGrid = "{}_ligand-to-{}".format(ligand, grid)
+    ligGridDockDir = "{}/{}/{}/{}".format(DATA_DIR, dataset, GLIDE_DIR, ligToGrid)
+    logFile = "{}/{}.log".format(ligGridDockDir, ligToGrid)
+
+    if os.path.exists(logFile):
+        if "NO POSES STORED FOR LIGAND" in open(logFile).read():
+            return True
+
 def dock(dataset, ligand, grid, xDock = True): #xDock = Extra Effort Docking
     logging.info("Docking {} to {}...".format(ligand, grid))
     #Setup the necessary files for docking, remove old ones if needed
@@ -95,13 +104,8 @@ def dockDataset(dataset, xDock=True):
 
     for ligand in structures:
         for grid in structures:
-            ligToGrid = "{}_ligand-to-{}".format(ligand, grid)
-            ligGridDockDir = "{}/{}/{}/{}".format(DATA_DIR, dataset, GLIDE_DIR, ligToGrid)
-            logFile = "{}/{}.log".format(ligGridDockDir, ligToGrid)
-           
-            if os.path.exists(logFile):
-                if "NO POSES STORED FOR LIGAND" in open(logFile).read():
-                    dockFailures.append((ligand, grid))
+            if glideFailed(dataset, ligand, grid):
+                dockFailures.append((ligand, grid))
 
     print("Of {} missing ligand-grid pairs, {} were failures (listed below). Not submitting these...".format(str(len(toDock)), str(len(dockFailures))))
     print(dockFailures)
@@ -115,8 +119,5 @@ def dockDataset(dataset, xDock=True):
 
         for finishedLigand, finishedGrid in pool.imap_unordered(dockHelper, currentlyDocking):
             #Check to make sure that glide worked successfully
-            if not glideExists(dataset, finishedLigand, finishedGrid):
+            if not glideExists(dataset, finishedLigand, finishedGrid) and not glideFailed(dataset, finishedLigand, finishedGrid):
                 toDock.append((dataset, finishedLigand, finishedGrid, xDock))
-                logging.info("{} to {} failed! Resubmitting to the queue...".format(finishedLigand, finishedGrid))
-            else:
-                logging.info("{} to {} succeeded!".format(finishedLigand, finishedGrid))
