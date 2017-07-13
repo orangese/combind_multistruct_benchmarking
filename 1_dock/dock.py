@@ -2,10 +2,12 @@
 import os
 import slurm
 from multiprocessing import Pool
+import logging
 
 SCHRODINGER = '/share/PI/rondror/software/schrodinger2017-1'
 DATA_DIR = '/scratch/PI/rondror/docking_data'
 LIGANDS_DIR = 'ligands'
+GLIDE_DIR = '' #To be determined by xDock
 GRIDS_DIR = 'grids'
 
 XGLIDE_IN = '''GRIDFILE   {}_grid.zip
@@ -35,6 +37,7 @@ def glideExists(dataset, ligand, grid):
         DATA_DIR, dataset, GLIDE_DIR, ligand, grid, ligand, grid))
 
 def dock(dataset, ligand, grid, xDock = True): #xDock = Extra Effort Docking
+    logging.info("Docking {} to {}...".format(ligand, grid))
     #Setup the necessary files for docking, remove old ones if needed
     ligToGrid = "{}_ligand-to-{}".format(ligand, grid)
     ligGridDockDir = "{}/{}/{}/{}".format(DATA_DIR, dataset, GLIDE_DIR, ligToGrid)
@@ -67,7 +70,9 @@ def dockHelper(ligGrid):
     return dock(*ligGrid)
 
 def dockDataset(dataset, xDock=True):
-    print("Docking {}...".format(dataset))
+    logging.basicConfig(filename='docking.log', level=logging.DEBUG)
+
+    global GLIDE_DIR
     if xDock:
         GLIDE_DIR = 'xglide'
     else:
@@ -84,16 +89,34 @@ def dockDataset(dataset, xDock=True):
             if not glideExists(dataset, ligand, grid):
                 toDock.append((dataset, ligand, grid, xDock))
 
-    print("{} ligand-grid pairs are missing! Submitting docking...".format(str(len(toDock))))
+    print("{} ligand-grid pairs are missing! Checking for failures...".format(str(len(toDock))))
+    
+    dockFailures = [] #List of structures that failed because docking couldn't find a good pose
 
-    pool = Pool(8) #We have about 8 glide licenses
+    for ligand in structures:
+        for grid in structures:
+            ligToGrid = "{}_ligand-to-{}".format(ligand, grid)
+            ligGridDockDir = "{}/{}/{}/{}".format(DATA_DIR, dataset, GLIDE_DIR, ligToGrid)
+            logFile = "{}/{}.log".format(ligGridDockDir, ligToGrid)
+           
+            if os.path.exists(logFile):
+                if "NO POSES STORED FOR LIGAND" in open(logFile).read():
+                    dockFailures.append((ligand, grid))
 
-    while len(toDock) !=0:
+    print("Of {} missing ligand-grid pairs, {} were failures (listed below). Not submitting these...".format(str(len(toDock)), str(len(dockFailures))))
+    print(dockFailures)
+    toDock = [x for x in toDock if x not in dockFailures]
+
+    pool = Pool(2) #We have about 8 glide licenses, each asks for 4
+
+    while len(toDock) != 0:
         currentlyDocking = toDock
         toDock = []
 
         for finishedLigand, finishedGrid in pool.imap_unordered(dockHelper, currentlyDocking):
             #Check to make sure that glide worked successfully
             if not glideExists(dataset, finishedLigand, finishedGrid):
-                toDock.append((finishedLigand, finishedGrid, xDock))
-                print("{} to {} failed! Resubmitting to the queue...".format(finishedLigand, finishedGrid))
+                toDock.append((dataset, finishedLigand, finishedGrid, xDock))
+                logging.info("{} to {} failed! Resubmitting to the queue...".format(finishedLigand, finishedGrid))
+            else:
+                logging.info("{} to {} succeeded!".format(finishedLigand, finishedGrid))
