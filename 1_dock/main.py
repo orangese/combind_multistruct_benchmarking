@@ -15,6 +15,7 @@ HERE = os.getcwd() + '/'
 
 DATA = "/scratch/PI/rondror/docking_data"
 DOCKING_SCRIPT = HERE + "dock_ligand_dir_to_grid_dir.sh" 
+XDOCKING_SCRIPT = HERE + "xdock_ligand_dir_to_grid_dir.sh"
 RMSD_SCRIPT= HERE + 'compute_rmsds.py'
 
 os.chdir(DATA)
@@ -105,7 +106,7 @@ for struct in structures:#Go through the given structures, performing the comman
 
         os.chdir("..")
 
-    if("d" in toRun):#Submit the docking run
+    if("d" in toRun):#Submit the docking run, regular settings
         os.system('mkdir -p glide')
         glidesExist = map(lambda x: os.path.exists(os.getcwd()+'/glide/'+x+'/'+x+'_pv.maegz'), os.listdir('glide'))
 
@@ -115,7 +116,22 @@ for struct in structures:#Go through the given structures, performing the comman
             if glidesExist.count(False) > 0: 
                 print 'Missing ' + str(glidesExist.count(False)) + ' of ' + str(len(glidesExist)) + ' docking results.'
             print 'Submitting docking jobs...'
-            os.system(DOCKING_SCRIPT + " " + os.getcwd()+"/grids " + os.getcwd() +"/ligands " + os.getcwd() + "/glide/")
+
+            os.system(XDOCKING_SCRIPT + " " + os.getcwd()+"/grids " + os.getcwd() +"/ligands " + os.getcwd() + "/xglide/")
+
+    if("x" in toRun):#Submit the docking run, extra sampling settings
+        os.system('mkdir -p xglide')
+        glidesExist = map(lambda x: os.path.exists(os.getcwd()+'/xglide/'+x+'/'+x+'_pv.maegz'), os.listdir('xglide'))
+
+        if len(os.listdir('xglide')) > 0 and glidesExist.count(False) == 0:
+            print 'Docking results already exist.'
+        else:
+            if glidesExist.count(False) > 0: 
+                print 'Missing ' + str(glidesExist.count(False)) + ' of ' + str(len(glidesExist)) + ' docking results.'
+            print 'Submitting docking jobs...'
+
+            os.system(XDOCKING_SCRIPT + " " + os.getcwd()+"/grids " + os.getcwd() +"/ligands " + os.getcwd() + "/xglide/")
+
 
     if('m' in toRun):
         os.chdir(HERE)

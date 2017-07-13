@@ -1,0 +1,12 @@
+NAME=$1
+echo GRIDFILE   $NAME'_grid.zip'
+echo LIGANDFILE  $NAME'_ligand.mae'
+echo EXPANDED_SAMPLING   True
+echo NENHANCED_SAMPLING   4
+echo POSES_PER_LIG   300
+echo POSTDOCK_NPOSE   300
+echo NMAXRMSSYM   300
+echo MAXKEEP   100000
+echo MAXREF   1000
+echo PRECISION   SP
+echo WRITEREPT   True
