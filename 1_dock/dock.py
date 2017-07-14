@@ -42,7 +42,7 @@ def glideFailed(dataset, ligand, grid):
     logFile = "{}/{}.log".format(ligGridDockDir, ligToGrid)
 
     if os.path.exists(logFile):
-        if "NO POSES STORED FOR LIGAND" in open(logFile).read():
+        if "Total elapsed time" in open(logFile).read(): #If we got to the end of Glide, something messed up
             return True
 
 def dock(dataset, ligand, grid, xDock = True): #xDock = Extra Effort Docking
@@ -102,16 +102,18 @@ def dockDataset(dataset, xDock=True):
     
     dockFailures = [] #List of structures that failed because docking couldn't find a good pose
 
-    for ligand in structures:
-        for grid in structures:
-            if glideFailed(dataset, ligand, grid):
-                dockFailures.append((ligand, grid))
+    for dataset, ligand, grid, xDock in toDock:
+        if glideFailed(dataset, ligand, grid):
+            dockFailures.append((dataset, ligand, grid, xDock))
 
     print("Of {} missing ligand-grid pairs, {} were failures (listed below). Not submitting these...".format(str(len(toDock)), str(len(dockFailures))))
-    print(dockFailures)
-    toDock = [x for x in toDock if x not in dockFailures]
+    print([(x[1], x[2]) for x in dockFailures])
 
-    pool = Pool(2) #We have about 8 glide licenses, each asks for 4
+    toDock = [x for x in toDock if x not in dockFailures]
+    print("Submitting:")
+    print([(x[1], x[2]) for x in toDock])
+
+    pool = Pool(5) #We have 5 Glide licenses
 
     while len(toDock) != 0:
         currentlyDocking = toDock
