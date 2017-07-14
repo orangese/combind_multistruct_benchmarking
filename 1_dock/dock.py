@@ -95,7 +95,6 @@ def glideFailed(dataset, ligand, grid):
             return True
 
 def dock(dataset, ligand, grid, xDock = True, inducedFit = False): #xDock = Extra Effort Docking, inducedFit = Induced Fit Docking; Must be either both False or One True; Otherwise default
-    print((xDock, inducedFit))
     #Make sure that ONLY ONE docking method has been chosen; Defaults to regular docking
     assert ((not xDock and not inducedFit) or (xDock != inducedFit))
 
@@ -177,8 +176,6 @@ def dockDataset(dataset, xDock=True):
     gridsDir = "{}/{}/{}".format(DATA_DIR, dataset, GRIDS_DIR)
 
     structures = [o for o in os.listdir(gridsDir) if os.path.isdir(os.path.join(gridsDir,o))]
-
-    dock("AR", "3B5R", "1XOW", False, True)
 
     toDock = [] #List of (ligand, grid) tuples that need to be submitted for docking
 
