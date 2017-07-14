@@ -50,7 +50,7 @@ def runGlides(inFiles):
         currentlyProcessing = inFiles
         inFiles = []
 
-        for finishedStruct in pool.imap(runGlidesHelper, currentlyProcessing):
+        for finishedStruct in pool.imap_unordered(runGlidesHelper, currentlyProcessing):
             if not processSuccess(finishedStruct):
                 inFiles.append(finishedStruct)
                 print("{} did not gridgen successfully - resubmitting".format(finishedStruct))

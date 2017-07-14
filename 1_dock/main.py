@@ -9,12 +9,14 @@ import stripstructures
 import ligprep #method extract is thread safe
 import gridgen #method runGlide is thread safe
 import processing #method process is thread safe
+import dock
 
 SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1"
 HERE = os.getcwd() + '/'
 
 DATA = "/scratch/PI/rondror/docking_data"
 DOCKING_SCRIPT = HERE + "dock_ligand_dir_to_grid_dir.sh" 
+XDOCKING_SCRIPT = HERE + "xdock_ligand_dir_to_grid_dir.sh"
 RMSD_SCRIPT= HERE + 'compute_rmsds.py'
 
 os.chdir(DATA)
@@ -105,17 +107,13 @@ for struct in structures:#Go through the given structures, performing the comman
 
         os.chdir("..")
 
-    if("d" in toRun):#Submit the docking run
+    if("d" in toRun):#Submit the docking run, regular settings
         os.system('mkdir -p glide')
-        glidesExist = map(lambda x: os.path.exists(os.getcwd()+'/glide/'+x+'/'+x+'_pv.maegz'), os.listdir('glide'))
+        dock.dockDataset(struct, xDock=False)
 
-        if len(os.listdir('glide')) > 0 and glidesExist.count(False) == 0:
-            print 'Docking results already exist.'
-        else:
-            if glidesExist.count(False) > 0: 
-                print 'Missing ' + str(glidesExist.count(False)) + ' of ' + str(len(glidesExist)) + ' docking results.'
-            print 'Submitting docking jobs...'
-            os.system(DOCKING_SCRIPT + " " + os.getcwd()+"/grids " + os.getcwd() +"/ligands " + os.getcwd() + "/glide/")
+    if("x" in toRun):#Submit the docking run, extra sampling settings
+        os.system('mkdir -p xglide')
+        dock.dockDataset(struct, xDock=True)
 
     if('m' in toRun):
         os.chdir(HERE)
