@@ -104,6 +104,7 @@ def dock(dataset, ligand, grid, xDock = True, inducedFit = False): #xDock = Extr
 
     if os.path.exists(ligGridDockDir):
         os.system("rm -rf {}".format(ligGridDockDir))
+
     os.system("mkdir {}".format(ligGridDockDir))
 
     gridFile = "{}/{}/{}/{}/{}.zip".format(DATA_DIR, dataset,  GRIDS_DIR, grid, grid)
@@ -219,9 +220,11 @@ def dockDataset(dataset, xDock=True):
         for grid in structures:
             if not glideExists(dataset, ligand, grid) and glideFailed(dataset, ligand, grid):
                 dockFailures.append((dataset, ligand, grid, False, True)) #xDock = False, inducedFit = True
-    
+
     print("Submitting the failed docking runs as induced fit docking jobs...")
     print(dockFailures)
-
+    
+    pool = Pool(5)
     #Here, we don't want to attempt a resubmission, maybe include this later? Implementing a first pass
-    pool.imap_unordered(dockHelper, dockFailures) 
+    for finishedLigand, finishedGrid in pool.imap_unordered(dockHelper, dockFailures):
+        print("Finished {} to {}!".format(finishedLigand, finishedGrid))
