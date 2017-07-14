@@ -95,6 +95,7 @@ def glideFailed(dataset, ligand, grid):
             return True
 
 def dock(dataset, ligand, grid, xDock = True, inducedFit = False): #xDock = Extra Effort Docking, inducedFit = Induced Fit Docking; Must be either both False or One True; Otherwise default
+    print((xDock, inducedFit))
     #Make sure that ONLY ONE docking method has been chosen; Defaults to regular docking
     assert ((not xDock and not inducedFit) or (xDock != inducedFit))
 
@@ -157,7 +158,7 @@ def dock(dataset, ligand, grid, xDock = True, inducedFit = False): #xDock = Extr
         slurm.salloc("{}/glide {}/{}.in -WAIT".format(SCHRODINGER, ligGridDockDir, ligToGrid), 
             1, "10:00:00") #jobString, numProcessors, timeLimit
     else:
-        slurm.salloc("{}/ifd -NGLIDECPU 1 -NPRIMECPU 1 {}/{}.inp -SUBHOST localhost".format(SCHRODINGER, ligGridDockDir, ligToGrid),
+        slurm.salloc("{}/ifd -NGLIDECPU 1 -NPRIMECPU 1 {}/{}.inp -SUBHOST localhost -WAIT".format(SCHRODINGER, ligGridDockDir, ligToGrid),
                 2, "50:00:00") #jobstring, numProcessors, timeLimit
 
     #Return (ligand,grid) so we know the directory to check for success
@@ -176,6 +177,8 @@ def dockDataset(dataset, xDock=True):
     gridsDir = "{}/{}/{}".format(DATA_DIR, dataset, GRIDS_DIR)
 
     structures = [o for o in os.listdir(gridsDir) if os.path.isdir(os.path.join(gridsDir,o))]
+
+    dock("AR", "3B5R", "1XOW", False, True)
 
     toDock = [] #List of (ligand, grid) tuples that need to be submitted for docking
 
