@@ -49,6 +49,19 @@ class PDB:
                     atom1.add_neighbor(atom2)
                     atom2.add_neighbor(atom1)
 
+    def _atom_weight(self, e):
+        if e == 'H': return 1
+        if e == 'C': return 12 
+        if e == 'N': return 14
+        if e == 'O': return 16
+        if e == 'F': return 19
+        if e == 'P': return 31
+        if e == 'S': return 32
+        if e == 'Cl':return 35
+        if e == 'Br':return 80
+        if e == 'I': return 127
+        return 0
+
     def _bond_length(self, element1, element2):
         """
         Bond lengths taken from Handbook of Chemistry and Physics. The information provided there was very specific,

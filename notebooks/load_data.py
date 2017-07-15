@@ -13,6 +13,15 @@ from pose import Pose
 from rmsd import RMSD
 
 
+def load_ligand_info(data_set_dir):
+    os.chdir(data_set_dir)
+    
+    lig_info = {}
+    for line in open(data_set_dir + 'lig_sizes.txt'):
+        a = line.strip().split(',')
+        lig_info[a[0].split('/')[-1][:4]] = [float(i) for i in a[1:]]
+    return lig_info
+
 def load_data(data_set_dir, rmsd_file, ligands_dir, grids_dir, glide_dir, crystal_fp_file, docking_fp_dir, w=[10,10,10,0,1]):
     os.chdir(data_set_dir)
 

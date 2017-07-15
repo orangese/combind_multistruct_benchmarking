@@ -15,7 +15,8 @@ class FuzzyIFP:
             'receptor': '',
             'ligand': '',
             'output_file': '',
-            'verbose':''}
+            'verbose':'',
+            'receptor_name':''}
         self.set_user_params(args)
         
         self.struct = structure.StructureReader(self.params['receptor'])
@@ -94,7 +95,16 @@ class FuzzyIFP:
         fp = active_site.fingerprint(lig)
 
         self.verbose_output(active_site)
+        self.print_size(lig)
         return fp
+
+    def print_size(self, ligand):
+        weight = ligand.molecular_weight()
+        diameter = ligand.diameter()
+
+        target = open('/scratch/PI/rondror/docking_data/'+self.params['receptor_name']+'/lig_sizes.txt', 'a')
+        target.write(self.params['ligand'] + ',' + str(weight) + ',' + str(diameter) + '\n')
+        target.close()
 
     def verbose_output(self, active_site, p_num=None):
         target = open(self.params['verbose'],'a')

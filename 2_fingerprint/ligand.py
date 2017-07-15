@@ -39,3 +39,20 @@ class Ligand(PDB):
             cur_atom.from_schrod(atom)
             self.add_atom(cur_atom)
         self.assign()
+
+    def molecular_weight(self):
+        weight = 0
+        for atom in self.atoms:
+            a_w = self._atom_weight(atom.element)
+            if a_w == 0: # atom type not found
+                return atom.element
+            weight += a_w
+        return weight
+
+    def diameter(self):
+        maximum = 0
+        for i1 in range(len(self.atoms)):
+            for i2 in range(i1+1,len(self.atoms)):
+                maximum = max(maximum, self.atoms[i1].dist_to(self.atoms[i2]))
+        return maximum
+                

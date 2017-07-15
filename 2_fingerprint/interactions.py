@@ -32,6 +32,8 @@ class HBond:
         self.DHA_angle = self.get_DHA_angle() # degrees
         self.HAX_angle = self.get_HAX_angle()
 
+        self.charge_score = 1.2 if self.a.formal_charge < 0 else 1
+
     def get_DHA_angle(self):
         return math.fabs(180 - func.angle_between_three_points(self.d.coordinates, 
                                     self.h.coordinates, self.a.coordinates) * 180 / math.pi)
@@ -39,7 +41,7 @@ class HBond:
     def get_HAX_angle(self):
         x = [atom.coordinates for atom in self.a.connected_atoms]
         a = self.a.coordinates
-        unit_vectors = [func.vector_addition(func.return_normalized_vector(func.vector_subtraction(p, a)), a) for p in x]
+        unit_vectors = [func.return_normalized_vector(func.vector_subtraction(p, a)) for p in x]
         
         if len(unit_vectors) == 3:
             unit_vectors = [
@@ -48,20 +50,33 @@ class HBond:
                 func.return_normalized_vector(func.CrossProduct(unit_vectors[2], unit_vectors[0]))
             ]
 
-            for (i, v) in enumerate(unit_vectors):
-                neg_v = func.vector_subtraction(Point(0,0,0), v)
-                if self.h.coordinates.dist_to(v) < self.h.coordinates.dist_to(neg_v):
-                    unit_vectors[i] = neg_v
+            h_loc = func.vector_subtraction(self.h.coordinates, a)
+            neg_v = func.vector_subtraction(Point(0,0,0), unit_vectors[0])
+            if h_loc.dist_to(unit_vectors[0]) < h_loc.dist_to(neg_v):
+                unit_vectors[0] = neg_v
+            for i in range(1,3):
+                (opt1, opt2) = (unit_vectors[i], func.vector_subtraction(Point(0,0,0), unit_vectors[i]))
+                if unit_vectors[0].dist_to(opt2) < unit_vectors[0].dist_to(opt1):
+                    unit_vectors[i] = opt2
 
-        x_coords = func.vector_average(unit_vectors)
+        x_coords = func.vector_addition(func.vector_average(unit_vectors), a)
 
         return math.fabs(180 - func.angle_between_three_points(self.h.coordinates, a, x_coords)*180/math.pi)
 
+    def angle_score(self, isHAX):
+        if isHAX and self.a.element == 'O':
+            return 1/(1+math.exp((self.HAX_angle-100)/10))
+        elif isHAX:
+            return 1/(1+math.exp((self.HAX_angle-60)/10))
+        return 1/(1+math.exp((self.DHA_angle-60)/10))
+
     def score(self):
         dist_score = 1/(1+math.exp(4*(self.dist-2.6)))
-        DHA_score  = 1/(1+math.exp((self.DHA_angle-60)/10))
-        HAX_score  = 1/(1+math.exp((self.HAX_angle-60)/10))
-        return dist_score*DHA_score*HAX_score
+        return dist_score*self.angle_score(False)*self.angle_score(True)*self.charge_score
+
+    def new_score(self):
+        dist_score = 1/(1+math.exp(4*(self.dist-2.6)))
+        return dist_score*self.angle_score(False)*self.angle_score(True)
 
     def __str__(self):
         d_str = '\n+donor: ' + str(self.d.atom_id) + ' ' + self.d.element
@@ -70,7 +85,8 @@ class HBond:
         dist  = '\n->dist: ' + str(self.dist)
         a1 = '\n->DHA: ' + str(self.DHA_angle)
         a2 = '\n->HAX: ' + str(self.HAX_angle)
-        return '\nHBond score: ' + str(self.score()) + d_str + h_str + a_str + dist + a1 + a2
+        chrg = '\n->charge score: ' + str(self.charge_score)
+        return '\nHBond score: ' + str(self.score()) + d_str + h_str + a_str + dist + a1 + a2 + chrg
 
 class LJ: # Lennard Jones potential
     def __init__(self):
