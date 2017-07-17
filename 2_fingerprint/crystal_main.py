@@ -39,7 +39,7 @@ for d in datasets:
         ligandFile = filter(lambda x: struct.lower() in x.lower(), ligands)[0]
         with open(struct + '.sh', 'w') as f:
             f.write('#!/bin/bash\n')
-            f.write('OUTPUT=$(' + SCHRODINGER + ' ' + FUZZY_SCRIPT + ' -receptor ' + DATA + d + "/processed/" + structFile + ' -ligand ' + DATA + d + "/ligands/" + ligandFile + ' -input pair -verbose ' + verbose_output + ')\n')
+            f.write('OUTPUT=$(' + SCHRODINGER + ' ' + FUZZY_SCRIPT + ' -receptor ' + DATA + d + "/processed/" + structFile + ' -ligand ' + DATA + d + "/ligands/" + ligandFile + ' -input pair -verbose ' + verbose_output + ' -receptor_name ' + d +')\n')
             f.write("echo \"" + struct + ";" + '$OUTPUT\" >> ' + OUTPUT)
         
         os.system("sbatch --time=00:10:00 -n 1 -p rondror " + struct + '.sh')
