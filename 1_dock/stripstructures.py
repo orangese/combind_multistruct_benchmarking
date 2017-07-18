@@ -28,6 +28,9 @@ def strip():
                     nonAAtoms.append(atom.__int__())
             struct.deleteAtoms(nonAAtoms)
 
+        #If the PDB lacks a title, give it the same title as the filename    
+        if struct._getTitle() == "":
+            struct._setTitle(os.path.splitext(f)[0])
         structs.append(struct)
 
     print("--Removing waters from structs...")
