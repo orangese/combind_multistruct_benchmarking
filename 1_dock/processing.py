@@ -13,12 +13,10 @@ def processHelper(fileName):
 
 def processSuccess(structure):
     fileName = structure+".mae"
-    print(fileName)
-    print(os.listdir("."))
     return fileName in os.listdir(".") #We're currently in processed
 
 def process():   
-    toProcess = [f[:4] for f in os.listdir("stripped") if not os.path.isfile('processed/'+f)]
+    toProcess = [os.path.splitext(f)[0] for f in os.listdir("stripped") if not os.path.isfile('processed/'+f)]
 
     os.system('mkdir -p processed')
     os.chdir('processed')
@@ -30,7 +28,7 @@ def process():
         currentlyProcessing = toProcess
         toProcess = []
 
-        for finishedStruct in pool.imap(processHelper, currentlyProcessing):
+        for finishedStruct in pool.imap_unordered(processHelper, currentlyProcessing):
             if not processSuccess(finishedStruct):
                 toProcess.append(finishedStruct)
                 print("{} did not process successfully - resubmitting".format(finishedStruct))

@@ -83,7 +83,8 @@ WRITEREPT   True
 
 def glideExists(dataset, ligand, grid):
     return os.path.exists("{}/{}/{}/{}_ligand-to-{}/{}_ligand-to-{}_pv.maegz".format(
-        DATA_DIR, dataset, GLIDE_DIR, ligand, grid, ligand, grid))
+        DATA_DIR, dataset, GLIDE_DIR, ligand, grid, ligand, grid)) or os.path.exists("{}/{}/{}/{}_ligand-to-{}/{}_ligand-to-{}-out.maegz".format(
+                    DATA_DIR, dataset, GLIDE_DIR, ligand, grid, ligand, grid))
 
 def glideFailed(dataset, ligand, grid):
     ligToGrid = "{}_ligand-to-{}".format(ligand, grid)
@@ -158,8 +159,10 @@ def dock(dataset, ligand, grid, xDock = True, inducedFit = False): #xDock = Extr
         slurm.salloc("{}/glide {}/{}.in -WAIT".format(SCHRODINGER, ligGridDockDir, ligToGrid), 
             1, "10:00:00") #jobString, numProcessors, timeLimit
     else:
-        slurm.salloc("{}/ifd -NGLIDECPU 1 -NPRIMECPU 1 {}/{}.inp -SUBHOST localhost -WAIT".format(SCHRODINGER, ligGridDockDir, ligToGrid),
-                2, "50:00:00") #jobstring, numProcessors, timeLimit
+        slurm.salloc("{}/ifd -NGLIDECPU 10 -NPRIMECPU 10 {}/{}.inp -SUBHOST localhost -WAIT -RETRIES 99999".format(SCHRODINGER, ligGridDockDir, ligToGrid),
+                10, "50:00:00") #jobstring, numProcessors, timeLimit
+        os.chdir(ligGridDockDir)
+        os.system("mv {}-out.maegz {}_pv.maegz".format(ligToGrid, ligToGrid)) #Rename so that our rmsd script can find it
 
     #Return (ligand,grid) so we know the directory to check for success
     return (ligand, grid)
@@ -175,12 +178,15 @@ def dockDataset(dataset, xDock=True):
         GLIDE_DIR = 'glide'
 
     gridsDir = "{}/{}/{}".format(DATA_DIR, dataset, GRIDS_DIR)
+    ligandsDir = "{}/{}/{}".format(DATA_DIR, dataset, LIGANDS_DIR)
 
+    #Contain the structure name (without _ligand or extensions)
     structures = [o for o in os.listdir(gridsDir) if os.path.isdir(os.path.join(gridsDir,o))]
+    ligands = [os.path.splitext(o)[0].replace("_ligand","") for o in os.listdir(ligandsDir) if os.path.isfile(os.path.join(ligandsDir,o))]
 
     toDock = [] #List of (ligand, grid) tuples that need to be submitted for docking
 
-    for ligand in structures:
+    for ligand in ligands:
         for grid in structures:
             if not glideExists(dataset, ligand, grid):
                 toDock.append((dataset, ligand, grid, xDock))
@@ -200,7 +206,7 @@ def dockDataset(dataset, xDock=True):
     print("Submitting:")
     print([(x[1], x[2]) for x in toDock])
 
-    pool = Pool(5) #We have 5 Glide licenses
+    pool = Pool(6) #We have 6 Glide SP Docking licenses
 
     while len(toDock) != 0:
         currentlyDocking = toDock
@@ -216,7 +222,7 @@ def dockDataset(dataset, xDock=True):
     #First, recalculate the failed jobs, more failures could have occured from our submissions
     dockFailures = []
 
-    for ligand in structures:
+    for ligand in ligands:
         for grid in structures:
             if not glideExists(dataset, ligand, grid) and glideFailed(dataset, ligand, grid):
                 dockFailures.append((dataset, ligand, grid, False, True)) #xDock = False, inducedFit = True
@@ -224,7 +230,7 @@ def dockDataset(dataset, xDock=True):
     print("Submitting the failed docking runs as induced fit docking jobs...")
     print(dockFailures)
     
-    pool = Pool(5)
+    pool = Pool(1)
     #Here, we don't want to attempt a resubmission, maybe include this later? Implementing a first pass
     for finishedLigand, finishedGrid in pool.imap_unordered(dockHelper, dockFailures):
         print("Finished {} to {}!".format(finishedLigand, finishedGrid))
