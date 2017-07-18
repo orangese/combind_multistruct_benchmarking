@@ -117,5 +117,5 @@ for struct in structures:#Go through the given structures, performing the comman
 
     if('m' in toRun):
         os.chdir(HERE)
-        os.system('sbatch --time=2:00:00 --job-name=r-'+struct+' -n 1 -p rondror '+RMSD_SCRIPT+' '+struct+' '+HERE)
+        os.system('sbatch --time=01:30:00 --job-name=r-'+struct+' -n 1 -p rondror '+RMSD_SCRIPT+' '+struct+' '+HERE)
 

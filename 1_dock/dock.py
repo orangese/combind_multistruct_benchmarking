@@ -59,8 +59,11 @@ STAGE SCORING
 '''
 
 XGLIDE_IN = '''GRIDFILE   {}_grid.zip
-LIGANDFILE  {}_ligand.mae
-DOCKING_METHOD confgen
+LIGANDFILE   {}_ligand.mae
+USE_REF_LIGAND   True
+REF_LIGAND_FILE   {}_ligand.mae
+CORE_DEFINITION   allheavy
+DOCKING_METHOD   confgen
 EXPANDED_SAMPLING   True
 NENHANCED_SAMPLING   4
 POSES_PER_LIG   300
@@ -75,6 +78,9 @@ WRITEREPT   True
 GLIDE_IN = '''GRIDFILE   {}_grid.zip
 LIGANDFILE  {}_ligand.mae
 NENHANCED_SAMPLING   4
+USE_REF_LIGAND   True
+REF_LIGAND_FILE   {}_ligand.mae
+CORE_DEFINITION   allheavy
 POSES_PER_LIG   150
 POSTDOCK_NPOSE   150
 PRECISION   SP
@@ -149,9 +155,9 @@ def dock(dataset, ligand, grid, xDock = True, inducedFit = False): #xDock = Extr
     else:
         with open("{}/{}.in".format(ligGridDockDir, ligToGrid), 'w+') as f:
             if xDock:
-                f.write(XGLIDE_IN.format(ligToGrid, ligToGrid))
+                f.write(XGLIDE_IN.format(ligToGrid, ligToGrid, ligToGrid))
             else:
-                f.write(GLIDE_IN.format(ligToGrid, ligToGrid))
+                f.write(GLIDE_IN.format(ligToGrid, ligToGrid, ligToGrid))
 
     #Submit the docking job and wait for it to finish
     os.chdir(ligGridDockDir)
@@ -220,17 +226,18 @@ def dockDataset(dataset, xDock=True):
     #Now all the potentially successful jobs are finished, dock the failed structures
 
     #First, recalculate the failed jobs, more failures could have occured from our submissions
-    dockFailures = []
+    #dockFailures = []
 
-    for ligand in ligands:
-        for grid in structures:
-            if not glideExists(dataset, ligand, grid) and glideFailed(dataset, ligand, grid):
-                dockFailures.append((dataset, ligand, grid, False, True)) #xDock = False, inducedFit = True
+    #for ligand in ligands:
+    #    for grid in structures:
+    #        if not glideExists(dataset, ligand, grid) and glideFailed(dataset, ligand, grid):
+    #            dockFailures.append((dataset, ligand, grid, False, True)) #xDock = False, inducedFit = True
 
-    print("Submitting the failed docking runs as induced fit docking jobs...")
-    print(dockFailures)
+    #print("Submitting the failed docking runs as induced fit docking jobs...")
+    #print(dockFailures)
     
-    pool = Pool(1)
+    #pool = Pool(1)
+
     #Here, we don't want to attempt a resubmission, maybe include this later? Implementing a first pass
-    for finishedLigand, finishedGrid in pool.imap_unordered(dockHelper, dockFailures):
-        print("Finished {} to {}!".format(finishedLigand, finishedGrid))
+    #for finishedLigand, finishedGrid in pool.imap_unordered(dockHelper, dockFailures):
+    #    print("Finished {} to {}!".format(finishedLigand, finishedGrid))

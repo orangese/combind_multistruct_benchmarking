@@ -65,9 +65,6 @@ class FuzzyIFP:
         fp = []
  
         for pose_num, st in enumerate(self.struct):
-            if pose_num > 50: #Only fingerprint poses 0->50, right now this is just a time saving measure
-                continue
-
             mergedReceptorSt = self.receptor.st.merge(st)
             minimize_structure(mergedReceptorSt, max_steps = 0)
             mergedReceptor = Receptor()

@@ -9,33 +9,43 @@ from rmsd import RMSD
 DATA = '/scratch/PI/rondror/docking_data/'
 dataset = sys.argv[1]
 
-OUTPUT = 'rmsd.csv'
-
 os.chdir(DATA+dataset)
-grids_dir = DATA+dataset+'/grids'
-structs = [d for d in os.listdir(grids_dir) if os.path.isdir(os.path.join(grids_dir, d))]
 
 def references(ligand):
-    return "ligands/{}.mae".format(ligand)
+    return "ligands/{}_ligand.mae".format(ligand)
 
 def name(ligand, grid):
-    return "{}-to-{}".format(ligand, grid)
+    return "{}_ligand-to-{}".format(ligand, grid)
 
-def glides(name):
+def xglides(name):
     return "xglide/{}/{}_pv.maegz".format(name, name)
 
-rmsds = {}
+def glides(name):
+    return "glide/{}/{}_pv.maegz".format(name, name)
 
-out = open(OUTPUT, 'w')
-for grid in structs:
-    grid = grid # look out for capitalization issues
-    rmsds[grid] = {}
-    for ligand in structs:
-        ligand = ligand + '_ligand' # look out for capitalization issues
-        print references(ligand), glides(name(ligand, grid))
+for i, dock in enumerate(['/glide/', '/xglide/']):
+    rmsds = {}
+
+    gdir = DATA+dataset+dock
+    if not os.path.isdir(gdir): continue
+
+    if i == 0: out = open('rmsd_test.csv', 'w')
+    if i == 1: out = open('xrmsd_test.csv', 'w')
+
+    for fnm in os.listdir(gdir):
+        lig, struct = fnm.split('_ligand-to-')
+        
+        if not (os.path.exists(gdir + fnm + '/' + fnm + '_pv.maegz') and os.path.exists(gdir + fnm + '/' + fnm + '.rept')):
+            continue
+        
+        if struct not in rmsds: rmsds[struct] = {}
+        
+        if i == 0: loc = glides(name(lig, struct))
+        if i == 1: loc = xglides(name(lig, struct))
+
         try:
-            rmsds[grid][ligand] = RMSD.create(references(ligand), glides(name(ligand, grid)))
+            rmsds[struct][lig] = RMSD.create(references(lig), loc)
         except IOError:
-            rmsds[grid][ligand] = RMSD([10.0])
-        out.write(name(ligand, grid) + ':' + str(rmsds[grid][ligand]) + '\n')
+            rmsds[struct][lig] = RMSD([10.0])
+        out.write(name(lig, struct) + ':' + str(rmsds[struct][lig]) + '\n')
 

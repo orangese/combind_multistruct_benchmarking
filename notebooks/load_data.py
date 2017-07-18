@@ -1,9 +1,5 @@
 import os
 import sys
-import tqdm
-import itertools
-from math import exp
-import numpy as np
 import os.path
 
 os.chdir("../3_score/")
@@ -22,93 +18,61 @@ def load_ligand_info(data_set_dir):
         lig_info[a[0].split('/')[-1][:4]] = [float(i) for i in a[1:]]
     return lig_info
 
-def load_data(data_set_dir, rmsd_file, ligands_dir, grids_dir, glide_dir, crystal_fp_file, docking_fp_dir, w=[10,10,10,0,1]):
+def load_data(data_set_dir, rmsd_file, glide_dir, crystal_fp_file, docking_fp_dir, w=[10,10,10,0,1]):
     os.chdir(data_set_dir)
 
-    # if not all structures (grids or ligands) are desired, remove them here
-    gridstructs = [d.upper() for d in os.listdir(grids_dir) if os.path.isdir(os.path.join(grids_dir, d))]
-    print 'Found ' + str(len(gridstructs)) + ' grids'
-    ligstructs = [d.upper() for d in os.listdir(ligands_dir) if os.path.isfile(os.path.join(ligands_dir, d))]
-    ligstructs = map(lambda x: x.split("_")[0], ligstructs)
-    print 'Found ' + str(len(ligstructs)) + ' ligands'
-    #Sort our ligands by the order in which we perform SAR analysis
-    #all_gridstructs_upper = map(lambda x : x.upper(), gridstructs)
-    ligstructs.sort(key=lambda lig: gridstructs.index(lig) if lig in gridstructs else len(gridstructs) + 1)
-    
-    crystals = load_crystals(crystal_fp_file, gridstructs, w=w)
-    glides = load_glides(gridstructs, docking_fp_dir, glide_dir, rmsd_file, w=w)
+    crystals = load_crystals(crystal_fp_file, w=w)
+
+    gscores = load_gscores(glide_dir)
+    rmsds = load_rmsds(rmsd_file)
+    ifps = load_ifps(docking_fp_dir, w=w)
+       
+    glides = load_glides(gscores, rmsds, ifps)
     
     return (crystals, glides)
 
 
-def load_crystals(crystal_fp_file, grids, w=None):
+def load_crystals(crystal_fp_file, w=None):
     print 'Loading crystal structures...'
     crystals = {} # PDB id : Pose
     
     if not os.path.isfile(crystal_fp_file):
         print 'Crystal structure fingerprint file not found.'
-        return {}
+    else:
+        for line in open(crystal_fp_file):
+            struct, ifp = line.strip().split(';')
+            crystals[struct] = Pose(0.0, FuzzyFingerPrint.compact_parser(ifp, struct, w=w), 0, 0)
 
-    for line in open(crystal_fp_file):
-        if len(line) < 2:
-            continue
-
-        struct, ifp = line.strip().split(';')
-
-        fp = FuzzyFingerPrint.compact_parser(ifp, struct.upper(), w=w)
-        crystals[struct.upper()] = Pose(0.0, fp, 0, 0)
-
-    #Check to see if we are missing any crystal fingerprints
-    crystalFPDiff = set( grids ).difference(set( crystals.keys() ))
-
-    if(len(crystalFPDiff) != 0):
-        print("Missing the following crystal structure fingerprints! Check " + crystal_fp_file)
-        print(list(crystalFPDiff))
     return crystals
 
-def load_gscores(gridstructs, glide_dir):
+def load_gscores(glide_dir):
     print 'Loading glidescores...'
     # Ligand -> Grid Structure -> List of Glide Scores sorted by pose number (Lowest Scores to Highest Scores)
+    
     gscores = {}
+    for gdir in os.listdir(glide_dir):
+        lig, struct = gdir.split('_ligand-to-')
+        
+        if not (os.path.exists(glide_dir + gdir + '/' + gdir + '_pv.maegz') and os.path.exists(glide_dir + gdir + '/' + gdir + '.rept')):
+            continue
 
-    failed_to_dock = 0
-    total = 0
+        if lig not in gscores: gscores[lig] = {}
+        gscores[lig][struct] = []
 
-    for ligand in gridstructs:
-        gscores[ligand] = {}
-        for grid in gridstructs:
-            total += 1
-            gscores[ligand][grid] = []
-
-            #Go through all possible permutations for file capitalization
-            #NOTE: Files still have to be in the {}_ligand-to-{} format!
-            cap_permutations = [(ligand, grid), (ligand.upper(), grid.upper()), (ligand.upper(), grid.lower()), (ligand.lower(), grid.upper()), (ligand.lower(), grid.lower())]
-            s_file = None
-            for tLigand, tGrid in cap_permutations:
-                l_to_g = '{}_ligand-to-{}'.format(tLigand, tGrid)
-                pv = glide_dir + l_to_g + '/' + l_to_g + '_pv.maegz'
-
-                if os.path.exists(pv):
-                    break
+        gscore_file = open(glide_dir + gdir + '/' + gdir + '.rept')
+        line = gscore_file.readline().strip().split()
+        while not line or line[0] != '====':
+            line = gscore_file.readline().strip().split()
+        line = gscore_file.readline().strip().split()
+        while line:
+            # Rank', 'Title', 'Lig#', 'Score', 'GScore'
+            if line[2] == '1': gscores[lig][struct].append(float(line[4]))
+            elif line[1] == '1': gscores[lig][struct].append(float(line[3]))
             else:
-                #print 'ligand, grid', ligand, grid, 'did not dock.'
-                failed_to_dock += 1
-                #gscores[ligand][grid].append(0)
-                continue
-
-            s_file = open(glide_dir + l_to_g + '/' + l_to_g + '.rept')
-            line = s_file.readline().strip().split()
-            while not line or line[0] != '1' or (len(line) != 19 and (len(line) > 1 and line[1] != "1" and len(line) != 18)): # hack - why is title blank sometimes?
-                line = s_file.readline().strip().split()
-            while line:
-                # Rank', 'Title', 'Lig#', 'Score', 'GScore'
-                rank, title, lig, score, gscore = line[:5]
-                gscores[ligand][grid] += [float(gscore)]
-                line = s_file.readline().strip().split()
-    if failed_to_dock == 0: print 'All ligands and structures successfully docked. Nice!'
-    else: print str(failed_to_dock) + ' of ' + str(total) + ' ligand, structure pairs failed to dock.'
+                print 'Lig# 1 not found. quitting. lig, grid: ', lig, struct
+                break
+            line = gscore_file.readline().strip().split()
     return gscores
-
 
 def load_rmsds(rmsd_file):
     print 'Loading rmsds...'
@@ -116,75 +80,52 @@ def load_rmsds(rmsd_file):
     rmsds = {}
     for line in open(rmsd_file):
         n, data = line.strip().split(':')
-        ligand, grid = n.split('-to-')
-        ligand = ligand.split('_')[0].upper()
-        grid = grid.split('_')[0].upper()
+        lig, struct = n.split('_ligand-to-')
 
-        if grid not in rmsds: rmsds[grid] = {}
-        rmsds[grid][ligand] = RMSD.read(data)
+        if struct not in rmsds: rmsds[struct] = {}
+        rmsds[struct][lig] = RMSD.read(data).data
     return rmsds
 
+def load_ifps(docking_fp_dir, w=None):
+    print 'Loading fingerprints...'
+    ifps = {}
+    if not os.path.exists(docking_fp_dir):
+        print 'Glide fingerprint directory not found.'
+    else:
+        for fnm in [i for i in os.listdir(docking_fp_dir) if i[-3:] == '.fp']:
+            lig, struct = fnm[:-3].split('_ligand-to-')
 
-def load_glides(gridstructs, docking_fp_dir, glide_dir, rmsd_file, w=None):
+            if struct not in ifps: ifps[struct] = {}
+            ifps[struct][lig] = []
+
+            fp_file = open(docking_fp_dir + fnm)
+            for pose_num, line in enumerate(fp_file):
+                ifps[struct][lig].append(FuzzyFingerPrint.compact_parser(line.strip(), lig, w=w))
+    
+    return ifps
+
+def load_glides(gscores, rmsds, ifps):
     print 'Loading docking results...'
-    gscores = load_gscores(gridstructs, glide_dir)
-    rmsds = load_rmsds(rmsd_file)
-            
-    missing_ifp = 0
-    total_ifp = 0
-
     glides = {}
-    for ligand in gridstructs:
-        glides[ligand] = {}
-        for grid in gridstructs:
-            glides[ligand][grid] = Ligand(None)
-            if len(gscores[ligand][grid]) == 0:
-                # put in one filler pose
-                glides[ligand][grid].add_pose(Pose(100,None,0,0),0)
-                continue # ligand, grid, did not dock.
-            total_ifp += 1
-            #Go through all possible permutations for file capitalization
-            #NOTE: Files still have to be in the {}_ligand-to-{} format!            
-            cap_permutations = [(ligand, grid), (ligand.upper(), grid.upper()), 
-                                (ligand.upper(), grid.lower()), (ligand.lower(), grid.upper()), (ligand.lower(), grid.lower())]
-            for tLigand, tGrid in cap_permutations:
-                fnm = docking_fp_dir + "{}_ligand-to-{}.fp".format(tLigand, tGrid, tLigand, tGrid)
-                try:
-                    s_file = open(fnm)
-                    break
-                except:
-                    pass
-            else:
-                missing_ifp += 1
-                for pose_num in range(len(gscores[ligand][grid])):
-                    try:
-                        glides[ligand][grid].add_pose(Pose(rmsds[grid][ligand].get_rmsd(pose_num), None, pose_num, gscores[ligand][grid][pose_num]), pose_num) 
-                    except: pass
-                continue
+    for lig in gscores.keys():
+        glides[lig] = {}
+        for struct in gscores[lig].keys():
+            if len(gscores[lig][struct]) == 0:
+                continue # ligand, grid, did not dock.    
 
-            for pose_num, line in enumerate(s_file):
-                #total_ifp += 1
-                try:
-                    ifp = line.strip()
-                except Exception as e:
-                    print("Error: No fingerprint generated for pose " + line.strip() + " in " + fnm)
-                    #missing_ifp += 1
-                    break
- 
-                #if pose_num < 50: #ONLY IMPORT 50 POSES, REMOVE LATER
-                try:
-                    glides[ligand][grid].add_pose(Pose(rmsds[grid][ligand].get_rmsd(pose_num),
-                                                       FuzzyFingerPrint.compact_parser(ifp, ligand,w=w), pose_num,
-                                                       gscores[ligand][grid][pose_num]), pose_num)
-                
-                except Exception as e:
-                    print e
-                    #print rmsds.keys()
-                    #print gscores.keys()
-                    #print rmsds[grid].keys()
-                    #print gscores[ligand].keys()
-                    break
-    if missing_ifp == 0: print 'All ligands successfully fingerprinted. Nice!'
-    else: print str(missing_ifp) + ' of ' + str(total_ifp) + ' ligands failed to fingerprint.'
+            try:
+                assert len(gscores[lig][struct]) == len(rmsds[struct][lig])
+                #assert len(ifps[struct][lig]) <= len(rmsds[struct][lig])
+            except:
+                print 'lig, struct: ', lig, struct, 
+                print 'gscores, rmsds, ifps: ', len(gscores[lig][struct]), len(rmsds[struct][lig]), len(ifps[struct][lig])
+
+            glides[lig][struct] = Ligand(None)
+            for pose in range(len(gscores[lig][struct])):
+                rmsd = rmsds[struct][lig][pose]
+                gscore = gscores[lig][struct][pose]
+                ifp = ifps[struct][lig][pose] if ifps != {} and pose < len(ifps[struct][lig]) else None
+                glides[lig][struct].add_pose(Pose(rmsd, ifp, pose, gscore), pose)
+
     return glides
 

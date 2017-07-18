@@ -135,7 +135,11 @@ def plot_scores_vs_rmsds(l, scores, lab='', scores2=None, lab2=''):
 
 def heatmap(A, glides):
     fig, ax = plt.subplots()
-    heatmap = ax.pcolor(A, cmap=CM.jet, vmin=0, vmax=10.25)
+
+    cmap = CM.jet
+    cmap.set_under('black')
+
+    heatmap = ax.pcolor(A, cmap=cmap, vmin=0, vmax=10.25)
     plt.colorbar(heatmap)
 
     # put the major ticks at the middle of each cell
@@ -163,12 +167,15 @@ def top_pose(glides):
     return A
 
  # Top scoring GLIDE pose in top n poses
-def best_pose(glides, n):
+def best_pose(ligstructs, gridstructs, glides, n):
     A = np.zeros( (len(glides.keys()), len(glides.keys())) )
-    for i, grid in enumerate(glides):
-        for j, ligand in enumerate(glides):
-            num_poses = min(n, len(glides[ligand][grid].poses.keys()))
-            A[i, j] = min([glides[ligand][grid].poses[k].rmsd for k in range(num_poses)])
+    for i, grid in enumerate(gridstructs):
+        for j, lig in enumerate(ligstructs):
+            if lig in glides.keys() and grid in glides[lig].keys():
+                num_poses = min(n, len(glides[lig][grid].poses.keys()))
+                #if num_poses == 0: A[i, j] = np.nan
+                A[i, j] = min([glides[lig][grid].poses[k].rmsd for k in range(num_poses)])
+            else: A[i, j] = np.nan
     return A
 
 def get_structure_and_ligands(rmsd_matrix, rmsd_filter, structures):
