@@ -128,12 +128,13 @@ def plot_scores_vs_rmsds(l, scores, lab='', scores2=None, lab2=''):
 
     if scores2 is not None:
         final_scores2 = scores2.get_final_scores(l)
-        plt.plot(rmsds[:-1], final_scores2[:-1], marker='.', markersize=10, color='blue', label=lab2, linestyle='None')
+        rmsds2 = scores2.get_rmsds(l)
+        plt.plot(rmsds2[:-1], final_scores2[:-1], marker='.', markersize=10, color='blue', label=lab2, linestyle='None')
         plt.plot([0], [final_scores2[-1]], marker='*', markersize=10, color='blue')
     plt.legend()
     plt.show()
 
-def heatmap(A, glides):
+def heatmap(A, ligstructs, gridstructs):
     fig, ax = plt.subplots()
 
     cmap = CM.jet
@@ -149,8 +150,8 @@ def heatmap(A, glides):
     ax.xaxis.tick_top()
 
     #labels
-    column_labels = glides.keys()
-    row_labels = glides.keys()
+    column_labels = ligstructs
+    row_labels = gridstructs
     ax.set_xticklabels(column_labels, minor=False, rotation = 'vertical')
     ax.set_yticklabels(row_labels, minor=False)
     ax.plot(ax.get_xlim(), ax.get_ylim()[::-1], linewidth = 4, c="m")
@@ -168,13 +169,24 @@ def top_pose(glides):
 
  # Top scoring GLIDE pose in top n poses
 def best_pose(ligstructs, gridstructs, glides, n):
-    A = np.zeros( (len(glides.keys()), len(glides.keys())) )
+    A = np.zeros( (len(gridstructs), len(ligstructs)) )
     for i, grid in enumerate(gridstructs):
         for j, lig in enumerate(ligstructs):
             if lig in glides.keys() and grid in glides[lig].keys():
                 num_poses = min(n, len(glides[lig][grid].poses.keys()))
                 #if num_poses == 0: A[i, j] = np.nan
                 A[i, j] = min([glides[lig][grid].poses[k].rmsd for k in range(num_poses)])
+            else: A[i, j] = np.nan
+    return A
+
+def docking_variance(ligstructs, gridstructs, glides, n):
+    A = np.zeros( (len(gridstructs), len(ligstructs)) )
+    for i, grid in enumerate(gridstructs):
+        for j, lig in enumerate(ligstructs):
+            if lig in glides.keys() and grid in glides[lig].keys():
+                num_poses = min(n, len(glides[lig][grid].poses.keys()))
+                #if num_poses == 0: A[i, j] = np.nan
+                A[i, j] = np.var([glides[lig][grid].poses[k].rmsd for k in range(num_poses)])
             else: A[i, j] = np.nan
     return A
 

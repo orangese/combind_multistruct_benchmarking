@@ -16,22 +16,16 @@ Move these files into `/scratch/PI/rondror/docking_data/<receptor name>/raw_pdbs
 
 The following can be done in one step with the command:
 
-`./main.py -splgd <receptor name>`.
+`./main.py -splgx <receptor name>`.
 
 For example:
 
-`./main.py -splgd B2AR`
+`./main.py -splgx B2AR`
 
 There are five steps: Strip, Process, Ligands, Grids, and Dock. Each can be run independently with, for example:
 
 `./main.py -s <receptor name>`.
 
-## 3) Compute RMSDs for all poses
-
-`./main.py -m <receptor name>`
-
-RMSDs will be output to `/scratch/PI/rondror/docking_data/<receptor name>/rmsd.csv`.
-
-## 4) Evaluate docking quality
+## 3) Evaluate docking quality
 
 Before proceeding to fingerprinting, make sure to check the docking results using the heatmap plot in `notebooks`. If there is not at least one receptor that generates good poses (at least one pose with an rmsd < 2A) for most ligands, do not continue! Either reconfigure glide to get better docking results or choose another receptor.

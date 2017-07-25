@@ -17,7 +17,7 @@ def processSuccess(structure):
 
 def process():   
     toProcess = [os.path.splitext(f)[0] for f in os.listdir("stripped") if not os.path.isfile('processed/'+f)]
-
+    print toProcess
     os.system('mkdir -p processed')
     os.chdir('processed')
     #Each thread has a very lightweight job (waiting on the salloc signal) so just launch len(currentFiles) threads

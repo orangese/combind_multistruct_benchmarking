@@ -7,7 +7,7 @@ SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1/run"
 FUZZY_SCRIPT = "/share/PI/rondror/$USER/combind/2_fingerprint/fuzzyifp.py"
 DATA = "/scratch/PI/rondror/docking_data/"
 if sys.argv[1] == 'all':
-    datasets = os.listdir(DATA)
+    datasets = ['AR','B2AR','CDK2','CHK1','HSP90','LPXC','MAP4K4','TRMD']#os.listdir(DATA)
 else:
     datasets = [sys.argv[1]]
 
@@ -18,7 +18,7 @@ for d in datasets:
 
     os.chdir(DATA + d)
 
-    OUTPUT = DATA + d + '/' + output_dir + '/ifp.fp'
+    OUTPUT = DATA + d + '/ifp/' + output_dir + '/ifp.fp'
 
     processed = [o for o in os.listdir("./processed/") if os.path.isfile(os.path.join("./processed/",o))]
     ligands = [o for o in os.listdir("./ligands/") if os.path.isfile(os.path.join("./ligands/",o))]
@@ -28,13 +28,13 @@ for d in datasets:
         print d + ' already has that output folder. continuing.'
         continue
 
-    os.system("mkdir " + output_dir)
-    os.chdir(output_dir)
+    os.system("mkdir ifp/" + output_dir)
+    os.chdir('ifp/'+output_dir)
 
     for structFile in processed:
         struct = os.path.splitext(structFile)[0]
 
-        verbose_output = DATA + d + '/' + output_dir + '/' + struct + '.out'
+        verbose_output = DATA + d + '/ifp/' + output_dir + '/' + struct + '.out'
 
         ligandFile = filter(lambda x: struct.lower() in x.lower(), ligands)[0]
         with open(struct + '.sh', 'w') as f:
