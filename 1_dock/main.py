@@ -11,8 +11,6 @@ import processing #method process is thread safe
 import dock
 
 SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1"
-HERE = os.getcwd() + '/'
-
 DATA = "/scratch/PI/rondror/docking_data"
 
 os.chdir(DATA)
@@ -22,7 +20,7 @@ structures = sys.argv[2:]
 
 toRun = []
 if("a" in commands):
-    toRun = ["s","p","l","g","x"] #Raw PDBs, Strip Structures, Process Structures, Grids, Dock
+    toRun = ["r","s","p","l","g","x"] #Raw PDBs, Strip Structures, Process Structures, Grids, Dock
 else:
     toRun = list(commands[1:])
 

@@ -1,5 +1,4 @@
 #!/share/PI/rondror/software/miniconda/bin/python
-
 import os
 import sys
 from os import listdir
@@ -19,10 +18,7 @@ DATA = '/scratch/PI/rondror/docking_data/'
 dataset = sys.argv[1]
 output_dir = sys.argv[2]
 
-glide = '/glide/'
-if dataset[0] == 'x':
-    dataset = dataset[1:]
-    glide = '/xglide/'
+glide = '/xglide/'
 
 if dataset == 'all':
     datasets = ['AR','MAP4K4','B2AR','CDK2','CHK1','HSP90','LPXC','TRMD']
