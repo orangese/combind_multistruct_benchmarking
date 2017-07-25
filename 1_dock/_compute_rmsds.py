@@ -23,14 +23,14 @@ def xglides(name):
 def glides(name):
     return "glide/{}/{}_pv.maegz".format(name, name)
 
-for i, dock in enumerate(['/glide/', '/xglide/']):
+for i, dock in enumerate(['/glide/']):#, '/xglide/']):
     rmsds = {}
 
     gdir = DATA+dataset+dock
     if not os.path.isdir(gdir): continue
 
-    if i == 0: out = open('rmsd_test.csv', 'w')
-    if i == 1: out = open('xrmsd_test.csv', 'w')
+    if i == 0: out = open('rmsd.csv', 'w')
+    if i == 1: out = open('xrmsd.csv', 'w')
 
     for fnm in os.listdir(gdir):
         lig, struct = fnm.split('_ligand-to-')

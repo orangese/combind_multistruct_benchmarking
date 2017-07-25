@@ -32,7 +32,7 @@ class HBond:
         self.DHA_angle = self.get_DHA_angle() # degrees
         self.HAX_angle = self.get_HAX_angle()
 
-        self.charge_score = 1.2 if self.a.formal_charge < 0 else 1
+        self.charge_score = 1.2 if (self.d.formal_charge > 0 or self.a.formal_charge < 0) else 1
 
     def get_DHA_angle(self):
         return math.fabs(180 - func.angle_between_three_points(self.d.coordinates, 
@@ -74,10 +74,6 @@ class HBond:
         dist_score = 1/(1+math.exp(4*(self.dist-2.6)))
         return dist_score*self.angle_score(False)*self.angle_score(True)*self.charge_score
 
-    def new_score(self):
-        dist_score = 1/(1+math.exp(4*(self.dist-2.6)))
-        return dist_score*self.angle_score(False)*self.angle_score(True)
-
     def __str__(self):
         d_str = '\n+donor: ' + str(self.d.atom_id) + ' ' + self.d.element
         a_str = '\n+acceptor: ' + str(self.a.atom_id) + ' ' + self.a.element
@@ -112,20 +108,21 @@ class LJ: # Lennard Jones potential
         r = atom1.dist_to(atom2)
         
         # count only favorable (negative, vdW) interactions 
-        self.total_score += min(0, C12/r**12 - C6/r**6)
+        self.total_score += C12/r**12 - C6/r**6
 
         r_m = (2*C12/C6)**(0.16666667)
         eps = -(C6**2)/(4*C12)
-        if r <= r_m:
+        if abs(r-r_m) <= 0.5:
             self.total_other_score += eps
-        else:
-            self.total_other_score += C12/r**12 - C6/r**6
-
+        elif r > (r_m + 0.5):
+            self.total_other_score += C12/(r-0.5)**12 - C6/(r-0.5)**6
+        elif r < (r_m - 0.5):
+            self.total_other_score += C12/(r+0.5)**12 - C6/(r+0.5)**6
     def score(self): 
-        return self.total_score
+        return min(0,self.total_score)
 
     def other_score(self):
-        return self.total_other_score
+        return min(0,self.total_other_score)
 
     def __str__(self):
         return '\nLJ potential: ' + str(self.score())

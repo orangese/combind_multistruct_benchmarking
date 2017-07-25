@@ -19,16 +19,21 @@ DATA = '/scratch/PI/rondror/docking_data/'
 dataset = sys.argv[1]
 output_dir = sys.argv[2]
 
-if sys.argv[1] == 'all':
-    datasets = os.listdir(DATA)
+glide = '/glide/'
+if dataset[0] == 'x':
+    dataset = dataset[1:]
+    glide = '/xglide/'
+
+if dataset == 'all':
+    datasets = ['AR','MAP4K4','B2AR','CDK2','CHK1','HSP90','LPXC','TRMD']
 else:
-    datasets = [sys.argv[1]]
+    datasets = [dataset]
 
 for dataset in datasets:
     print dataset
     
-    glideDir = DATA + dataset + '/glide/'
-    ifpDir = DATA + dataset + '/' + output_dir + '/'
+    glideDir = DATA + dataset + glide
+    ifpDir = DATA + dataset + '/ifp/' + output_dir + '/'
 
     if os.path.exists(ifpDir):
         print dataset + ' already has that output directory. continuing...'

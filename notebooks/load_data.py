@@ -23,8 +23,7 @@ def load_data(data_set_dir, rmsd_file, glide_dir, crystal_fp_file, docking_fp_di
 
     crystals = load_crystals(crystal_fp_file, w=w)
 
-    gscores = load_gscores(glide_dir)
-    rmsds = load_rmsds(rmsd_file)
+    gscores, rmsds = load_gscores(glide_dir, rmsd_file)
     ifps = load_ifps(docking_fp_dir, w=w)
        
     glides = load_glides(gscores, rmsds, ifps)
@@ -39,21 +38,25 @@ def load_crystals(crystal_fp_file, w=None):
     if not os.path.isfile(crystal_fp_file):
         print 'Crystal structure fingerprint file not found.'
     else:
-        for line in open(crystal_fp_file):
+        fp_file = open(crystal_fp_file)
+        for line in fp_file:
             struct, ifp = line.strip().split(';')
             crystals[struct] = Pose(0.0, FuzzyFingerPrint.compact_parser(ifp, struct, w=w), 0, 0)
-
+        fp_file.close()
     return crystals
 
-def load_gscores(glide_dir):
+def load_gscores(glide_dir, rmsd_file):
     print 'Loading glidescores...'
     # Ligand -> Grid Structure -> List of Glide Scores sorted by pose number (Lowest Scores to Highest Scores)
-    
+    (total, undocked) = 0, 0
     gscores = {}
+    rmsds = {}
     for gdir in os.listdir(glide_dir):
+        if '_ligand-to-' not in gdir: continue
         lig, struct = gdir.split('_ligand-to-')
-        
+        total += 1
         if not (os.path.exists(glide_dir + gdir + '/' + gdir + '_pv.maegz') and os.path.exists(glide_dir + gdir + '/' + gdir + '.rept')):
+            undocked += 1
             continue
 
         if lig not in gscores: gscores[lig] = {}
@@ -64,6 +67,7 @@ def load_gscores(glide_dir):
         while not line or line[0] != '====':
             line = gscore_file.readline().strip().split()
         line = gscore_file.readline().strip().split()
+        
         while line:
             # Rank', 'Title', 'Lig#', 'Score', 'GScore'
             if line[2] == '1': gscores[lig][struct].append(float(line[4]))
@@ -71,19 +75,31 @@ def load_gscores(glide_dir):
             else:
                 print 'Lig# 1 not found. quitting. lig, grid: ', lig, struct
                 break
+            #print line
+            if line[-1] != '--':
+                if struct not in rmsds: rmsds[struct] = {}
+                if lig not in rmsds[struct]: rmsds[struct][lig] = []
+                rmsds[struct][lig].append(float(line[-1]))
+            #    print line[-1]
             line = gscore_file.readline().strip().split()
-    return gscores
+        gscore_file.close()
+    if len(rmsds.keys()) == 0:
+        rmsds = load_rmsds(rmsd_file)
+    print '{} of {} total pairs failed to dock.'.format(undocked, total)
+    return gscores, rmsds
 
 def load_rmsds(rmsd_file):
     print 'Loading rmsds...'
     # Ligand -> Grid Structure -> List of RMSDs ordered by GLIDE Pose Number
     rmsds = {}
-    for line in open(rmsd_file):
+    all_rmsds = open(rmsd_file)
+    for line in all_rmsds:
         n, data = line.strip().split(':')
         lig, struct = n.split('_ligand-to-')
 
         if struct not in rmsds: rmsds[struct] = {}
         rmsds[struct][lig] = RMSD.read(data).data
+    all_rmsds.close()
     return rmsds
 
 def load_ifps(docking_fp_dir, w=None):
@@ -101,7 +117,7 @@ def load_ifps(docking_fp_dir, w=None):
             fp_file = open(docking_fp_dir + fnm)
             for pose_num, line in enumerate(fp_file):
                 ifps[struct][lig].append(FuzzyFingerPrint.compact_parser(line.strip(), lig, w=w))
-    
+            fp_file.close()
     return ifps
 
 def load_glides(gscores, rmsds, ifps):
@@ -117,7 +133,9 @@ def load_glides(gscores, rmsds, ifps):
                 assert len(gscores[lig][struct]) == len(rmsds[struct][lig])
                 #assert len(ifps[struct][lig]) <= len(rmsds[struct][lig])
             except:
-                print 'lig, struct: ', lig, struct, 
+                print 'lig, struct: ', lig, struct, rmsds.keys()
+                print rmsds[struct].keys()
+                print len(rmsds[struct][lig])
                 print 'gscores, rmsds, ifps: ', len(gscores[lig][struct]), len(rmsds[struct][lig]), len(ifps[struct][lig])
 
             glides[lig][struct] = Ligand(None)
