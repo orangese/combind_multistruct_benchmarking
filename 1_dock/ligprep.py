@@ -23,7 +23,7 @@ def extractLigands():
             print('Warning: There are multiple ligand sized molecules, picking the first one')
         
         ligand = ligands[0]
-        st_writer = StructureWriter("ligands/{}_ligand.mae".format(outdir, s))
+        st_writer = StructureWriter("ligands/{}_ligand.mae".format(s))
         st_writer.append(ligand.st)
         st_writer.close()
 

@@ -55,7 +55,7 @@ for struct in structures:#Go through the given structures, performing the comman
 
     if("l" in toRun):#Extract Ligands, assumes processed folder exists
         print("!Extracting Ligands")
-        ligprep.extractLigands(getLigs)
+        ligprep.extractLigands()
 
     if("g" in toRun):#Generate grids, assumes processed folder exists
         print("!Generating Grids")
