@@ -80,7 +80,7 @@ def dockDataset(dataset):
     structures = [o for o in os.listdir(gridsDir) if os.path.isdir(os.path.join(gridsDir,o))]
 
     ligands = [os.path.splitext(o)[0].replace("_ligand","") for o in os.listdir(ligandsDir) if os.path.isfile(os.path.join(ligandsDir,o))]
-    ligands = [l for l in ligands if l not in structures]# do not dock ligands that we have structures for
+    #ligands = [l for l in ligands if l not in structures]# do not dock ligands that we have structures for
         
     toDock = [] #List of (ligand, grid) tuples that need to be submitted for docking
 
