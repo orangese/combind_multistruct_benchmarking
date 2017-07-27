@@ -8,17 +8,9 @@ from ligand import Ligand
 from pose import Pose
 from rmsd import RMSD
 
+MAX_NUM_POSES = 50
 
-def load_ligand_info(data_set_dir):
-    os.chdir(data_set_dir)
-    
-    lig_info = {}
-    for line in open(data_set_dir + 'lig_sizes.txt'):
-        a = line.strip().split(',')
-        lig_info[a[0].split('/')[-1][:4]] = [float(i) for i in a[1:]]
-    return lig_info
-
-def load_data(data_set_dir, rmsd_file, glide_dir, crystal_fp_file, docking_fp_dir, w=[10,10,10,0,1]):
+def load_data(data_set_dir, rmsd_file, glide_dir, crystal_fp_file, docking_fp_dir, w=[10,10,10,0,1], require_fp=True):
     os.chdir(data_set_dir)
 
     crystals = load_crystals(crystal_fp_file, w=w)
@@ -26,7 +18,7 @@ def load_data(data_set_dir, rmsd_file, glide_dir, crystal_fp_file, docking_fp_di
     gscores, rmsds = load_gscores(glide_dir, rmsd_file)
     ifps = load_ifps(docking_fp_dir, w=w)
        
-    glides = load_glides(gscores, rmsds, ifps)
+    glides = load_glides(gscores, rmsds, ifps, require_fp)
     
     return (crystals, glides)
 
@@ -41,7 +33,7 @@ def load_crystals(crystal_fp_file, w=None):
         fp_file = open(crystal_fp_file)
         for line in fp_file:
             struct, ifp = line.strip().split(';')
-            crystals[struct] = Pose(0.0, FuzzyFingerPrint.compact_parser(ifp, struct, w=w), 0, 0)
+            crystals[struct] = Pose(0.0, FuzzyFingerPrint.compact_parser(ifp, struct, w=w), 0, 0, struct, struct)
         fp_file.close()
     return crystals
 
@@ -68,19 +60,17 @@ def load_gscores(glide_dir, rmsd_file):
             line = gscore_file.readline().strip().split()
         line = gscore_file.readline().strip().split()
         
-        while line:
+        while line and len(gscores[lig][struct]) <= MAX_NUM_POSES:
             # Rank', 'Title', 'Lig#', 'Score', 'GScore'
             if line[2] == '1': gscores[lig][struct].append(float(line[4]))
             elif line[1] == '1': gscores[lig][struct].append(float(line[3]))
             else:
                 print 'Lig# 1 not found. quitting. lig, grid: ', lig, struct
                 break
-            #print line
             if line[-1] != '--':
                 if struct not in rmsds: rmsds[struct] = {}
                 if lig not in rmsds[struct]: rmsds[struct][lig] = []
                 rmsds[struct][lig].append(float(line[-1]))
-            #    print line[-1]
             line = gscore_file.readline().strip().split()
         gscore_file.close()
     if len(rmsds.keys()) == 0:
@@ -116,34 +106,29 @@ def load_ifps(docking_fp_dir, w=None):
 
             fp_file = open(docking_fp_dir + fnm)
             for pose_num, line in enumerate(fp_file):
+                if pose_num > MAX_NUM_POSES: break
                 ifps[struct][lig].append(FuzzyFingerPrint.compact_parser(line.strip(), lig, w=w))
             fp_file.close()
     return ifps
 
-def load_glides(gscores, rmsds, ifps):
+def load_glides(gscores, rmsds, ifps, require_fp):
     print 'Loading docking results...'
     glides = {}
     for lig in gscores.keys():
         glides[lig] = {}
         for struct in gscores[lig].keys():
-            if len(gscores[lig][struct]) == 0:
-                continue # ligand, grid, did not dock.    
-
-            try:
-                assert len(gscores[lig][struct]) == len(rmsds[struct][lig])
-                #assert len(ifps[struct][lig]) <= len(rmsds[struct][lig])
-            except:
-                print 'lig, struct: ', lig, struct, rmsds.keys()
-                print rmsds[struct].keys()
-                print len(rmsds[struct][lig])
-                print 'gscores, rmsds, ifps: ', len(gscores[lig][struct]), len(rmsds[struct][lig]), len(ifps[struct][lig])
+            if require_fp and (lig not in ifps or struct not in ifps[lig] or len(ifps[lig][struct]) == 0):
+                continue # ligand, grid, did not fingerprint
+            elif not require_fp and len(gscores[lig][struct]) == 0:
+                continue # did not dock
 
             glides[lig][struct] = Ligand(None)
             for pose in range(len(gscores[lig][struct])):
                 rmsd = rmsds[struct][lig][pose]
                 gscore = gscores[lig][struct][pose]
-                ifp = ifps[struct][lig][pose] if ifps != {} and pose < len(ifps[struct][lig]) else None
-                glides[lig][struct].add_pose(Pose(rmsd, ifp, pose, gscore), pose)
+                try: ifp = ifps[struct][lig][pose]
+                except: ifp = None
+                glides[lig][struct].add_pose(Pose(rmsd, ifp, pose, gscore, struct, lig), pose)
 
     return glides
 

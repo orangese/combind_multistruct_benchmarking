@@ -4,18 +4,55 @@ class Scores:
     def __init__(self, glides, crystals, ligands, structure, n):
         self.glides = glides
         self.crystals = crystals
-        self.ligands = ligands
+        self.ligands = [l for l in ligands if structure in glides[l]]
         self.struct = structure
-
-        self.num_poses = {l: min(n,len(glides[l][structure].poses)) for l in ligands}
-
+        self.num_poses = {l: min(n,len(glides[l][structure].poses)) for l in self.ligands}
         # the crystal poses are the last row/column of each matrix here
         self.all_scores = self.score_all_pairs_of_poses()
         self.scores_from_one_ligand = self.rank_poses_based_on_one_other_ligand()
         self.final_scores_for_each_ligand = self.rank_poses_based_on_all_other_ligands()
 
+        self.optimized_scores = self.joint_optimize()
+
         self.all_rmsds = {}
         self.all_gscores = {}
+
+    def objective(self, pose_cluster):
+        score = 0
+        for l1, p1 in pose_cluster:
+            for l2, p2 in pose_cluster:
+                if l1 == l2: continue
+                if p1 == -1: fp1 = scores.crystals[l1].fp
+                else: fp1 = scores.glides[l1][scores.struct].poses[p1].fp
+                if p2 == -1: fp2 = scores.crystals[l2].fp
+                else: fp2 = scores.glides[l2][scores.struct].poses[p2].fp
+                score += scores.score_pose_pair(fp1, fp2)
+        return score
+
+    def joint_optimize(self):
+        # randomly pick a ligand
+        # optimize that ligand
+
+        pose_cluster = [(l, np.argmax(self.get_final_scores(l)[:-1])) for l in self.ligands]
+        for sample in range(150):
+            rand_lig = np.random.choice(self.ligands)
+            lig_ind = self.ligands.index(rand_lig)
+    
+            old_rmsd = self.get_rmsds(rand_lig)[pose_cluster[lig_ind][1]]
+    
+            (max_score, pose_num) = (0, 0)
+            for p in range(self.num_poses[rand_lig]):
+                pose_cluster[lig_ind] = (rand_lig, p)
+                new_score = self.objective(pose_cluster)
+                if new_score > max_score:
+                    max_score, pose_num = new_score, p
+            pose_cluster[lig_ind] = (rand_lig, pose_num)
+    
+            new_rmsd = self.get_rmsds(rand_lig)[pose_cluster[lig_ind][1]]
+    
+            #if new_rmsd != old_rmsd:
+            #    print '{} updated: {} -> {}'.format(rand_lig, old_rmsd, new_rmsd)
+            #    print np.mean([ scores.get_rmsds(l)[pose_cluster[scores.ligands.index(l)][1]] for l in scores.ligands ])
 
     def score_pose_pair(self, fp1, fp2):
         score = 0
@@ -38,6 +75,8 @@ class Scores:
                     for p2 in range(-1,np.shape(edges)[1]-1):
                         fp1 = poses1.get(p1, self.crystals[self.ligands[i1]]).fp
                         fp2 = poses2.get(p2, self.crystals[self.ligands[i2]]).fp
+                        if fp1 == None or fp2 == None:
+                            print self.ligands[i1], self.ligands[i2], self.struct, p1, p2
                         edges[p1][p2] = self.score_pose_pair(fp1, fp2)
             
                 all_scores[(self.ligands[i1], self.ligands[i2])] = edges

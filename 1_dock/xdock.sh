@@ -1,3 +1,3 @@
 #!/bin/sh
 
-./main.py -x TRMD 
+./main.py -x TRMD

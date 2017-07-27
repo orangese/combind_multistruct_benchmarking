@@ -123,6 +123,7 @@ def plot_final_scores(scores, lab=''):
 def plot_scores_vs_rmsds(l, scores, lab='', scores2=None, lab2=''):
     final_scores = scores.get_final_scores(l)
     rmsds = scores.get_rmsds(l)
+    fig, ax = plt.subplots()
     plt.plot(rmsds[:-1], final_scores[:-1], marker='.', markersize=10, color='red', label=lab, linestyle='None')
     plt.plot([0], [final_scores[-1]], marker='*', markersize=10, color='red')
 
@@ -132,6 +133,7 @@ def plot_scores_vs_rmsds(l, scores, lab='', scores2=None, lab2=''):
         plt.plot(rmsds2[:-1], final_scores2[:-1], marker='.', markersize=10, color='blue', label=lab2, linestyle='None')
         plt.plot([0], [final_scores2[-1]], marker='*', markersize=10, color='blue')
     plt.legend()
+    plt.gca().set_xlim([0,14])
     plt.show()
 
 def heatmap(A, ligstructs, gridstructs):
@@ -159,49 +161,42 @@ def heatmap(A, ligstructs, gridstructs):
     #plt.savefig(plotTitle + '.png')
     plt.show()
 
- # Top scoring GLIDE pose
-def top_pose(glides):
-    A = np.zeros( (len(glides.keys()), len(glides.keys())) )
-    for i, grid in enumerate(glides):
-        for j, ligand in enumerate(glides):
-            A[i, j] = glides[ligand][grid].poses[0].rmsd
-    return A
+def refine_poses(glides, require_fp=False):
+    # glides maps [lig][struct] to ligands
+    # goal: output poses. map [lig] to all poses, ordered by gscore
+    poses = {}
+    for lig in glides.keys():
+        poses[lig] = []
+        for struct in glides[lig].keys():
+            if lig == struct: continue
+            p = glides[lig][struct].poses
+            poses[lig].extend([p[i] for i in p.keys() if (not require_fp) or (p[i].fp is not None)])
+        poses[lig].sort(key=lambda x: x.gscore)
+    return poses
 
- # Top scoring GLIDE pose in top n poses
-def best_pose(ligstructs, gridstructs, glides, n):
-    A = np.zeros( (len(gridstructs), len(ligstructs)) )
-    for i, grid in enumerate(gridstructs):
-        for j, lig in enumerate(ligstructs):
-            if lig in glides.keys() and grid in glides[lig].keys():
-                num_poses = min(n, len(glides[lig][grid].poses.keys()))
-                #if num_poses == 0: A[i, j] = np.nan
-                A[i, j] = min([glides[lig][grid].poses[k].rmsd for k in range(num_poses)])
+def helpfully_frozen(ligs, structs, glides, n):
+    luck = 0
+    total = 0
+    for l in ligs:
+        for s in structs:
+            if not (l in glides and s in glides[l]): continue
+            total += 1
+            p = [glides[l][s].poses[i].rmsd for i in range(n) if i < len(glides[l][s].poses)]
+            if np.mean(p) < 2 and np.var(p) < 1:
+                luck += 1
+    print 'got lucky on {} of {} pairs.'.format(luck, total)
+
+def get_docking_stats(ligs, structs, glides, n, func):
+    A = np.zeros( (len(structs), len(ligs)) )
+    for i, struct in enumerate(structs):
+        for j, lig in enumerate(ligs):
+            if lig in glides.keys() and struct in glides[lig].keys():
+                num_poses = min(n, len(glides[lig][struct].poses.keys()))
+                A[i, j] = func([glides[lig][struct].poses[k].rmsd for k in range(num_poses)])
             else: A[i, j] = np.nan
     return A
 
-def docking_variance(ligstructs, gridstructs, glides, n):
-    A = np.zeros( (len(gridstructs), len(ligstructs)) )
-    for i, grid in enumerate(gridstructs):
-        for j, lig in enumerate(ligstructs):
-            if lig in glides.keys() and grid in glides[lig].keys():
-                num_poses = min(n, len(glides[lig][grid].poses.keys()))
-                #if num_poses == 0: A[i, j] = np.nan
-                A[i, j] = np.var([glides[lig][grid].poses[k].rmsd for k in range(num_poses)])
-            else: A[i, j] = np.nan
-    return A
-
-def get_structure_and_ligands(rmsd_matrix, rmsd_filter, structures):
-    (best_struct, lig, score) = (None, [], 10)
-    for i, struct in enumerate(structures):
-        good_lig = [(l, rmsd_matrix[i][j]) for j, l in enumerate(structures) if rmsd_filter(rmsd_matrix[i][j])]
-        ave_rmsd = sum([rmsd for (l, rmsd) in good_lig])/float(len(good_lig))
-        if len(good_lig) > len(lig) or (len(good_lig) == len(lig) and ave_rmsd < score):
-            (best_struct, lig, score) = (struct, good_lig, ave_rmsd)
-    
-    return (best_struct, [i[0] for i in lig], score)
-
-def show_results_for_all_ligand_pairs(scores, lab='', scores2=None, lab2=''):
-    
+def show_results_for_all_ligand_pairs(scores, lab='', scores2=None, lab2=''):    
     count = 0
     pair_indices = {}
     ave_change = 0
