@@ -20,23 +20,44 @@ def plot_all_poses(l1, l2, scores, lab, scores2=None, lab2=None):
 
     rmsds1 = scores.get_rmsds(l1)
     rmsds2 = scores.get_rmsds(l2)
+    
+    points = []
 
     for p1 in range(np.shape(all_scores)[0] - 1):
+        points = []
         for p2 in range(np.shape(all_scores)[1] - 1):
             x = (rmsds1[p1] + rmsds2[p2])/2.0
             y = all_scores[p1][p2]
-            plt.plot([x],[y],'r.')
+            points.append((x,y))
+            #plt.plot([x],[y],'r.')
 
-            if scores2 is not None:
-                y2 = all_scores2[p1][p2]
-                plt.plot([x],[y2],'b.')
-                plt.arrow(x,y,0,y2-y,fc='k',ec='k')
+            #if scores2 is not None:
+            #    y2 = all_scores2[p1][p2]
+            #    plt.plot([x],[y2],'b.')
+            #    plt.arrow(x,y,0,y2-y,fc='k',ec='k')
+
+        points.sort(key=lambda (x,y): y)
+        points.reverse()
+        #top = int(len(points)**0.5)
+        x = [p[0] for p in points]
+        y = [p[1] for p in points]
+        plt.plot(x, y, '.')
+        #plt.plot(x[top:], y[top:], 'b.')
 
     plt.legend()
     plt.xlabel('(rmsd1 + rmsd2)/2')
     plt.ylabel('pair score')
-    #plt.gca().set_xlim([-0.5,9])
+    plt.gca().set_xlim([0,12])
     #plt.gca().set_ylim([0,700])
+    plt.show()
+
+def plot_clusters(scores, lab=''):
+    for l in scores.ligands:
+        for p in scores.pose_clusters[l]:
+            if p == -1: symb = 'k*'
+            else: symb = 'k.'
+            rmsd = np.mean([scores.get_rmsds(li)[pi] for (li,pi) in scores.pose_clusters[l][p]])
+            plt.plot([rmsd],[scores.objective(scores.pose_clusters[l][p])], symb)
     plt.show()
 
 def plot_magnitudes(scores, title=''):
@@ -77,37 +98,28 @@ def plot_magnitudes(scores, title=''):
         
 
 def plot_final_rmsds(scores, title='', scores2=None, lab2='', max_norm_rmsds=None):#, show_glide=False):
-    fig, ax = plt.subplots()
-
-    top_pose_rmsds = [scores.get_rmsds(l)[np.argmax(scores.get_final_scores(l)[:-1])] for l in scores.ligands]
-    min_rmsds = [np.min(scores.get_rmsds(l)[:-1]) for l in scores.ligands]
-    plt.plot(min_rmsds, marker='d', markersize=10, color="black", label='best: '+str(np.mean(min_rmsds))[:4])
-
-    if max_norm_rmsds is not None:
-        plt.plot(max_norm_rmsds, marker='.', markersize=10, color='magenta', label='max norm: '+str(np.mean(max_norm_rmsds))[:4])
-
-    if True:#show_glide:
-        glide_rmsds = [scores.get_rmsds(l)[np.argmin(scores.get_gscores(l))] for l in scores.ligands]
-        plt.plot(glide_rmsds, marker='.', markersize=10, color='green', label='glide: '+str(np.mean(glide_rmsds))[:4])
-
-    plt.plot(top_pose_rmsds, marker='.', markersize=10, color="red",label='us: '+str(np.mean(top_pose_rmsds))[:4])
+    
+    a = scores.all_analysis
+    for i in ['min', 'ave', 'norm', 'opt', 'glide', 'us']:
+        plt.plot(a[i][1][:], marker='.', markersize=10, label='{}: {}'.format(i, str(np.mean(a[i][1][:]))[:4]))
 
     if scores2 is not None:
-        top_rmsds2 = [scores2.get_rmsds(l)[np.argmax(scores2.get_final_scores(l)[:-1])] for l in scores2.ligands]
-        plt.plot(top_rmsds2, marker='.', markersize=10, color='blue',label=lab2+str(np.mean(top_rmsds2))[:4])
+        if False in [scores.ligands[i] == scores2.ligands[i] for i in range(len(scores.ligands))]:
+            raise Exception
+
+        us_rmsds2 = scores2.all_analysis['us'][1][:]
+        plt.plot(us_rmsds2, marker='.', markersize=10, color='blue',label=lab2+str(np.mean(us_rmsds2))[:4])
 
     plt.legend()
-    ax.set_xticklabels(scores.ligands, minor=False, rotation='vertical')
-    ax.set_xticks(np.arange(0,len(scores.ligands),1))
-    plt.gca().set_ylim([0,10])
+    plt.gca().set_xticklabels(scores.ligands, minor=False, rotation='vertical')
+    plt.gca().set_xticks(np.arange(0,len(scores.ligands),1))
+    plt.gca().set_ylim([0,12])
     
-    ax.set_title(title)
-    ax.set_xlabel('Ligands')
-    ax.set_ylabel('RMSD [A]')
+    plt.gca().set_title(title)
+    plt.gca().set_xlabel('Ligands')
+    plt.gca().set_ylabel('RMSD [A]')
 
     plt.show()
-
-    return [(scores.ligands[i],top_pose_rmsds[i],min_rmsds[i],glide_rmsds[i]) for i in range(len(scores.ligands))]
 
 def plot_final_scores(scores, lab=''):
     top_pose_scores = [np.max(scores.get_final_scores(l)[:-1]) for l in scores.ligands]
@@ -133,8 +145,35 @@ def plot_scores_vs_rmsds(l, scores, lab='', scores2=None, lab2=''):
         plt.plot(rmsds2[:-1], final_scores2[:-1], marker='.', markersize=10, color='blue', label=lab2, linestyle='None')
         plt.plot([0], [final_scores2[-1]], marker='*', markersize=10, color='blue')
     plt.legend()
-    plt.gca().set_xlim([0,14])
+    plt.gca().set_xlim([0,12])
     plt.show()
+
+def plot_score_breakdown(scores, lab=''):
+    final_poses = [np.argmax(scores.get_final_scores(l)[:-1]) for l in scores.ligands]
+    bd = {l: scores.score_breakdown(l, final_poses[i]) for i, l in enumerate(scores.ligands)}
+
+    lig_ind = np.arange(len(scores.ligands))
+
+    leg = {0:'res=hdonor', 1:'res=hacc', 2:'sb', 3:'lj', 4:''}
+
+    plt.bar(lig_ind, [bd[l][0] for l in scores.ligands], label=leg[0])
+    for i in range(1,len(bd[scores.ligands[0]])):
+        prev = [sum([bd[l][i-n-1] for n in range(i)]) for l in scores.ligands]
+        plt.bar(lig_ind, [bd[l][i] for l in scores.ligands], bottom=prev, label=leg[i])
+    plt.gca().set_xticklabels(scores.ligands, minor=False, rotation='vertical')
+    plt.gca().set_xticks(np.arange(0,len(scores.ligands),1))
+    plt.legend()
+    plt.show()
+
+def plot_n_rmsds(scores, lab=''):
+    final_poses = [np.argmax(scores.get_final_scores(l)[:-1]) for l in scores.ligands]
+    n_rmsds = [scores.rmsd_of_neighbors(l, final_poses[i]) for i, l in enumerate(scores.ligands)]
+    plt.plot(n_rmsds, marker='.', markersize=10)
+    plt.gca().set_xticklabels(scores.ligands, minor=False, rotation='vertical')
+    plt.gca().set_xticks(np.arange(0,len(scores.ligands),1))
+    plt.gca().set_ylim([0,12])
+    plt.show()
+
 
 def heatmap(A, ligstructs, gridstructs):
     fig, ax = plt.subplots()
