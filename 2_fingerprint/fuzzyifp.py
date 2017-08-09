@@ -65,6 +65,7 @@ class FuzzyIFP:
         fp = []
  
         for pose_num, st in enumerate(self.struct):
+            if pose_num > 50: break # only fingerprint first 50
             mergedReceptorSt = self.receptor.st.merge(st)
             minimize_structure(mergedReceptorSt, max_steps = 0)
             mergedReceptor = Receptor()
@@ -99,10 +100,10 @@ class FuzzyIFP:
 
         if p_num is not None: target.write('\nPose Number '+str(p_num) + '\n')
 
-        for res in sorted(active_site.residues.keys()):
-            if len(active_site.residues[res].all_interactions) > 0:
+        for res in sorted(active_site.residues.keys(), key=lambda r:int(r)):
+            if len(active_site.int_per_res[res]) > 0:
                 target.write('\nResidue ' + str(res) + '\n')
-                for i in active_site.residues[res].all_interactions:
+                for i in active_site.int_per_res[res]:
                     target.write(str(i) + '\n')
         target.close()
 

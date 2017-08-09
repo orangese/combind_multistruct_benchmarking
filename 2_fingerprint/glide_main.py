@@ -30,6 +30,15 @@ for dataset in datasets:
     os.system("mkdir -p " + ifpDir)
     os.chdir(ifpDir)
 
+    empty = 0
+    for f in listdir('.'):
+        name, ext = f.split('.')
+        if ext == 'fp':
+            if os.path.getsize(f) == 0: 
+                empty += 1
+                os.system('rm -f {}.fp {}.out'.format(name, name))
+    print 'deleted {} empty fingerprint files'.format(empty)
+    
     glideFolders = [f for f in listdir(glideDir) if not os.path.exists(ifpDir+f+'.fp')]
     print '{}: {} of {} xglide folders have not been fingerprinted. submitting these...'.format(dataset, len(glideFolders), len(listdir(glideDir)))
     
@@ -44,4 +53,4 @@ for dataset in datasets:
 
             f.write("wait\n") #Wait for all forks for finish
 
-        os.system("sbatch --time=01:00:00 -c 6 -p rondror " + dataset + str(i) + ".sh") #Submit the script
+        os.system("sbatch --time=03:00:00 -c 6 -p rondror " + dataset + str(i) + ".sh") #Submit the script

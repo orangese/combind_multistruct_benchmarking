@@ -51,12 +51,41 @@ class Receptor(PDB):
         return [i for pdb in self.residues.values() + self.ligands.values() for i in pdb.all_atoms()]
 
     def fingerprint(self, ligand):
-        """
-        Let's deal with processing this in another class?? 
-        Alternatively we could make a fp class and add a method 
-        that lets us add things as we go???
-        """
-        return {num: resi.fingerprint(ligand) for num, resi in self.residues.items() if any(resi.fingerprint(ligand))}
+        used_h = {} # enforces 1 hbond per h
+        used_fc = {} # 1 sb per ligand formal charge
+        lj = {}
+        for num, resi in self.residues.items():
+            h, s, l = resi.get_interactions(ligand)
+            for hb in h:
+                if hb.h.atom_id not in used_h or used_h[hb.h.atom_id][0].score() < hb.score():
+                    used_h[hb.h.atom_id] = (hb, num)
+            for sb in s:
+                if sb.lig_atom.atom_id not in used_fc or used_fc[sb.lig_atom.atom_id][0].score() < sb.score():
+                    used_fc[sb.lig_atom.atom_id] = (sb, num)
+            lj[num] = l
+
+        hbs = {num:[] for num in self.residues}
+        sbs = {num:[] for num in self.residues}
+        score_thresh = 0.05
+        for h in used_h:
+            hb, r = used_h[h]
+            if hb.score() >= score_thresh: 
+                hbs[r].append(hb)
+        for fc in used_fc:
+            sb, r = used_fc[fc]
+            if sb.score() >= score_thresh:
+                sbs[r].append(sb)            
+            
+        fp = {r:[0,0,0,0,0] for r in self.residues}
+        for r in self.residues:
+            fp[r][0] = sum([hb.score() for hb in hbs[r] if hb.resIsHDonor])
+            fp[r][1] = sum([hb.score() for hb in hbs[r] if not hb.resIsHDonor])
+            fp[r][2] = sum([sb.score() for sb in sbs[r]])
+            fp[r][3] = abs(lj[r].score()) if abs(lj[r].score()) >= score_thresh else 0
+            fp[r][4] = abs(lj[r].other_score()) if abs(lj[r].other_score()) >= score_thresh else 0
+        
+        self.int_per_res = {r: hbs[r] + sbs[r] for r in self.residues}
+        return {r:fp[r] for r in fp if any(fp[r])}
 
     def assign(self):
         for residue in self.residues.values(): residue.assign()

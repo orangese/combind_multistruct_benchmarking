@@ -2,8 +2,10 @@ import numpy as np
 from fingerprint import FuzzyFingerPrint
 
 class Scores:
-    def __init__(self, glides, crystals, ligands, structure, n):
-        
+    def __init__(self, glides, crystals, ligands, structure, n, pair_score):
+        self.exclude = {}
+        self.score_pose_pair = pair_score
+
         self.all_rmsds = {}
         self.all_gscores = {}
 
@@ -13,12 +15,16 @@ class Scores:
         self.struct = structure
         self.num_poses = {l: min(n,len(glides[l][structure].poses)) for l in self.ligands}
         # the crystal poses are the last row/column of each matrix here
-        self.all_scores = self.score_all_pairs_of_poses()
-        self.scores_from_one_ligand = self.rank_poses_based_on_one_other_ligand()
-        self.final_scores_for_each_ligand = self.rank_poses_based_on_all_other_ligands()
+        #self.all_scores = self.score_all_pairs_of_poses()
+        #self.scores_from_one_ligand = self.rank_poses_based_on_one_other_ligand()
+        #self.final_scores_for_each_ligand = self.rank_poses_based_on_all_other_ligands()
 
         self.optimized_scores = self.joint_optimize()
+        self.all_analysis = self.aggregate_scores()
 
+    def redo_optimization(self, exclude):
+        self.exclude = exclude
+        self.optimized_scores = self.joint_optimize()
         self.all_analysis = self.aggregate_scores()
 
     def norm(self, l, p):
@@ -29,11 +35,11 @@ class Scores:
         norms = {l:[self.norm(l,p) for p in range(self.num_poses[l])] for l in self.ligands}
 
         all_analysis = {
-            'us'    : [np.argmax(self.final_scores_for_each_ligand[l][:-1]) for l in self.ligands],
+            #'us'    : [np.argmax(self.final_scores_for_each_ligand[l][:-1]) for l in self.ligands],
             'opt'   : [self.optimized_scores[l] for l in self.ligands],
             'glide' : [0 for l in self.ligands],
             'min'   : [np.argmin(self.get_rmsds(l)[:-1]) for l in self.ligands],
-            'norm'  : [np.argmax(norms[l]) for l in self.ligands]
+            #'norm'  : [np.argmax(norms[l]) for l in self.ligands]
         }
         
         for i in all_analysis:
@@ -48,27 +54,6 @@ class Scores:
         
         return all_analysis
 
-    def add_overlap(self, fp1, fp2, i=None):
-        new_feats = {}
-        for r in fp1.feats:
-            new_feats[r] = np.add(fp1.feats[r], fp2.feats.get(r,[0,0,0,0,0]))
-        for r in fp2.feats:
-            if r not in fp1.feats:
-                new_feats[r] = fp2.feats[r]
-        return FuzzyFingerPrint(new_feats)
-
- 
-    def add_objective(self, pose_cluster):
-        score = 0
-        (l1, p1) = pose_cluster[0]
-        (l2, p2) = pose_cluster[1]
-        fp = self.add_overlap(self.glides[l1][self.struct].poses[p1].fp, self.glides[l2][self.struct].poses[p2].fp)
-        for li, pi in pose_cluster[2:]:
-            fp = self.add_overlap(fp, self.glides[l1][self.struct].poses[pi].fp)
-        
-        return np.sum([np.sum(np.square(fp.feats[r])) for r in fp.feats])
-
-
     def objective(self, pose_cluster):
         score = 0
         for l1, p1 in pose_cluster:
@@ -78,14 +63,14 @@ class Scores:
                 else: fp1 = self.glides[l1][self.struct].poses[p1].fp
                 if p2 == -1: fp2 = self.crystals[l2].fp
                 else: fp2 = self.glides[l2][self.struct].poses[p2].fp
-                score += self.score_pose_pair(fp1, fp2)
+                score += self.score_pose_pair(fp1, fp2, self.exclude)
         return score
 
     def joint_optimize(self):
         # randomly pick a ligand
         # optimize that ligand
         time_since_update = 0
-        pose_cluster = [(l, np.argmax(self.get_final_scores(l)[:-1])) for l in self.ligands]
+        pose_cluster = [(l, np.argmax(self.get_gscores(l))) for l in self.ligands]
         while time_since_update < len(self.ligands)**2:
             time_since_update += 1
 
@@ -97,7 +82,7 @@ class Scores:
             (max_score, pose_num) = (0, 0)
             for p in range(self.num_poses[rand_lig]):
                 pose_cluster[lig_ind] = (rand_lig, p)
-                new_score = self.add_objective(pose_cluster)
+                new_score = self.objective(pose_cluster)
                 if new_score > max_score:
                     max_score, pose_num = new_score, p
             pose_cluster[lig_ind] = (rand_lig, pose_num)
@@ -106,9 +91,12 @@ class Scores:
     
             if new_rmsd != old_rmsd:
                 time_since_update = 0
+        #print 'Excluded: ', self.exclude
+        #print 'Score: ', max_score/2
+        #print 'RMSD: ', np.mean([self.get_rmsds(l)[pose_cluster[self.ligands.index(l)][1]] for l in self.ligands])
         return {l: p for (l, p) in pose_cluster}
 
-    def score_pose_pair(self, fp1, fp2, i=None):
+    def score_pose_pair_old(self, fp1, fp2, i=None):
         score = 0
         for r in fp1.feats:
             if r in fp2.feats:
@@ -135,7 +123,6 @@ class Scores:
                         if fp1 == None or fp2 == None:
                             print self.ligands[i1], self.ligands[i2], self.struct, p1, p2
                         edges[p1][p2] = self.score_pose_pair(fp1, fp2)
-            
                 all_scores[(self.ligands[i1], self.ligands[i2])] = edges
     
         return all_scores
@@ -176,6 +163,20 @@ class Scores:
     def print_neighbors(self, l, p):
         for l2 in self.scores_from_one_ligand[l].keys():
             print l2, [self.scores_from_one_ligand[l][l2][i][p] for i in range(3)]
+
+    def get_neighbor_cluster(self, l, p):
+        cluster = {(l,p):self.glides[l][self.struct].poses[p].fp}
+        for l2 in self.scores_from_one_ligand[l].keys():
+            p2 = self.scores_from_one_ligand[l][l2][0][p]
+            cluster[(l2,p2)] = self.glides[l2][self.struct].poses[p2].fp
+        return cluster
+
+    def get_best_cluster(self):
+        cluster = {}
+        for l in self.ligands:
+            best_p = int(np.argmin(self.get_rmsds(l)[:-1]))
+            cluster[(l,best_p)] = self.glides[l][self.struct].poses[best_p].fp
+        return cluster
 
     def score_breakdown(self, l, p):
         #final_pose = np.argmax(self.get_final_scores(l)[:-1])

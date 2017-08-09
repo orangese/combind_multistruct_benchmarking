@@ -71,7 +71,7 @@ class HBond:
         return 1/(1+math.exp((self.DHA_angle-60)/10))
 
     def score(self):
-        dist_score = 1/(1+math.exp(4*(self.dist-2.6)))
+        dist_score = 1/(1+math.exp(3*(self.dist-2.6)))
         return dist_score*self.angle_score(False)*self.angle_score(True)*self.charge_score
 
     def __str__(self):
@@ -127,19 +127,44 @@ class LJ: # Lennard Jones potential
     def __str__(self):
         return '\nLJ potential: ' + str(self.score())
 
+def is_carboxylate(atom):
+    c1 = atom.formal_charge == -1
+    c2 = atom.element == 'O'
+    nei = [i for i in atom.connected_atoms]
+    c3 = len(nei) == 1 and nei[0].element == 'C'
+    nei2 = [i for i in nei[0].connected_atoms if i.atom_id != atom.atom_id]
+    c4 = len(nei2) == 2 and 'O' in [i.element for i in nei2]
+    if c1 and c2 and c3 and c4:
+        other_O = nei2[0] if nei2[0].element == 'O' else nei2[1]
+        if len(other_O.connected_atoms) == 1:
+            return (True, other_O)
+    return (False, None)
+
 class SaltBridge:
     def __init__(self, atom1, atom2):
         # atom 1 and atom 2 must have opposite formal charges (see residue.py)
-        self.atom1 = atom1
-        self.atom2 = atom2
-        self.r = atom1.dist_to(atom2)
+        self.res_atom = atom1
+        self.lig_atom = atom2
+        self.r = self.get_distance() # atom1.dist_to(atom2)
+
+    def get_distance(self): # special treatment for carboxylate
+        r1 = self.lig_atom.dist_to(self.res_atom)
+        if is_carboxylate(self.res_atom)[0]:
+            r2 = self.lig_atom.dist_to(is_carboxylate(self.res_atom)[1])
+            return 2*r1*r2/(r1+r2) # effective distance
+        elif is_carboxylate(self.lig_atom)[0]:
+            r2 = self.res_atom.dist_to(is_carboxylate(self.lig_atom)[1])
+            return 2*r1*r2/(r1+r2)
+        return r1
 
     def score(self):
         # scales with 1/r (as in electric potential energy) and is capped at 2
         return min(2, 4.0/self.r)
 
     def __str__(self):
-        at1 = '\n+atom1: ' + str(self.atom1.atom_id) + ' ' + self.atom1.element + '\n++charge: ' + str(self.atom1.formal_charge)
-        at2 = '\n+atom2: ' + str(self.atom2.atom_id) + ' ' + self.atom2.element + '\n++charge: ' + str(self.atom2.formal_charge)
+        ra = self.res_atom
+        la = self.lig_atom
+        at1 = '\n+res_atom: {} {} \n++charge: {} \n++COO-: {}'.format(ra.atom_id, ra.element, ra.formal_charge, is_carboxylate(ra)[0])
+        at2 = '\n+lig_atom: {} {} \n++charge: {} \n++COO-: {}'.format(la.atom_id, la.element, la.formal_charge, is_carboxylate(la)[0])
         return '\nSB score: ' + str(self.score()) + at1 + at2 + '\n+r: ' + str(self.r)
 
