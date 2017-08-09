@@ -12,10 +12,10 @@ class Residue(PDB):
         self.atoms = []
         self.aromatics = []
 
-        self.score_thresh = 0.05
+        #self.score_thresh = 0.05
 
-        self.all_interactions = []
-        self.fp = [0,0,0,0,0]
+        #self.all_interactions = []
+        #self.fp = [0,0,0,0,0]
 
     def copy_of(self):
         """
@@ -35,43 +35,43 @@ class Residue(PDB):
     def all_atoms(self):
         return [atom for atom in self.atoms]
 
-    def fingerprint(self, ligand):
-        if sum(self.fp) != 0: return self.fp
+    def get_interactions(self, ligand):
+        #if sum(self.fp) != 0: return self.fp
         
-        hbonds = {} # maps h id to hbond (one h bond per h)
+        hbonds = []#{} # maps h id to hbond (one h bond per h)
         sbs = []
         lj = LJ()
 
         for res_atom in self.atoms:
             for lig_atom in ligand.all_atoms():
 
-                hb_options = []
+                #hb_options = []
                 if valid_donor(res_atom) and valid_acceptor(lig_atom):
-                    hb_options.extend([HBond(res_atom, lig_atom, n, True) for n in res_atom.connected_atoms if n.element == 'H'])
+                    hbonds.extend([HBond(res_atom, lig_atom, n, True) for n in res_atom.connected_atoms if n.element == 'H'])
                 if valid_donor(lig_atom) and valid_acceptor(res_atom):
-                    hb_options.extend([HBond(lig_atom, res_atom, n, False) for n in lig_atom.connected_atoms if n.element == 'H'])
+                    hbonds.extend([HBond(lig_atom, res_atom, n, False) for n in lig_atom.connected_atoms if n.element == 'H'])
 
-                for hb in hb_options:
-                    if hb.h.atom_id not in hbonds or hbonds[hb.h.atom_id].score() < hb.score():
-                            hbonds[hb.h.atom_id] = hb
+                #for hb in hb_options:
+                #    if hb.h.atom_id not in hbonds or hbonds[hb.h.atom_id].score() < hb.score():
+                #            hbonds[hb.h.atom_id] = hb
                 
                 if valid_sb(res_atom, lig_atom):
                     sbs.append(SaltBridge(res_atom, lig_atom))
 
                 lj.add_score(res_atom, lig_atom)
 
-        hbonds = [hbonds[h] for h in hbonds.keys() if hbonds[h].score() >= self.score_thresh]
-        sbs = [i for i in sbs if i.score() >= self.score_thresh]
+        #hbonds = [hbonds[h] for h in hbonds.keys() if hbonds[h].score() >= self.score_thresh]
+        #sbs = [i for i in sbs if i.score() >= self.score_thresh]
 
-        self.fp[0] = sum([hb.score() for hb in hbonds if hb.resIsHDonor])
-        self.fp[1] = sum([hb.score() for hb in hbonds if not hb.resIsHDonor])
-        self.fp[2] = sum([sb.score() for sb in sbs])
-        self.fp[3] = lj.score() if abs(lj.score()) >= self.score_thresh else 0
-        self.fp[4] = lj.other_score() if abs(lj.other_score()) >= self.score_thresh else 0
+        #self.fp[0] = sum([hb.score() for hb in hbonds if hb.resIsHDonor])
+        #self.fp[1] = sum([hb.score() for hb in hbonds if not hb.resIsHDonor])
+        #self.fp[2] = sum([sb.score() for sb in sbs])
+        #self.fp[3] = lj.score() if abs(lj.score()) >= self.score_thresh else 0
+        #self.fp[4] = lj.other_score() if abs(lj.other_score()) >= self.score_thresh else 0
 
-        self.all_interactions = hbonds + sbs
+        #self.all_interactions = hbonds + sbs
         
-        return self.fp
+        return hbonds, sbs, lj # self.fp
 
     def assign(self):
         self._assign_bonds()

@@ -33,6 +33,7 @@ def load_crystals(crystal_fp_file, w=None):
         fp_file = open(crystal_fp_file)
         for line in fp_file:
             struct, ifp = line.strip().split(';')
+            if ifp == '': continue
             crystals[struct] = Pose(0.0, FuzzyFingerPrint.compact_parser(ifp, struct, w=w), 0, 0, struct, struct)
         fp_file.close()
     return crystals

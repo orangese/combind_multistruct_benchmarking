@@ -11,5 +11,5 @@
 #SBATCH --dependency=singleton
 
 hostname
-jupyter-notebook --port=8894 --no-browser
+jupyter-notebook --port=8895 --no-browser
 

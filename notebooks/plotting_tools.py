@@ -95,12 +95,50 @@ def plot_magnitudes(scores, title=''):
 
     max_norm_rmsds = [scores.get_rmsds(l)[highest_magnitude_poses[l][0]] for l in scores.ligands]
     plot_final_rmsds(scores, title=title, max_norm_rmsds=max_norm_rmsds)
-        
+
+def get_interactions(pose_cluster, interactions):
+    all_residues = []
+    for (l,p), fp in pose_cluster.items():
+        all_residues.extend([r for r in fp.feats if r not in all_residues])
+    
+    shared = {}
+    empty_fp = [0 for i in range(max(interactions)+1)]
+    for r in all_residues:
+        for i in interactions:
+            strengths = []
+            for j in range(len(pose_cluster.keys())):
+                for k in range(j+1, len(pose_cluster.keys())):
+                    fp1 = pose_cluster[pose_cluster.keys()[j]]
+                    fp2 = pose_cluster[pose_cluster.keys()[k]]
+                    strengths.append(fp1.feats.get(r,empty_fp)[i]*fp2.feats.get(r,empty_fp)[i])
+            if max(strengths) > 0:
+                shared[(r,i)] = sum(strengths)
+
+    return shared, sum([s for k, s in shared.items()]) # sorted(shared.keys(), key=lambda x:-shared[x])[:max_r]
+
+def plot_shared_interactions(c1, c2=None, interactions=[0,1,2], max_r=10, lab1='', lab2='', title=''):
+    # pose cluster is a dict mapping (lig_name, pnum) to fp instance
+    shared, s1 = get_interactions(c1, interactions)
+    to_plot = sorted(shared.keys(), key=lambda x:-shared[x])[:max_r]
+
+    if c2 is not None:
+        shared2, s2 = get_interactions(c2, interactions)
+        to_plot2 = sorted(shared2.keys(), key=lambda x:-shared2[x])[:max_r]
+        to_plot.extend([i for i in to_plot2 if i not in to_plot])
+        plt.plot([shared2.get(i, 0) for i in to_plot], '.-', markersize=10, label='{} score: {}'.format(lab2, s2))
+
+    plt.plot([shared.get(i, 0) for i in to_plot], '.-', markersize=10, label='{} score: {}'.format(lab1, s1))
+
+    plt.gca().set_xticklabels(to_plot, minor=False, rotation='vertical')
+    plt.gca().set_xticks(np.arange(0, len(to_plot), 1))
+    plt.title(title)
+    plt.legend()
+    plt.show()
 
 def plot_final_rmsds(scores, title='', scores2=None, lab2='', max_norm_rmsds=None):#, show_glide=False):
     
     a = scores.all_analysis
-    for i in ['min', 'ave', 'norm', 'opt', 'glide', 'us']:
+    for i in ['min', 'ave', 'glide', 'opt']:# 'norm', 'opt', 'glide', 'us']:
         plt.plot(a[i][1][:], marker='.', markersize=10, label='{}: {}'.format(i, str(np.mean(a[i][1][:]))[:4]))
 
     if scores2 is not None:
@@ -146,6 +184,42 @@ def plot_scores_vs_rmsds(l, scores, lab='', scores2=None, lab2=''):
         plt.plot([0], [final_scores2[-1]], marker='*', markersize=10, color='blue')
     plt.legend()
     plt.gca().set_xlim([0,12])
+    plt.show()
+
+def plot_ifp_comparison(fp1, fp2, i=[0,1,2,3], lab1='fp1', lab2='fp2', title={0:'res=hdonor',1:'res=hacc',2:'sb',3:'lj'}):
+
+    is_interaction = lambda fp, r, i: r in fp.feats and True in [fp.feats[r][j] >= 1 for j in i]
+
+    sort_key = lambda r: int(r)
+    fp1_res = sorted([r for r in fp1.feats if is_interaction(fp1, r, i) and not is_interaction(fp2, r, i)], key=sort_key)
+    both_res= sorted([r for r in fp1.feats if is_interaction(fp1, r, i) and is_interaction(fp2, r, i)], key=sort_key)
+    fp2_res = sorted([r for r in fp2.feats if not is_interaction(fp1, r, i) and is_interaction(fp2, r, i)], key=sort_key)
+
+    symb = {0:'*',1:'s',2:'d',3:'.'}
+
+    res = fp1_res + both_res + fp2_res
+    val1 = {j:[] for j in i}
+    val2 = {j:[] for j in i}
+
+    for j in i:
+        for r in res:
+            if is_interaction(fp1, r, [j]):
+                val1[j].append(fp1.feats[r][j]**2)
+            else:
+                val1[j].append(-1)
+            if is_interaction(fp2, r, [j]):
+                val2[j].append(fp2.feats[r][j]**2)
+            else:
+                val2[j].append(-1)
+
+        plt.plot(val1[j], symb[j]+'r', markersize=10, label=title[j])
+        plt.plot(val2[j], symb[j]+'b', markersize=10)
+
+    plt.legend()
+    plt.title('red = {}, blue = {}'.format(lab1, lab2))
+    plt.gca().set_ylim([0,12])
+    plt.gca().set_xticklabels(res, minor=False, rotation='vertical')
+    plt.gca().set_xticks(np.arange(0,len(res),1))
     plt.show()
 
 def plot_score_breakdown(scores, lab=''):
