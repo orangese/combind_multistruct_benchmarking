@@ -76,16 +76,14 @@ class Receptor(PDB):
             if sb.score() >= score_thresh:
                 sbs[r].append(sb)            
             
-        #score_thresh = 0.05
         fp = {r:[0,0,0,0,0] for r in self.residues}
         for r in self.residues:
-            fp[r][0] = sum([hb.score() for hb in hbs[r] if hb.resIsHDonor])# and hb.score() >= score_thresh])
-            fp[r][1] = sum([hb.score() for hb in hbs[r] if not hb.resIsHDonor])# and hb.score() >= score_thresh])
-            fp[r][2] = sum([sb.score() for sb in sbs[r]])# if abs(sb.score()) >= score_thresh])
+            fp[r][0] = sum([hb.score() for hb in hbs[r] if hb.resIsHDonor])
+            fp[r][1] = sum([hb.score() for hb in hbs[r] if not hb.resIsHDonor])
+            fp[r][2] = sum([sb.score() for sb in sbs[r]])
             fp[r][3] = abs(lj[r].score()) if abs(lj[r].score()) >= score_thresh else 0
             fp[r][4] = abs(lj[r].other_score()) if abs(lj[r].other_score()) >= score_thresh else 0
-            #fp.extend(fp_r)    
-        #return {num: resi.fingerprint(ligand) for num, resi in self.residues.items() if any(resi.fingerprint(ligand))}
+        
         self.int_per_res = {r: hbs[r] + sbs[r] for r in self.residues}
         return {r:fp[r] for r in fp if any(fp[r])}
 
