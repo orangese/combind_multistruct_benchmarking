@@ -15,8 +15,7 @@ class FuzzyIFP:
             'receptor': '',
             'ligand': '',
             'output_file': '',
-            'verbose':'',
-            'receptor_name':''}
+            'verbose':''}
         self.set_user_params(args)
         
         self.struct = structure.StructureReader(self.params['receptor'])

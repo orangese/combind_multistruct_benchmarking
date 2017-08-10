@@ -10,32 +10,62 @@ from rmsd import RMSD
 
 MAX_NUM_POSES = 50
 
-def load_data(data_set_dir, rmsd_file, glide_dir, crystal_fp_file, docking_fp_dir, w=[10,10,10,0,1], require_fp=True):
+def sort_data(receptor, crystals, glides):
+    
+    exclude = {
+        'B1AR':['2Y00', '4AMI'],
+        'B2AR':['3P0G'],
+        'HSP90':['4YKY', '4YKZ', '4YKX']
+    }
+
+    ligs = sorted([i for i in glides.keys() if i not in exclude.get(receptor,[])])
+        
+    structs = []
+    for l in ligs:
+        structs.extend([i for i in glides[l] if i not in structs and i not in exclude.get(receptor,[])])
+    structs.sort()
+
+    new_glides = {l:{s:glides[l][s] for s in glides[l] if s in structs} for l in glides if l in ligs}
+    new_crystals = {l:crystals[l] for l in crystals if l in ligs}
+
+    return new_crystals, new_glides, ligs, structs
+
+def load_data(receptor,
+        rmsd_file = 'xrmsd.csv',
+        glide = 'xglide',
+        crystal_ifp = 'ifp/xcrystal_ifp_3',
+        glide_ifp = 'ifp/xglide_ifp_3',
+        w = [10,10,10,1,0],
+        require_fp = True):
+
+    data_set_dir = '/scratch/PI/rondror/docking_data/'+receptor
+    glide_dir = '{}/{}/'.format(data_set_dir, glide)
+    crystal_fp_dir = '{}/{}/'.format(data_set_dir, crystal_ifp)
+    glide_fp_dir = '{}/{}/'.format(data_set_dir, glide_ifp)
+
     os.chdir(data_set_dir)
 
-    crystals = load_crystals(crystal_fp_file, w=w)
+    crystals = load_crystals(crystal_fp_dir, w=w)
 
     gscores, rmsds = load_gscores(glide_dir, rmsd_file)
-    ifps = load_ifps(docking_fp_dir, w=w)
+    ifps = load_ifps(glide_fp_dir, w=w)
        
     glides = load_glides(gscores, rmsds, ifps, require_fp)
     
-    return (crystals, glides)
+    return sort_data(receptor, crystals, glides)
 
 
-def load_crystals(crystal_fp_file, w=None):
+def load_crystals(crystal_fp_dir, w=None):
     print 'Loading crystal structures...'
     crystals = {} # PDB id : Pose
     
-    if not os.path.isfile(crystal_fp_file):
-        print 'Crystal structure fingerprint file not found.'
-    else:
-        fp_file = open(crystal_fp_file)
-        for line in fp_file:
-            struct, ifp = line.strip().split(';')
-            if ifp == '': continue
-            crystals[struct] = Pose(0.0, FuzzyFingerPrint.compact_parser(ifp, struct, w=w), 0, 0, struct, struct)
-        fp_file.close()
+    for f in [i for i in os.listdir(crystal_fp_dir) if i.split('.')[-1] == 'fp']:
+        with open('{}/{}'.format(crystal_fp_dir, f)) as fp_file:
+            for line in fp_file:
+                struct, ifp = line.strip().split(';')
+                if ifp == '':
+                    continue
+                crystals[struct] = Pose(0.0, FuzzyFingerPrint.compact_parser(ifp, struct, w=w), 0, 0, struct, struct)
     return crystals
 
 def load_gscores(glide_dir, rmsd_file):

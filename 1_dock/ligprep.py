@@ -9,7 +9,7 @@ def extractLigands():
     os.system("mkdir -p ligands")
     structs = [f.split('.')[0] for f in os.listdir("processed") if not os.path.exists('ligands/{}_ligand.mae'.format(f.split('.')[0]))]
 
-    print('extracting ligands from: ',structs)
+    print 'Extracting ligands from {} files'.format(len(structs))
 
     for s in structs:
         struct = StructureReader("processed/{}.mae".format(s)).next()
@@ -17,13 +17,15 @@ def extractLigands():
         asl_searcher = AslLigandSearcher()
         ligands = asl_searcher.search(struct)
 
-        assert len(ligands) != 0, 'Error: Could not find a ligand for {}'.format(s)
+        if len(ligands) == 0: 
+            print 'Error: Could not find a ligand for {}'.format(s)
 
-        if(len(ligands) > 1):
-            print('Warning: There are multiple ligand sized molecules, picking the first one')
+        elif len(ligands) > 1:
+            print 'Error: multiple ligands found for {}'.format(s)
         
-        ligand = ligands[0]
-        st_writer = StructureWriter("ligands/{}_ligand.mae".format(s))
-        st_writer.append(ligand.st)
-        st_writer.close()
+        else:
+            ligand = ligands[0]
+            st_writer = StructureWriter("ligands/{}_ligand.mae".format(s))
+            st_writer.append(ligand.st)
+            st_writer.close()
 
