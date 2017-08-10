@@ -12,19 +12,35 @@ Move these files into `/scratch/PI/rondror/docking_data/<receptor name>/raw_pdbs
 
 `mkdir <receptor name>/raw_pdbs`
 
-## 2) Process files and dock ligands automatically
+## 2) Process files and dock ligands
 
-The following can be done in one step with the command:
+Remove alternate conformations from the pdb files:
 
-`./main.py -splgx <receptor name>`.
+`sbatch xdock.sh -r <receptor>`
+
+Strip waters and align structures:
+
+`sbatch xdock.sh -s <receptor>`
+
+Add hydrogens and missing sidechains:
+
+`sbatch xdock.sh -p <receptor>`
+
+Extract ligands:
+
+`sbatch xdock.sh -l <receptor>`
+
+Define the receptor region the ligand is docked into (the Glide grid):
+
+`sbatch xdock.sh -g <receptor>`
+
+Dock all the ligands into all the grids:
+
+`sbatch xdock.sh -x <receptor>`
 
 For example:
 
-`./main.py -splgx B2AR`
-
-There are five steps: Strip, Process, Ligands, Grids, and Dock. Each can be run independently with, for example:
-
-`./main.py -s <receptor name>`.
+`sbatch xdock.sh -x B1AR`
 
 ## 3) Evaluate docking quality
 

@@ -6,42 +6,34 @@ import time
 SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1/run"
 FUZZY_SCRIPT = "/share/PI/rondror/$USER/combind/2_fingerprint/fuzzyifp.py"
 DATA = "/scratch/PI/rondror/docking_data/"
-if sys.argv[1] == 'all':
-    datasets = ['AR','B2AR','CDK2','CHK1','HSP90','LPXC','MAP4K4','TRMD']#os.listdir(DATA)
-else:
-    datasets = [sys.argv[1]]
 
-output_dir = sys.argv[2]
+output_dir = sys.argv[1]
+datasets = sys.argv[2:]
 
 for d in datasets:
     print d
 
-    os.chdir(DATA + d)
-
-    OUTPUT = DATA + d + '/ifp/' + output_dir + '/ifp.fp'
-
-    processed = [o for o in os.listdir("./processed/") if os.path.isfile(os.path.join("./processed/",o))]
-    ligands = [o for o in os.listdir("./ligands/") if os.path.isfile(os.path.join("./ligands/",o))]
-
-    if os.path.exists(output_dir):
-        #os.system('rm -r '+output_dir)
+    os.system('mkdir -p {}{}/ifp'.format(DATA, d))
+    os.chdir('{}{}/ifp'.format(DATA, d))
+    if output_dir in os.listdir('.'):
         print d + ' already has that output folder. continuing.'
-        continue
+        #continue
+        os.system('rm -r {}'.format(output_dir))
 
-    os.system("mkdir ifp/" + output_dir)
-    os.chdir('ifp/'+output_dir)
+    os.system('mkdir ' + output_dir)
+    os.chdir(output_dir)
 
-    for structFile in processed:
+    for structFile in os.listdir('../../processed'): 
         struct = os.path.splitext(structFile)[0]
-
-        verbose_output = DATA + d + '/ifp/' + output_dir + '/' + struct + '.out'
-
-        ligandFile = filter(lambda x: struct.lower() in x.lower(), ligands)[0]
-        with open(struct + '.sh', 'w') as f:
-            f.write('#!/bin/bash\n')
-            f.write('OUTPUT=$(' + SCHRODINGER + ' ' + FUZZY_SCRIPT + ' -receptor ' + DATA + d + "/processed/" + structFile + ' -ligand ' + DATA + d + "/ligands/" + ligandFile + ' -input pair -verbose ' + verbose_output + ' -receptor_name ' + d +')\n')
-            f.write("echo \"" + struct + ";" + '$OUTPUT\" >> ' + OUTPUT)
+        lig = filter(lambda x: struct.lower() in x.lower(), os.listdir('../../ligands'))[0]
         
-        os.system("sbatch --time=00:10:00 -n 1 -p rondror " + struct + '.sh')
+        struct_path = '{}{}/processed/{}.mae'.format(DATA, d, struct)
+        lig_path = '{}{}/ligands/{}'.format(DATA, d, lig)
+
+        with open('{}.sh'.format(struct), 'w') as f:
+            f.write('#!/bin/bash\n')
+            f.write('OUTPUT=$({} {} -receptor {} -ligand {} -input pair -verbose {}.out)\n'.format(SCHRODINGER, FUZZY_SCRIPT, struct_path, lig_path, struct)) 
+            f.write('echo \"{};$OUTPUT\" >> {}.fp'.format(struct, struct))
+        os.system('sbatch --time=00:10:00 -n 1 -p rondror {}.sh'.format(struct))
 
 

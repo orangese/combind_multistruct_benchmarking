@@ -16,9 +16,9 @@ def generateInHelper(struct_base):
     struct = StructureReader(struct_base+'.mae').next()
     asl_searcher = AslLigandSearcher()
     ligands = asl_searcher.search(struct)
-    assert len(ligands) != 0, "Error: Could not find a ligand in {}".format(struct_base)
-    if(len(ligands) > 1):
-        print('Warning: There are {} ligand sized molecules in {}, picking the first'.format(struct_base, len(ligands)))
+    if len(ligands) == 0:
+        print "Error: Could not find a ligand in {}".format(struct_base)
+        return
 
     ligand = ligands[0].mol_num
 

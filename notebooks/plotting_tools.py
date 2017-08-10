@@ -2,6 +2,37 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.cm as CM
 
+def print_table(a):
+    str1 = '|'
+    str2 = '|'
+    for i in ['min','ave','glide','opt']:# a.keys():#['min','ave','norm','opt','glide','us']:
+        str1 = '{} {} |'.format(str1, i)
+        str2 = '{} {} |'.format(str2, str(np.mean(a[i]))[:4])
+    
+    print str1
+    print str2
+
+def plot_docking_output(ligs, struct, xglides, n, gscore=True):
+    for lig in ligs:
+        print lig
+
+        if struct not in xglides[lig]: 
+            print 'struct not found. struct, lig: ', struct, lig
+            continue
+        poses = xglides[lig][struct].poses
+        pnum = [i for i in poses.keys()]
+        g1 = [poses[i].gscore for i in poses.keys()]
+        rmsd = [poses[i].rmsd for i in poses.keys()]
+        if gscore:
+            plt.plot(g1[:n], rmsd[:n], '.', markersize=10, label=lig)
+        else:
+            plt.plot(pnum[:n], rmsd[:n], '.', markersize=10, label=lig)
+
+    #plt.gca().set_ylim([0,12])
+    #plt.gca().set_xlim([0,25])
+    plt.legend()
+    plt.show()
+
 def plot_all_poses(l1, l2, scores, lab, scores2=None, lab2=None):
     # plot pair score vs rmsd ave with arrows connecting pair 1 to pair 2
     # if a second set of scores is given, outputs a plot comparing the two scores
