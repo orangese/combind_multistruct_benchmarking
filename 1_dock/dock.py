@@ -1,19 +1,15 @@
 #!/share/PI/rondror/software/schrodinger2016-1/run
+
 import os
 import slurm
 from multiprocessing import Pool
 
-SCHRODINGER = '/share/PI/rondror/software/schrodinger2017-1'
-DATA_DIR = '/scratch/PI/rondror/docking_data'
-LIGANDS_DIR = 'ligands'
-PROCESSED_DIR = 'processed'
-GLIDE_DIR = 'xglide'
-GRIDS_DIR = 'grids'
+GLIDE = '/share/PI/rondror/software/schrodinger2017-1/glide'
 
-XGLIDE_IN = '''GRIDFILE   {}_grid.zip
-LIGANDFILE   {}_ligand.mae
+XGLIDE_IN = '''GRIDFILE   ../../grids/{}/{}.zip
+LIGANDFILE   ../../ligands/{}.mae
 USE_REF_LIGAND   True
-REF_LIGAND_FILE   {}_ligand.mae
+REF_LIGAND_FILE   ../../ligands/{}.mae
 CORE_DEFINITION   allheavy
 DOCKING_METHOD   confgen
 EXPANDED_SAMPLING   True
@@ -27,90 +23,65 @@ PRECISION   SP
 WRITEREPT   True
 '''
 
-def glideExists(dataset, ligand, grid):
-    return os.path.exists("{}/{}/{}/{}_ligand-to-{}/{}_ligand-to-{}_pv.maegz".format(
-        DATA_DIR, dataset, GLIDE_DIR, ligand, grid, ligand, grid)) or os.path.exists("{}/{}/{}/{}_ligand-to-{}/{}_ligand-to-{}-out.maegz".format(
-                    DATA_DIR, dataset, GLIDE_DIR, ligand, grid, ligand, grid))
+def glideExists(ligand, grid):
+    return os.path.exists('{}-to-{}/{}-to-{}_pv.maegz'.format(ligand, grid, ligand, grid)) 
 
-def glideFailed(dataset, ligand, grid):
-    ligToGrid = "{}_ligand-to-{}".format(ligand, grid)
-    ligGridDockDir = "{}/{}/{}/{}".format(DATA_DIR, dataset, GLIDE_DIR, ligToGrid)
-    logFile = "{}/{}.log".format(ligGridDockDir, ligToGrid)
+def glideFailed(ligand, grid):
+    logFile = '{}-to-{}/{}-to-{}.log'.format(ligand, grid, ligand, grid)
+    return os.path.exists(logFile) and 'Total elapsed time' in open(logFile).read()
 
-    if os.path.exists(logFile):
-        if "Total elapsed time" in open(logFile).read(): #If we got to the end of Glide, something messed up
-            return True
+def dock(pair):
+    ligand, grid = pair
 
-def dock(dataset, ligand, grid):
-    #Setup the necessary files for docking, remove old ones if needed
-    ligToGrid = "{}_ligand-to-{}".format(ligand, grid)
-    ligGridDockDir = "{}/{}/{}/{}".format(DATA_DIR, dataset, GLIDE_DIR, ligToGrid)
+    if '{}-to-{}'.format(ligand, grid) in os.listdir('.'):
+        os.system('rm -rf {}-to-{}'.format(ligand, grid))
 
-    if os.path.exists(ligGridDockDir):
-        os.system("rm -rf {}".format(ligGridDockDir))
-
-    os.system("mkdir {}".format(ligGridDockDir))
-
-    gridFile = "{}/{}/{}/{}/{}.zip".format(DATA_DIR, dataset,  GRIDS_DIR, grid, grid)
-    os.system("cp {} {}/{}_grid.zip".format(gridFile, ligGridDockDir, ligToGrid))
-
-    ligandFile = "{}/{}/{}/{}_ligand.mae".format(DATA_DIR, dataset, LIGANDS_DIR, ligand)
-    os.system("cp {} {}/{}_ligand.mae".format(ligandFile, ligGridDockDir, ligToGrid))
+    os.system('mkdir {}-to-{}'.format(ligand, grid))
     
-    #Write out the input file
-    with open("{}/{}.in".format(ligGridDockDir, ligToGrid), 'w+') as f:
-        f.write(XGLIDE_IN.format(ligToGrid, ligToGrid, ligToGrid))
+    os.chdir('{}-to-{}'.format(ligand, grid))
+    with open('{}-to-{}.in'.format(ligand, grid), 'w+') as f:
+        f.write(XGLIDE_IN.format(grid, grid, ligand, ligand))
 
-    #Submit the docking job and wait for it to finish
-    os.chdir(ligGridDockDir)
-    slurm.salloc("{}/glide {}/{}.in -WAIT".format(SCHRODINGER, ligGridDockDir, ligToGrid), 
-            1, "02:30:00") #jobString, numProcessors, timeLimit
+    slurm.salloc('{} {}-to-{}.in -WAIT'.format(GLIDE, ligand, grid), 1, "02:30:00")
+    os.chdir('..')
 
-    #Return (ligand,grid) so we know the directory to check for success
-    return (ligand, grid)
+    return (ligand, grid, glideExists(ligand, grid) or glideFailed(ligand, grid))
 
-def dockHelper(ligGrid):
-    return dock(*ligGrid)
-
-def dockDataset(dataset):
-    gridsDir = "{}/{}/{}".format(DATA_DIR, dataset, GRIDS_DIR)
-    ligandsDir = "{}/{}/{}".format(DATA_DIR, dataset, LIGANDS_DIR)
-
-    #Contain the structure name (without _ligand or extensions)
-    structures = [o for o in os.listdir(gridsDir) if os.path.isdir(os.path.join(gridsDir,o))]
-
-    ligands = [os.path.splitext(o)[0].replace("_ligand","") for o in os.listdir(ligandsDir) if os.path.isfile(os.path.join(ligandsDir,o))]
-    #ligands = [l for l in ligands if l not in structures]# do not dock ligands that we have structures for
+def dockDataset():
+    os.system('mkdir -p xglide')
+    os.chdir('xglide')
         
-    toDock = [] #List of (ligand, grid) tuples that need to be submitted for docking
+    toDock = []
 
-    for ligand in ligands:
-        for grid in structures:
-            if not glideExists(dataset, ligand, grid):
-                toDock.append((dataset, ligand, grid))
+    for ligand in os.listdir('../ligands'):
+        ligand = ligand.split('.')[0]
+        for grid in os.listdir('../grids'):
+            if not glideExists(ligand, grid) and not glideFailed(ligand, grid):
+                toDock.append((ligand, grid))
 
-    print("{} ligand-grid pairs are missing! Checking for failures...".format(str(len(toDock))))
-    
-    dockFailures = [] #List of structures that failed because docking couldn't find a good pose
+    num_licenses = 5
+    pool = Pool(num_licenses)
 
-    for dataset, ligand, grid in toDock:
-        if glideFailed(dataset, ligand, grid):
-            dockFailures.append((dataset, ligand, grid))
+    i = 0    
+    while len(toDock) > 0:
+        i += 1
+        print 'iteration {}, {} jobs left to go'.format(i, len(toDock))
 
-    print("Of {} missing ligand-grid pairs, {} were failures (listed below). Not submitting these...".format(str(len(toDock)), str(len(dockFailures))))
-    print([(x[1], x[2]) for x in dockFailures])
-
-    toDock = [x for x in toDock if x not in dockFailures]
-    print("Submitting:")
-    print([(x[1], x[2]) for x in toDock])
-
-    pool = Pool(6) #We have 6 Glide SP Docking licenses
-
-    while len(toDock) != 0:
         currentlyDocking = toDock
         toDock = []
+        
+        done = 0 
+        not_done = 0
+        for l, g, success in pool.imap_unordered(dock, currentlyDocking):
+            if not success:
+                toDock.append((l, g))
+                not_done += 1
+            else: done += 1
+        print '{} done, {} not done'.format(done, not_done)
+        if len(toDock) == 0:
+            print 'all done!'
+            break
 
-        for finishedLigand, finishedGrid in pool.imap_unordered(dockHelper, currentlyDocking):
-            #Check to make sure that glide worked successfully
-            if not glideExists(dataset, finishedLigand, finishedGrid) and not glideFailed(dataset, finishedLigand, finishedGrid):
-                toDock.append((dataset, finishedLigand, finishedGrid))
+    else:
+        print len(toDock), 'failed pairs.'
+        print toDock

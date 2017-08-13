@@ -8,50 +8,88 @@ from multiprocessing import Pool
 
 GLIDE = "/share/PI/rondror/software/schrodinger2017-1/glide"
 
-def generateIn(struct_bases):
-    #Single threaded since this doesn't take very long
-    map(generateInHelper, struct_bases)
+reference_ligands = {
+    'B1AR_all': '2Y00'
+}
 
-def generateInHelper(struct_base):
-    struct = StructureReader(struct_base+'.mae').next()
+def getCentroid(receptor): 
+    ref_ligand = '../ligands/{}_ligand.mae'.format(reference_ligands[receptor])
+    struct = StructureReader(ref_ligand).next()
     asl_searcher = AslLigandSearcher()
     ligands = asl_searcher.search(struct)
+
     if len(ligands) == 0:
-        print "Error: Could not find a ligand in {}".format(struct_base)
-        return
+        print "Error: Could not find a reference ligand for {}".format(receptor)
+        raise Exception()
 
     ligand = ligands[0].mol_num
 
     position_sum = [0, 0, 0]
     for atom in struct.molecule[ligand].atom:
         position_sum = [i+j for i, j in zip(position_sum, atom.xyz)]
-    center = map(lambda x: x / float(len(struct.molecule[ligand].atom)), position_sum)
 
-    out = open("{}.in".format(struct_base), 'w')
-    out.write('GRID_CENTER '     + ','.join(map(str, center)) + '\n')
-    out.write('GRIDFILE '        + struct_base                + '.zip\n')
-    out.write('LIGAND_MOLECULE ' + str(ligand)                + '\n')
-    out.write('RECEP_FILE '      + struct_base                + '.mae\n')
-    out.close()
+    return map(lambda x: x / float(len(struct.molecule[ligand].atom)), position_sum)
 
-def processSuccess(structure):
-    return structure+".zip" in os.listdir(".") #We're currently in grids
+def generateInFiles(structs, receptor):
 
-def runGlidesHelper(inFile):
-    slurm.salloc("{} -WAIT {}".format(GLIDE, inFile), "1", "1:00:00")
-    return inFile.split(".")[0] #Return the sturcture name (before the .in extension)
+    x, y, z = getCentroid(receptor)
 
-def runGlides(inFiles):
-    #Each thread has a very lightweight job (waiting on the salloc signal) so just launch len(inFiles) threads
-    pool = Pool(len(inFiles))
+    for s in structs:
+        if '{}.in'.format(s) in os.listdir('.'): continue
+
+        out = open("{}.in".format(s), 'w')
+        out.write('GRID_CENTER {},{},{}\n'.format(x,y,z))
+        out.write('GRIDFILE {}.zip\n'.format(s))
+
+        struct = StructureReader('../processed/{}.mae'.format(s)).next()
+        asl_searcher = AslLigandSearcher()
+        ligands = asl_searcher.search(struct)
+        if len(ligands) > 1:
+            print "Error: multiple ligands in {}".format(s)
+            raise Exception()
+        if len(ligands) == 1:
+            out.write('LIGAND_MOLECULE {}\n'.format(ligands[0].mol_num))
+
+        out.write('INNERBOX 15,15,15\n')
+        out.write('OUTERBOX 40,40,40\n')        
+        out.write('RECEP_FILE ../processed/{}.mae\n'.format(s))
+        out.close()
+
+def getGridsHelper(struct):
+    if struct in os.listdir('.'):
+        return struct, True
+
+    slurm.salloc("{} -WAIT {}.in".format(GLIDE, struct), "1", "1:00:00")
+
+    if '{}.zip'.format(struct) in os.listdir('.'):
+        os.system('mkdir {}'.format(struct))
+        os.system('mv {}.zip {}'.format(struct, struct))
+        return struct, True
+    return struct, False
+
+def getGrids(receptor):
+    os.system('mkdir -p grids')
+    os.chdir('grids')
+
+    unfinished_grids = [f.split('.')[0] for f in os.listdir('../processed')]
+
+    generateInFiles(unfinished_grids, receptor)
+    pool = Pool(len(unfinished_grids))
     
-    #Keep submitting jobs until they're all successful
-    while len(inFiles) != 0:
-        currentlyProcessing = inFiles
-        inFiles = []
+    for i in range(5):
+        processing_grids = unfinished_grids
+        unfinished_grids = []
+        print 'iteration {}, generating {} grids'.format(i+1, len(processing_grids))
+        print processing_grids
 
-        for finishedStruct in pool.imap_unordered(runGlidesHelper, currentlyProcessing):
-            if not processSuccess(finishedStruct):
-                inFiles.append(finishedStruct)
-                print("{} did not gridgen successfully - resubmitting".format(finishedStruct))
-
+        for g, done in pool.imap_unordered(getGridsHelper, processing_grids):
+            if done: print g, 'succeeded!'
+            else: unfinished_grids.append(g)
+        if len(unfinished_grids) == 0:
+            print 'all done!'
+            os.system('rm *.log *.in gpu*')
+            break
+    else:
+        print unfinished_grids, 'failed to generate grids'
+    
+    os.chdir('..')
