@@ -24,14 +24,9 @@ def get():
         os.system('mv {} raw_pdbs'.format(input_file))
 
     print 'removing alternate conformations...'
-    os.chdir('raw_pdbs')
-    for f in [name for name in os.listdir('.') if name.split('.')[-1] == 'pdb']:
-        remove_alt_conf(f)
-    os.chdir('..')
-
-def remove_alt_conf(file_name):
-    struct = StructureReader(file_name).next()
-    pw = PDBWriter('{}.pdb'.format(file_name.split('.')[0].upper()), first_occ=True)
-    pw.write(struct)
-    if file_name.split('.')[0].upper() != file_name.split('.')[0]:
-        os.system('rm {}'.format(file_name))
+    for f in os.listdir('raw_pdbs'):
+        struct = StructureReader('raw_pdbs/{}'.format(f)).next()
+        pw = PDBWriter('raw_pdbs/{}.pdb'.format(f.split('.')[0].upper()), first_occ=True)
+        pw.write(struct)
+        if f.split('.')[0].upper() != f.split('.')[0]:
+            os.system('rm raw_pdbs/{}'.format(f))

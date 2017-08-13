@@ -10,7 +10,7 @@ from rmsd import RMSD
 
 MAX_NUM_POSES = 50
 
-def sort_data(receptor, crystals, glides):
+def sort_data(receptor, crystals, glides, combine_structs=False):
     
     exclude = {
         'B1AR':['2Y00', '4AMI'],
@@ -24,6 +24,16 @@ def sort_data(receptor, crystals, glides):
     for l in ligs:
         structs.extend([i for i in glides[l] if i not in structs and i not in exclude.get(receptor,[])])
     structs.sort()
+    
+    if combine_structs:
+        for l in ligs:
+            all_poses = []
+            for s in glides[l]:
+                all_poses.extend([pose for num, pose in glides[l][s].poses.items()])
+            all_poses.sort(key=lambda x: x.gscore)
+            glides[l]['all'] = Ligand(None)
+            glides[l]['all'].poses = {i: p for i, p in enumerate(all_poses[:MAX_NUM_POSES])}
+        structs.append('all')
 
     new_glides = {l:{s:glides[l][s] for s in glides[l] if s in structs} for l in glides if l in ligs}
     new_crystals = {l:crystals[l] for l in crystals if l in ligs}
@@ -36,7 +46,8 @@ def load_data(receptor,
         crystal_ifp = 'ifp/xcrystal_ifp_3',
         glide_ifp = 'ifp/xglide_ifp_3',
         w = [10,10,10,1,0],
-        require_fp = True):
+        require_fp=True,
+        combine_structs=False):
 
     data_set_dir = '/scratch/PI/rondror/docking_data/'+receptor
     glide_dir = '{}/{}/'.format(data_set_dir, glide)
@@ -52,7 +63,7 @@ def load_data(receptor,
        
     glides = load_glides(gscores, rmsds, ifps, require_fp)
     
-    return sort_data(receptor, crystals, glides)
+    return sort_data(receptor, crystals, glides, combine_structs)
 
 
 def load_crystals(crystal_fp_dir, w=None):
@@ -138,6 +149,7 @@ def load_ifps(docking_fp_dir, w=None):
             fp_file = open(docking_fp_dir + fnm)
             for pose_num, line in enumerate(fp_file):
                 if pose_num > MAX_NUM_POSES: break
+                if line == '': continue
                 ifps[struct][lig].append(FuzzyFingerPrint.compact_parser(line.strip(), lig, w=w))
             fp_file.close()
     return ifps

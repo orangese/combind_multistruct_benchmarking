@@ -17,15 +17,13 @@ def extractLigands():
         asl_searcher = AslLigandSearcher()
         ligands = asl_searcher.search(struct)
 
-        if len(ligands) == 0: 
-            print 'Error: Could not find a ligand for {}'.format(s)
+        if len(ligands) == 0: print 'Error: could not find a ligand for {}'.format(s)
 
-        elif len(ligands) > 1:
-            print 'Error: multiple ligands found for {}'.format(s)
+        elif len(ligands) > 1: print 'Error: multiple ligands found for {}'.format(s)
         
         else:
+            print 'Found 1 ligand for {}. Success!'.format(s)
             ligand = ligands[0]
             st_writer = StructureWriter("ligands/{}_ligand.mae".format(s))
             st_writer.append(ligand.st)
             st_writer.close()
-
