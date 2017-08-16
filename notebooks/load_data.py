@@ -8,22 +8,38 @@ from ligand import Ligand
 from pose import Pose
 from rmsd import RMSD
 
-MAX_NUM_POSES = 50
+MAX_NUM_POSES = 500
 
-def sort_data(receptor, crystals, glides, combine_structs=False):
+# grouped in order of biggest ligands to smallest
+similarity_groups = {
+    'B1AR_all': {
+        0: ['2Y00','2Y01','2Y02','4AMI','4AMJ'],
+        1: ['2VT4','2YCW','2YCX','2YCY','2YCZ','4BVN','5F8U'],
+        2: ['2Y03','2Y04'], # these are substructures of group 0
+        3: ['3ZPQ','3ZPR'], # these are only slightly smaller than 2
+        4: ['4GPO']         # no ligand bound
+    }
+}
+
+def sort_data(receptor, crystals, glides, combine_structs=False, exclude_duplicates=False):
     
     exclude = {
-        'B1AR':['2Y00', '4AMI'],
+        'B1AR_all':['2Y01','4BVN','5F8U'],
         'B2AR':['3P0G'],
-        'HSP90':['4YKY', '4YKZ', '4YKX']
+        'HSP90':['4YKY','4YKZ','4YKX']
     }
-
-    ligs = sorted([i for i in glides.keys() if i not in exclude.get(receptor,[])])
-        
+    
+    
+    ligs = sorted([i for i in glides.keys()])# if i not in exclude.get(receptor,[])])
     structs = []
     for l in ligs:
-        structs.extend([i for i in glides[l] if i not in structs and i not in exclude.get(receptor,[])])
+        structs.extend([i for i in glides[l] if i not in structs])# and i not in exclude.get(receptor,[])])
     structs.sort()
+    if receptor in similarity_groups:
+        sg = similarity_groups[receptor]
+        f = lambda x: [i for i in range(max(sg.keys())+1) if x in sg[i]][0]
+        ligs.sort(key=f)
+        structs.sort(key=f)
     
     if combine_structs:
         for l in ligs:
@@ -55,9 +71,8 @@ def load_data(receptor,
     glide_fp_dir = '{}/{}/'.format(data_set_dir, glide_ifp)
 
     os.chdir(data_set_dir)
-
+    
     crystals = load_crystals(crystal_fp_dir, w=w)
-
     gscores, rmsds = load_gscores(glide_dir, rmsd_file)
     ifps = load_ifps(glide_fp_dir, w=w)
        
@@ -102,7 +117,7 @@ def load_gscores(glide_dir, rmsd_file):
             line = gscore_file.readline().strip().split()
         line = gscore_file.readline().strip().split()
         
-        while line and len(gscores[lig][struct]) <= MAX_NUM_POSES:
+        while line and len(gscores[lig][struct]) < MAX_NUM_POSES:
             # Rank', 'Title', 'Lig#', 'Score', 'GScore'
             if line[2] == '1': gscores[lig][struct].append(float(line[4]))
             elif line[1] == '1': gscores[lig][struct].append(float(line[3]))
@@ -148,7 +163,7 @@ def load_ifps(docking_fp_dir, w=None):
 
             fp_file = open(docking_fp_dir + fnm)
             for pose_num, line in enumerate(fp_file):
-                if pose_num > MAX_NUM_POSES: break
+                if pose_num >= MAX_NUM_POSES: break
                 if line == '': continue
                 ifps[struct][lig].append(FuzzyFingerPrint.compact_parser(line.strip(), lig, w=w))
             fp_file.close()

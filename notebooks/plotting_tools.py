@@ -280,13 +280,13 @@ def plot_n_rmsds(scores, lab=''):
     plt.show()
 
 
-def heatmap(A, ligstructs, gridstructs):
+def heatmap(A, ligstructs, gridstructs, red=10.25):
     fig, ax = plt.subplots()
 
     cmap = CM.jet
     cmap.set_under('black')
 
-    heatmap = ax.pcolor(A, cmap=cmap, vmin=0, vmax=10.25)
+    heatmap = ax.pcolor(A, cmap=cmap, vmin=0, vmax=red)
     plt.colorbar(heatmap)
 
     # put the major ticks at the middle of each cell
@@ -302,6 +302,8 @@ def heatmap(A, ligstructs, gridstructs):
     ax.set_yticklabels(row_labels, minor=False)
     ax.plot(ax.get_xlim(), ax.get_ylim()[::-1], linewidth = 4, c="m")
     plt.title('')
+    plt.xlabel('ligands')
+    plt.ylabel('structures')
     #plt.savefig(plotTitle + '.png')
     plt.show()
 

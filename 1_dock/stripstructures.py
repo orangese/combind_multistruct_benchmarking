@@ -11,13 +11,11 @@ from os.path import isfile, join
 import sys
 
 def strip():
-    rawFiles = [f for f in listdir("raw_pdbs") if f.endswith(".pdb") and not os.path.exists('stripped/{}.mae'.format(f.split('.')[0]))]
-    print rawFiles
     structs = []
      
     print("--Reading in structs...")
-    for f in rawFiles:
-        struct = StructureReader("raw_pdbs/" + f).next()
+    for f in os.listdir('raw_pdbs'):
+        struct = StructureReader('raw_pdbs/' + f).next()
         
         #If there are multiple chains in our PDB File, delete all non-A chains
         chainNames = set([chain._getChainName() for chain in struct.chain])
@@ -46,16 +44,11 @@ def strip():
 
     print("--Aligning structures...")
     structAlign = StructAlign()
-
-    if 'stripped' in listdir('.') and len(listdir('stripped')) > 0:
-        template = StructureReader('stripped/{}'.format(listdir('stripped')[0])).next()
-        structAlign.align(template, newStructs)
-    else:
-        structAlign.align(newStructs[0], newStructs[1:])
+    structAlign.align(newStructs[0], newStructs[1:])
     
     os.system('mkdir -p stripped')
     for struct in newStructs:
-        st_writer = StructureWriter("./stripped/" + struct._getTitle() + ".mae")
+        st_writer = StructureWriter("stripped/" + struct._getTitle() + ".mae")
         st_writer.append(struct)
         st_writer.close()
 

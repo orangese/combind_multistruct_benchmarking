@@ -9,7 +9,9 @@ from multiprocessing import Pool
 GLIDE = "/share/PI/rondror/software/schrodinger2017-1/glide"
 
 reference_ligands = {
-    'B1AR_all': '2Y00'
+    'B1AR_all': '2Y00',
+    'B2AR_all': '3PDS',
+    'CHK1_all': '2C3K'
 }
 
 def getCentroid(receptor): 
@@ -71,12 +73,12 @@ def getGrids(receptor):
     os.system('mkdir -p grids')
     os.chdir('grids')
 
-    unfinished_grids = [f.split('.')[0] for f in os.listdir('../processed')]
-
-    generateInFiles(unfinished_grids, receptor)
-    pool = Pool(len(unfinished_grids))
+    unfinished_grids = [f.split('.')[0] for f in os.listdir('../processed') if f.split('.')[1] == 'mae']
     
-    for i in range(5):
+    generateInFiles(unfinished_grids, receptor)
+    pool = Pool(min(len(unfinished_grids), 25))
+    
+    for i in range(1):
         processing_grids = unfinished_grids
         unfinished_grids = []
         print 'iteration {}, generating {} grids'.format(i+1, len(processing_grids))

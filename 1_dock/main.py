@@ -22,7 +22,7 @@ if 'a' in commands:
 else:
     toRun = list(commands[1:])
 
-for dataset in datasets:#Go through the given structures, performing the commands specified
+for dataset in datasets:
 
     os.chdir('{}/{}'.format(DATA, dataset))
 
