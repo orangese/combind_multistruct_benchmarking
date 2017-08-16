@@ -17,15 +17,16 @@ for d in datasets:
     os.chdir('{}{}/ifp'.format(DATA, d))
     if output_dir in os.listdir('.'):
         print d + ' already has that output folder. continuing.'
-        #continue
-        os.system('rm -r {}'.format(output_dir))
+        continue
 
     os.system('mkdir ' + output_dir)
     os.chdir(output_dir)
 
     for structFile in os.listdir('../../processed'): 
         struct = os.path.splitext(structFile)[0]
-        lig = filter(lambda x: struct.lower() in x.lower(), os.listdir('../../ligands'))[0]
+        ligs = filter(lambda x: struct in x, os.listdir('../../ligands'))
+        if ligs == []: continue
+        lig = ligs[0]
         
         struct_path = '{}{}/processed/{}.mae'.format(DATA, d, struct)
         lig_path = '{}{}/ligands/{}'.format(DATA, d, lig)

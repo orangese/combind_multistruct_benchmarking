@@ -42,7 +42,7 @@ def dock(pair):
     with open('{}-to-{}.in'.format(ligand, grid), 'w+') as f:
         f.write(XGLIDE_IN.format(grid, grid, ligand, ligand))
 
-    slurm.salloc('{} {}-to-{}.in -WAIT'.format(GLIDE, ligand, grid), 1, "02:30:00")
+    slurm.salloc('{} {}-to-{}.in -WAIT'.format(GLIDE, ligand, grid), 1, "6:00:00")
     os.chdir('..')
 
     return (ligand, grid, glideExists(ligand, grid) or glideFailed(ligand, grid))
@@ -53,12 +53,16 @@ def dockDataset():
         
     toDock = []
 
-    for ligand in os.listdir('../ligands'):
-        ligand = ligand.split('.')[0]
-        for grid in os.listdir('../grids'):
+    all_ligands = [f.split('.')[0] for f in os.listdir('../ligands')]
+    all_grids = [f.split('.')[0] for f in os.listdir('../grids')]
+
+    for grid in all_grids:
+        for ligand in all_ligands:
             if not glideExists(ligand, grid) and not glideFailed(ligand, grid):
                 toDock.append((ligand, grid))
-
+    print len(toDock)
+    print toDock
+    #return
     num_licenses = 5
     pool = Pool(num_licenses)
 
