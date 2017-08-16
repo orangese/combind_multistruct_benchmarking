@@ -4,6 +4,14 @@ from schrodinger.structure import StructureReader
 from schrodinger.structutils.analyze import AslLigandSearcher
 from schrodinger.structure import StructureWriter
 
+# New goals:
+# 1. Make sure proteins are aligned
+# 2. Make sure all ligands are in the orthosteric site
+
+# Plan:
+# compare all detected ligands (1 or multiple) to the reference ligand defined elsewhere
+# ref. ligand is in gridgen.py right now. move it either to a different class, imported everywhere, or pass it from main. 
+
 def extractLigands():
 
     os.system("mkdir -p ligands")
