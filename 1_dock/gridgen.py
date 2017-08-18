@@ -3,7 +3,7 @@ from schrodinger.structure import StructureReader
 from schrodinger.structutils.analyze import AslLigandSearcher
 from schrodinger.structure import StructureWriter
 import os
-import slurm
+import subprocess
 from multiprocessing import Pool
 
 GLIDE = "/share/PI/rondror/software/schrodinger2017-1/glide"
@@ -14,7 +14,7 @@ reference_ligands = {
     'CHK1_all': '2C3K'
 }
 
-def getCentroid(receptor): 
+def getCentroid(receptor):
     ref_ligand = '../ligands/{}_ligand.mae'.format(reference_ligands[receptor])
     struct = StructureReader(ref_ligand).next()
     asl_searcher = AslLigandSearcher()
@@ -53,7 +53,7 @@ def generateInFiles(structs, receptor):
             out.write('LIGAND_MOLECULE {}\n'.format(ligands[0].mol_num))
 
         out.write('INNERBOX 15,15,15\n')
-        out.write('OUTERBOX 40,40,40\n')        
+        out.write('OUTERBOX 40,40,40\n')
         out.write('RECEP_FILE ../processed/{}.mae\n'.format(s))
         out.close()
 
@@ -61,7 +61,7 @@ def getGridsHelper(struct):
     if struct in os.listdir('.'):
         return struct, True
 
-    slurm.salloc("{} -WAIT {}.in".format(GLIDE, struct), "1", "1:00:00")
+    subprocess.call([GLIDE, "-WAIT", "{}.in".format(struct)])
 
     if '{}.zip'.format(struct) in os.listdir('.'):
         os.system('mkdir {}'.format(struct))
@@ -74,10 +74,10 @@ def getGrids(receptor):
     os.chdir('grids')
 
     unfinished_grids = [f.split('.')[0] for f in os.listdir('../processed') if f.split('.')[1] == 'mae']
-    
+
     generateInFiles(unfinished_grids, receptor)
-    pool = Pool(min(len(unfinished_grids), 25))
-    
+    pool = Pool(int(os.environ.get("SLURM_NTASKS", 4), 10))
+
     for i in range(1):
         processing_grids = unfinished_grids
         unfinished_grids = []
@@ -93,5 +93,5 @@ def getGrids(receptor):
             break
     else:
         print unfinished_grids, 'failed to generate grids'
-    
+
     os.chdir('..')

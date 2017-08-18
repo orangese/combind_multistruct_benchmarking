@@ -1,7 +1,7 @@
 #!/share/PI/rondror/software/schrodinger2016-1/run
 
 import os
-import slurm
+import subprocess
 from multiprocessing import Pool
 
 GLIDE = '/share/PI/rondror/software/schrodinger2017-1/glide'
@@ -24,7 +24,7 @@ WRITEREPT   True
 '''
 
 def glideExists(ligand, grid):
-    return os.path.exists('{}-to-{}/{}-to-{}_pv.maegz'.format(ligand, grid, ligand, grid)) 
+    return os.path.exists('{}-to-{}/{}-to-{}_pv.maegz'.format(ligand, grid, ligand, grid))
 
 def glideFailed(ligand, grid):
     logFile = '{}-to-{}/{}-to-{}.log'.format(ligand, grid, ligand, grid)
@@ -37,12 +37,12 @@ def dock(pair):
         os.system('rm -rf {}-to-{}'.format(ligand, grid))
 
     os.system('mkdir {}-to-{}'.format(ligand, grid))
-    
+
     os.chdir('{}-to-{}'.format(ligand, grid))
     with open('{}-to-{}.in'.format(ligand, grid), 'w+') as f:
         f.write(XGLIDE_IN.format(grid, grid, ligand, ligand))
 
-    slurm.salloc('{} {}-to-{}.in -WAIT'.format(GLIDE, ligand, grid), 1, "6:00:00")
+    subprocess.call([GLIDE, "{}-to-{}.in".format(ligand, grid), "-WAIT"])
     os.chdir('..')
 
     return (ligand, grid, glideExists(ligand, grid) or glideFailed(ligand, grid))
@@ -50,7 +50,7 @@ def dock(pair):
 def dockDataset():
     os.system('mkdir -p xglide')
     os.chdir('xglide')
-        
+
     toDock = []
 
     all_ligands = [f.split('.')[0] for f in os.listdir('../ligands')]
@@ -60,21 +60,22 @@ def dockDataset():
         for ligand in all_ligands:
             if not glideExists(ligand, grid) and not glideFailed(ligand, grid):
                 toDock.append((ligand, grid))
-    print len(toDock)
-    print toDock
+
+    print(len(toDock))
+    print(toDock)
     #return
     num_licenses = 5
     pool = Pool(num_licenses)
 
-    i = 0    
+    i = 0
     while len(toDock) > 0:
         i += 1
-        print 'iteration {}, {} jobs left to go'.format(i, len(toDock))
+        print('iteration {}, {} jobs left to go'.format(i, len(toDock)))
 
         currentlyDocking = toDock
         toDock = []
-        
-        done = 0 
+
+        done = 0
         not_done = 0
         for l, g, success in pool.imap_unordered(dock, currentlyDocking):
             if not success:
