@@ -9,6 +9,7 @@ import ligprep
 import gridgen
 import processing
 import dock
+import centroid
 
 SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1"
 DATA = "/scratch/PI/rondror/docking_data"
@@ -23,8 +24,8 @@ else:
     toRun = list(commands[1:])
 
 for dataset in datasets:
-
     os.chdir('{}/{}'.format(DATA, dataset))
+    ref_coord = centroid.getCentroid(dataset)
 
     if 'r' in toRun:
         get_pdbs.get()
@@ -33,7 +34,7 @@ for dataset in datasets:
     if 'p' in toRun:
         processing.process()
     if 'l' in toRun:
-        ligprep.extractLigands()
+        ligprep.extractLigands(ref_coord)
     if 'g' in toRun:
         gridgen.getGrids(dataset)
     if 'x' in toRun:

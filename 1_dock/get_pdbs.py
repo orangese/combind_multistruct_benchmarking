@@ -25,6 +25,7 @@ def get():
 
     print 'removing alternate conformations...'
     for f in os.listdir('raw_pdbs'):
+	print str(f)
         struct = StructureReader('raw_pdbs/{}'.format(f)).next()
         pw = PDBWriter('raw_pdbs/{}.pdb'.format(f.split('.')[0].upper()), first_occ=True)
         pw.write(struct)
