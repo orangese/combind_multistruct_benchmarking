@@ -18,6 +18,12 @@ similarity_groups = {
         2: ['2Y03','2Y04'], # these are substructures of group 0
         3: ['3ZPQ','3ZPR'], # these are only slightly smaller than 2
         4: ['4GPO']         # no ligand bound
+    },
+    'B2AR_all': {
+        0: ['4LDL','4QKX','4LDE','3SN6','3PDS','3P0G'],
+        1: ['5JQH','5D6L','5D5B','5D5A','4GBR','2RH1','3NYA','3NY8','3NY9'],
+        2: ['4LDO','3D4S'],
+        3: ['2R4S','2R4R','3KJ6']
     }
 }
 
