@@ -1,64 +1,93 @@
 #!/share/PI/rondror/software/schrodinger2017-1/run
 from schrodinger.structure import StructureReader
-from schrodinger.structutils.analyze import AslLigandSearcher
 from schrodinger.structure import StructureWriter
-from schrodinger.structure import _StructureAtom
-from schrodinger.structure import Structure
 from schrodinger.structutils.structalign import StructAlign
+from schrodinger.structutils.measure import get_shortest_distance
+from schrodinger.structutils.analyze import AslLigandSearcher
 import os
-from os import listdir
-from os.path import isfile, join
-import sys
 
-def strip():
-    structs = []
-     
-    all_good = True
+def load_proteins_and_ligands(protein_dir='raw_pdbs', ligand_dir='ligands'):
+    
+    print 'loading {} files...'.format(len(os.listdir(protein_dir)))
 
-    print("--Reading in structs...")
-    for f in os.listdir('raw_pdbs'):
-        struct = StructureReader('raw_pdbs/' + f).next()
+    proteins = {}
+    ligands = {}
+    for f in os.listdir(protein_dir):
+        if 'pdb' not in f: continue
+
+        name = f.split('.')[0]
+        proteins[name] = StructureReader('{}/{}'.format(protein_dir, f)).next()        
         
-        #If there are multiple chains in our PDB File, delete all non-A chains
-        chainNames = set([chain._getChainName() for chain in struct.chain])
-        if len(chainNames) > 1:
-            print '{} has multiple chains present. manually open file and delete irrelevant ones'.format(f)
-            all_good = False
-            continue
-        '''if len(chainNames) > 1 and "A" in chainNames:
-            nonAAtoms = [] 
-            for atom in struct.atom:
-                if atom._getAtomChain() not in ['A', 'L', 'Z']:# the ligand is sometimes in L or Z
-                    nonAAtoms.append(atom.__int__())
-            struct.deleteAtoms(nonAAtoms)'''
+        lig_searcher = AslLigandSearcher()
+        all_ligs = lig_searcher.search(proteins[name])
+        
+        if ligand_dir in os.listdir('.') and len([l for l in os.listdir(ligand_dir) if name == l.split('_')[0]]) == 1:
+            assert len(all_ligs) == 0, 'found both a ligand file and a ligand in the structure. delete one and try again.'
+            ligands[name] = StructureReader('{}/{}'.format(ligand_dir, [l for l in os.listdir(ligand_dir) if name == l.split('_')[0]][0])).next()
+            #print '+ Ligand: found in \'{}\' folder'.format(ligand_dir)
+        else:
+            assert len(all_ligs) in [0,1], 'multiple ligands found'
+            if len(all_ligs) == 0:
+                ligands[name] = None
+                print '+ Ligand: no ligand found'
+            if len(all_ligs) == 1:
+                ligands[name] = all_ligs[0]
+                #print '+ Ligand: one ligand found'
+    return proteins, ligands
 
-        #If the PDB lacks a title, give it the same title as the filename    
-        if struct._getTitle() == "" or struct._getTitle() == 'xxxx':
-            struct._setTitle(os.path.splitext(f)[0].upper())
-        structs.append(struct)
+def merge_and_strip(proteins, ligands):
 
-    if not all_good:
-        print 'deal with extra chains and then try again.'
-        return
+    print 'merging...'
 
-    print("--Removing waters from structs...")
-    newStructs = [] #List for structs without water
-    for struct in structs:
-        delAtomList = []
-        for mol in struct.molecule:
-            atomList = map(lambda x: x.element, mol.atom)
-            if(len(atomList) == 1 and atomList[0] == 'O'): #Found a water molecule
-                delAtomList.append(_StructureAtom.__int__(mol.atom[0]))
-        struct.deleteAtoms(delAtomList)
-        newStructs.append(struct)
+    merged = {}
+    for struct in proteins.keys():
+        all_chains = {c._getChainName() : c.extractStructure() for c in proteins[struct].chain if c._getChainName().strip() != ''}    
+        if ligands[struct] == None:
+            assert len(all_chains.keys()) == 1, 'no ligand and multiple chains found in {}'.format(f)
+            merged[struct] = all_chains[all_chains.keys()[0]]
+        else:
+            chain_dist = [(c, get_shortest_distance(ligands[struct], st2=all_chains[c])[0]) for c in all_chains]
+            chain_dist.sort(key=lambda x: x[1])
+            assert chain_dist[0][1] < 2.5, 'no chain closer than 2.5 A to the ligand found in {}'.format(f)
 
-    print("--Aligning structures...")
+            if len(all_chains) > 1:
+                assert abs(chain_dist[0][1] - chain_dist[1][1]) > 0.5, 'chain {} and chain {} are both close to {}'.format(chain_dist[0][0], chain_dist[1][0], struct)
+                
+            merged[struct] = ligands[struct].merge(all_chains[chain_dist[0][0]])
+           
+        merged[struct]._setTitle(struct)
+    return merged
+
+def strip(protein_dir='raw_pdbs', ligand_dir='ligands'):
+    proteins, ligands = load_proteins_and_ligands(protein_dir, ligand_dir)
+    merged = merge_and_strip(proteins, ligands)
+    
+    os.system('mkdir -p stripped ligands')
+    
+    print 'aligning complexes...'
+
+    structs = [s for name, s in merged.items()]
     structAlign = StructAlign()
-    structAlign.align(newStructs[0], newStructs[1:])
+    structAlign.align(structs[0], structs[1:])
 
-    os.system('mkdir -p stripped')
-    for struct in newStructs:
-        st_writer = StructureWriter("stripped/" + struct._getTitle() + ".mae")
-        st_writer.append(struct)
+    for struct in merged.keys():
+        # ligand has one "residue"
+        molecules = sorted([m for m in merged[struct].molecule], key=lambda x: len(x.residue))
+        
+        if ligands[struct] is not None:
+            assert len(molecules[0].residue) == 1
+            assert not [r for r in molecules[0].residue][0].isStandardResidue()
+            os.system('rm {}/{}*'.format(ligand_dir, struct))
+            ligand = molecules.pop(0).extractStructure()
+            ligand._setTitle('{}_ligand'.format(struct))
+            st_writer = StructureWriter('ligands/{}_ligand.mae'.format(struct))
+            st_writer.append(ligand)
+            st_writer.close()
+ 
+        st_writer = StructureWriter('stripped/{}.mae'.format(struct))
+        for m in molecules:
+            assert len(m.residue) > 1
+            protein = m.extractStructure()
+            protein._setTitle(struct)
+            st_writer.append(protein)
         st_writer.close()
-
