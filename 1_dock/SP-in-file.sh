@@ -1,8 +1,0 @@
-NAME=$1
-echo GRIDFILE   $NAME'_grid.zip'
-echo LIGANDFILE  $NAME'_ligand.mae'
-echo NENHANCED_SAMPLING   4
-echo POSES_PER_LIG   150
-echo POSTDOCK_NPOSE   150
-echo PRECISION   SP
-echo WRITEREPT   True

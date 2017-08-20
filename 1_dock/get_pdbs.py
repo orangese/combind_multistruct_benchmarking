@@ -1,11 +1,8 @@
 import sys
 import os
-import multiprocessing as mp
 import wget
 import ssl
-import multiprocessing as mp
-from schrodinger.structure import PDBWriter
-from schrodinger.structure import StructureReader
+from schrodinger.structure import PDBWriter, StructureReader, StructureWriter
 
 SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1"
 
@@ -24,10 +21,17 @@ def get():
         os.system('mv {} raw_pdbs'.format(input_file))
 
     print 'removing alternate conformations...'
+    os.system('mkdir -p raw_maes')
     for f in os.listdir('raw_pdbs'):
-	print str(f)
-        struct = StructureReader('raw_pdbs/{}'.format(f)).next()
-        pw = PDBWriter('raw_pdbs/{}.pdb'.format(f.split('.')[0].upper()), first_occ=True)
-        pw.write(struct)
-        if f.split('.')[0].upper() != f.split('.')[0]:
-            os.system('rm raw_pdbs/{}'.format(f))
+        name = f.split('.')[0].upper()
+        if '{}.mae'.format(name) in os.listdir('raw_maes'): 
+            continue
+        
+        struct1 = StructureReader('raw_pdbs/{}'.format(f)).next()
+        pw = PDBWriter('raw_maes/{}.pdb'.format(name, first_occ=True))
+        pw.write(struct1)
+        struct2 = StructureReader('raw_maes/{}.pdb'.format(name)).next()
+        mw = StructureWriter('raw_maes/{}.mae'.format(name))
+        mw.append(struct2)
+        mw.close()
+        os.system('rm raw_maes/{}.pdb'.format(name))

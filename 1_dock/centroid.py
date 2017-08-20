@@ -2,6 +2,7 @@
 from schrodinger.structure import StructureReader
 from schrodinger.structutils.analyze import AslLigandSearcher
 from schrodinger.structure import StructureWriter
+import numpy as np
 
 #Ideally the reference ligand should be the only ligand in the structure.
 #Otherwise, we need to add code that specifies which ligand in the structure is the reference ligand.
@@ -12,6 +13,17 @@ reference_ligands = {
     'TRMD_all': '3AXZ',
     'TRMD': '3AXZ'
 }
+
+def dist(xyz1, xyz2):
+    return np.linalg.norm([xyz1[i] - xyz2[i] for i in range(3)])
+
+def average_atom_pos(struct):
+    xyz = [0, 0, 0]
+    for atom in struct.atom:
+        for i in range(3):
+            xyz[i] += atom.xyz[i]/float(len(struct.atom))
+
+    return xyz
 
 def getCentroid(receptor): 
     #ref_ligand = 'ligands_all/{}_ligand.mae'.format(reference_ligands[receptor])

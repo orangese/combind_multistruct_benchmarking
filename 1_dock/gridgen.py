@@ -8,33 +8,9 @@ from multiprocessing import Pool
 
 GLIDE = "/share/PI/rondror/software/schrodinger2017-1/glide"
 
-reference_ligands = {
-    'B1AR_all': '2Y00',
-    'B2AR_all': '3PDS',
-    'CHK1_all': '2C3K'
-}
+def generate_input_files(structs, centroid):
 
-def getCentroid(receptor):
-    ref_ligand = '../ligands/{}_ligand.mae'.format(reference_ligands[receptor])
-    struct = StructureReader(ref_ligand).next()
-    asl_searcher = AslLigandSearcher()
-    ligands = asl_searcher.search(struct)
-
-    if len(ligands) == 0:
-        print "Error: Could not find a reference ligand for {}".format(receptor)
-        raise Exception()
-
-    ligand = ligands[0].mol_num
-
-    position_sum = [0, 0, 0]
-    for atom in struct.molecule[ligand].atom:
-        position_sum = [i+j for i, j in zip(position_sum, atom.xyz)]
-
-    return map(lambda x: x / float(len(struct.molecule[ligand].atom)), position_sum)
-
-def generateInFiles(structs, receptor):
-
-    x, y, z = getCentroid(receptor)
+    x, y, z = centroid
 
     for s in structs:
         if '{}.in'.format(s) in os.listdir('.'): continue
@@ -57,7 +33,7 @@ def generateInFiles(structs, receptor):
         out.write('RECEP_FILE ../processed/{}.mae\n'.format(s))
         out.close()
 
-def getGridsHelper(struct):
+def get_grids_helper(struct):
     if struct in os.listdir('.'):
         return struct, True
 
@@ -69,14 +45,18 @@ def getGridsHelper(struct):
         return struct, True
     return struct, False
 
-def getGrids(receptor):
+def get_grids():
+
+    with open('grid_center.txt','r') as f:
+        centroid = [float(i) for i in f[0].split(',')]
+
     os.system('mkdir -p grids')
     os.chdir('grids')
 
     unfinished_grids = [f.split('.')[0] for f in os.listdir('../processed') if f.split('.')[1] == 'mae']
 
-    generateInFiles(unfinished_grids, receptor)
-    pool = Pool(int(os.environ.get("SLURM_NTASKS", 4), 10))
+    generate_input_files(unfinished_grids, centroid)
+    pool = Pool(int(os.environ.get("SLURM_NTASKS", 4)))#, 10)
 
     for i in range(1):
         processing_grids = unfinished_grids
@@ -84,7 +64,7 @@ def getGrids(receptor):
         print 'iteration {}, generating {} grids'.format(i+1, len(processing_grids))
         print processing_grids
 
-        for g, done in pool.imap_unordered(getGridsHelper, processing_grids):
+        for g, done in pool.imap_unordered(get_grids_helper, processing_grids):
             if done: print g, 'succeeded!'
             else: unfinished_grids.append(g)
         if len(unfinished_grids) == 0:
