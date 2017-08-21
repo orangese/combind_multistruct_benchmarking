@@ -31,7 +31,7 @@ def ready_to_get_pdbs():
     return True
 
 def ready_to_extract_lig():
-    return False
+    return os.path.exists('raw_maes')
 
 def get_apo():
     if 'apo.txt' not in os.listdir('.'):
