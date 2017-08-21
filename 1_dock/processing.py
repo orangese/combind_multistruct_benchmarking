@@ -23,16 +23,15 @@ def process():
     unfinished_structs = [f.split('.')[0] for f in os.listdir('../aligned_proteins') if f not in os.listdir('.')]
     pool = Pool(int(os.environ.get("SLURM_NTASKS", 4)))#, 10)
 
-    for i in range(1):
+    for i in range(2):
         processing_structs = unfinished_structs
         unfinished_structs = []
         print('iteration {}, processing {} structs'.format(i+1, len(processing_structs)))
         print(processing_structs)
         for s, done in pool.imap_unordered(processHelper, processing_structs):
-            if done: print(s, ' succeeded!')
-            else: unfinished_structs.append(s)
+            if not done:
+                unfinished_structs.append(s)
         if len(unfinished_structs) == 0:
-            print 'all done!'
             break
     else:
         print unfinished_structs, 'failed to process'

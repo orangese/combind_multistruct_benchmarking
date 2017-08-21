@@ -1,6 +1,7 @@
 import os
 from schrodinger.structure import StructureReader
-from schrodinger.structutils.rmsd import renumber_conformer, calculate_in_place_rmsd
+from schrodinger.structutils.rmsd import ConformerRmsd
+from schrodinger.structutils.measure import get_shortest_distance
 import centroid
 
 def get_alignment_stats():
@@ -46,15 +47,30 @@ def check_ligand_alignment():
 def check_binding_pocket_alignment():
     residues = {}
     structs = {}
+
+    lig = StructureReader('aligned_ligands/{}'.format(os.listdir('aligned_ligands')[0])).next()
+    print os.listdir('aligned_ligands')[0]
     for f in os.listdir('aligned_proteins'):
         name = f.split('.')[0]
         structs[name] = StructureReader('aligned_proteins/{}'.format(f)).next()
-        for r in structs[name].residue:
+        for r in sorted([r for r in structs[name].residue], key=lambda x:x.resnum):
             if r.hasMissingAtoms(): continue
-            if (r.resnum, r.pdbres) not in residues:
-                residues[(r.resnum, r.pdbres)] = {}
-            residues[(r.resnum, r.pdbres)][name] = r.extractStructure()
-
+            if get_shortest_distance(lig, st2=r.extractStructure())[0] > 7: continue
+            if r.resnum >= 1000:
+                all_r = {(r2.resnum, r2.pdbres):r2.extractStructure() for r2 in structs[name].residue}
+                if (r.resnum - 1000, r.pdbres) in all_r and (r.resnum - 1000, r.pdbres) in residues:
+                    dist1 = get_shortest_distance(lig, st2=r.extractStructure())
+                    dist2 = get_shortest_distance(lig, st2=all_r[(r.resnum-1000, r.pdbres)])
+                    if dist1 < dist2:
+                        residues[(r.resnum-1000,r.pdbres)][name] = r.extractStructure()
+                else:
+                    if (r.resnum-1000, r.pdbres) not in residues:
+                        residues[(r.resnum-1000, r.pdbres)] = {}
+                    residues[(r.resnum-1000,r.pdbres)][name] = r.extractStructure()    
+            else: 
+                if (r.resnum, r.pdbres) not in residues:
+                    residues[(r.resnum, r.pdbres)] = {}
+                residues[(r.resnum, r.pdbres)][name] = r.extractStructure()
     with open('residue_alignments.txt', 'w') as f:
         for r in residues:
             for i1 in range(len(structs.keys())):
@@ -64,8 +80,5 @@ def check_binding_pocket_alignment():
                     r1 = residues[r][structs.keys()[i1]]
                     r2 = residues[r][structs.keys()[i2]]
                     if len(r1.atom) != len(r2.atom): continue
-                    renumber_conformer(r1, r2, use_symmetry=True)
-                    a1 = [a.index for a in r1.atom]
-                    a2 = [a.index for a in r2.atom]
-                    rmsd = calculate_in_place_rmsd(r1, a1, r2, a2, use_symmetry=True)
+                    rmsd = ConformerRmsd(r1, r2).calculate()
                     f.write('{} {} {} {} {}\n'.format(r[0],r[1], structs.keys()[i1], structs.keys()[i2], rmsd))

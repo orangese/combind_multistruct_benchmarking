@@ -7,9 +7,9 @@ from multiprocessing import Pool
 GLIDE = '/share/PI/rondror/software/schrodinger2017-1/glide'
 
 XGLIDE_IN = '''GRIDFILE   ../../grids/{}/{}.zip
-LIGANDFILE   ../../ligands/{}.mae
+LIGANDFILE   ../../aligned_ligands/{}.mae
 USE_REF_LIGAND   True
-REF_LIGAND_FILE   ../../ligands/{}.mae
+REF_LIGAND_FILE   ../../aligned_ligands/{}.mae
 CORE_DEFINITION   allheavy
 DOCKING_METHOD   confgen
 EXPANDED_SAMPLING   True
@@ -53,7 +53,7 @@ def dock_dataset():
 
     to_dock = []
 
-    all_ligands = [f.split('.')[0] for f in os.listdir('../ligands')]
+    all_ligands = [f.split('.')[0] for f in os.listdir('../aligned_ligands')]
     all_grids = [f.split('.')[0] for f in os.listdir('../grids')]
 
     for grid in all_grids:
@@ -62,8 +62,6 @@ def dock_dataset():
                 to_dock.append((ligand, grid))
 
     print len(to_dock)
-    print to_dock
-    #return
     num_licenses = 5
     pool = Pool(num_licenses)
 
@@ -84,7 +82,6 @@ def dock_dataset():
             else: done += 1
         print '{} done, {} not done'.format(done, not_done)
         if len(to_dock) == 0:
-            print 'all done!'
             break
 
     else:
