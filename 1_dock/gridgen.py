@@ -48,7 +48,9 @@ def get_grids_helper(struct):
 def get_grids():
 
     with open('grid_center.txt','r') as f:
-        centroid = [float(i) for i in f[0].split(',')]
+        for line in f:
+            centroid = [float(i) for i in line.strip().split(',')]
+            break
 
     os.system('mkdir -p grids')
     os.chdir('grids')
@@ -58,17 +60,16 @@ def get_grids():
     generate_input_files(unfinished_grids, centroid)
     pool = Pool(int(os.environ.get("SLURM_NTASKS", 4)))#, 10)
 
-    for i in range(1):
+    for i in range(2):
         processing_grids = unfinished_grids
         unfinished_grids = []
         print 'iteration {}, generating {} grids'.format(i+1, len(processing_grids))
         print processing_grids
 
         for g, done in pool.imap_unordered(get_grids_helper, processing_grids):
-            if done: print g, 'succeeded!'
-            else: unfinished_grids.append(g)
+            if not done:
+                unfinished_grids.append(g)
         if len(unfinished_grids) == 0:
-            print 'all done!'
             os.system('rm *.log *.in gpu*')
             break
     else:

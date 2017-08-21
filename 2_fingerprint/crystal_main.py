@@ -24,12 +24,12 @@ for d in datasets:
 
     for structFile in os.listdir('../../processed'): 
         struct = os.path.splitext(structFile)[0]
-        ligs = filter(lambda x: struct in x, os.listdir('../../ligands'))
+        ligs = filter(lambda x: struct in x, os.listdir('../../aligned_ligands'))
         if ligs == []: continue
         lig = ligs[0]
         
         struct_path = '{}{}/processed/{}.mae'.format(DATA, d, struct)
-        lig_path = '{}{}/ligands/{}'.format(DATA, d, lig)
+        lig_path = '{}{}/aligned_ligands/{}'.format(DATA, d, lig)
 
         with open('{}.sh'.format(struct), 'w') as f:
             f.write('#!/bin/bash\n')

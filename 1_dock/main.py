@@ -25,8 +25,10 @@ if datasets[0] == 'pdbbind':
     all_pdbbind = tests.parse_index_file()
     datasets = ['pdbbind/{}'.format(s) for s in os.listdir('{}/pdbbind'.format(DATA))]
     datasets = [d for d in datasets if 'aligned_ligands' in os.listdir('{}/{}'.format(DATA,d))]
-    datasets = [d for d in datasets if len(os.listdir('{}/{}/aligned_ligands'.format(DATA,d))) >= 8]
-    print len(datasets)
+    #datasets = [d for d in datasets if len(os.listdir('{}/{}/aligned_ligands'.format(DATA,d))) >= 8]
+    datasets.sort(key=lambda x: -len(os.listdir('{}/{}/aligned_ligands'.format(DATA,x))))
+    datasets = datasets[:3]
+    print datasets
 
 command_map = {
     'm' : prep_pdbbind.move_files,
@@ -44,8 +46,11 @@ all_commands = ['m','r','l','a','p','s','g','x']
 def run_command(dataset):
     os.chdir('{}/{}'.format(DATA, dataset))    
     
-    already_done = tests.check_prerequisites(all_commands[all_commands.index(command) + 1])
-    if already_done: return
+    if command != 'x': 
+        already_done = tests.check_prerequisites(all_commands[all_commands.index(command) + 1])
+        if already_done: 
+            print '{} already finished {}'.format(dataset, command)
+            return
     if not tests.check_prerequisites(command):
         print '{} not ready to {}'.format(dataset, command)
         return
