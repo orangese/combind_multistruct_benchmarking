@@ -280,7 +280,7 @@ def plot_n_rmsds(scores, lab=''):
     plt.show()
 
 
-def heatmap(A, ligstructs, gridstructs, red=10.25):
+def heatmap(A, row_vals, col_vals, red=10.25, row_label='ligands', col_label='structures'):
     fig, ax = plt.subplots()
 
     cmap = CM.jet
@@ -296,14 +296,14 @@ def heatmap(A, ligstructs, gridstructs, red=10.25):
     ax.xaxis.tick_top()
 
     #labels
-    column_labels = ligstructs
-    row_labels = gridstructs
-    ax.set_xticklabels(column_labels, minor=False, rotation = 'vertical')
-    ax.set_yticklabels(row_labels, minor=False)
+    #column_labels = x_vals#ligstructs
+    #row_labels = y_vals#gridstructs
+    ax.set_xticklabels(col_vals, minor=False, rotation = 'vertical')
+    ax.set_yticklabels(row_vals, minor=False)
     ax.plot(ax.get_xlim(), ax.get_ylim()[::-1], linewidth = 4, c="m")
     plt.title('')
-    plt.xlabel('ligands')
-    plt.ylabel('structures')
+    plt.xlabel(col_label)
+    plt.ylabel(row_label)
     #plt.savefig(plotTitle + '.png')
     plt.show()
 

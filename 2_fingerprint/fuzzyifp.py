@@ -21,7 +21,7 @@ class FuzzyIFP:
         self.struct = structure.StructureReader(self.params['receptor'])
         self.receptor = Receptor()
         st = self.struct.next()
-        minimize_structure(st, max_steps = 0) #Assigns partial charges
+        #minimize_structure(st, max_steps = 0) #Assigns partial charges
         self.receptor.load_mae(st)
 
         target = open(self.params['verbose'],'a')
@@ -66,7 +66,7 @@ class FuzzyIFP:
         for pose_num, st in enumerate(self.struct):
             if pose_num > 50: break # only fingerprint first 50
             mergedReceptorSt = self.receptor.st.merge(st)
-            minimize_structure(mergedReceptorSt, max_steps = 0)
+            #minimize_structure(mergedReceptorSt, max_steps = 0)
             mergedReceptor = Receptor()
             mergedReceptor.load_mae(mergedReceptorSt)
             
@@ -84,7 +84,7 @@ class FuzzyIFP:
     def fingerprint_pair(self):
         lig = Ligand()
         st = structure.StructureReader(self.params['ligand']).next()
-        minimize_structure(st, max_steps = 0)
+        #minimize_structure(st, max_steps = 0)
         lig.load_mae(st) #Assigns partial charges
 
         active_site = self.get_active_site(lig, self.receptor)

@@ -9,6 +9,7 @@ DATA = '/scratch/PI/rondror/docking_data'
 
 PDBBIND = '/scratch/PI/rondror/docking_data/PDBbind_refined'
 pdbbind_index = '{}/index/INDEX_refined_name.2016'.format(PDBBIND)
+pdbbind_resolution = '{}/index/INDEX_refined_data.2016'.format(PDBBIND)
 
 def parse_index_file():
     uniprot_to_pdb = {}
@@ -41,6 +42,19 @@ def get_apo():
         for line in f:
             apo.append(line.strip())
     return apo
+
+def get_best_resolution():
+    all_processed = [f.split('.')[0] for f in os.listdir('processed') if f.endswith('mae')]
+    all_resol = {}
+    with open(pdbbind_resolution) as f:
+        for line in f:
+            if line[0] == '#': continue
+            info = line.strip().split()
+            pdb = info[0].upper()
+            resolution = float(info[1])
+            all_resol[pdb] = resolution
+    all_processed.sort(key=lambda x: all_resol[x])
+    return all_processed[0]
 
 def ready_to_align():
     assert 'ligands' in os.listdir('.'), 'ligands folder not found'
@@ -99,17 +113,17 @@ def ready_to_check_align():
 
 def ready_to_make_grids():
     assert 'grid_center.txt' in os.listdir('.')
-    assert 'excluded_ligands.txt' in os.listdir('.')
-    assert 'residue_alignments.txt' in os.listdir('.')
+    #assert 'excluded_ligands.txt' in os.listdir('.')
+    #assert 'residue_alignments.txt' in os.listdir('.')
 
     return ready_to_check_align()
 
 def ready_to_dock():
     assert 'grids' in os.listdir('.')
-    for f in os.listdir('processed'):
-        s = f.split('.')[0]
-        assert s in os.listdir('grids'), s
-        assert '{}.zip'.format(s) in os.listdir('grids/{}'.format(s)), s
+    #for f in os.listdir('processed'):
+    #    s = f.split('.')[0]
+    #    assert s in os.listdir('grids'), s
+    #    assert '{}.zip'.format(s) in os.listdir('grids/{}'.format(s)), s
 
     return True
 

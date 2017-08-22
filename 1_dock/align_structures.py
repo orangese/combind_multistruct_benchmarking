@@ -24,6 +24,18 @@ def load_proteins_and_ligands():
     return proteins, ligands
 
 def merge_and_strip(proteins, ligands):
+    merged = {}
+    for struct in proteins.keys():
+        all_chains = {c._getChainName() : c for c in proteins[struct].chain}
+        to_delete = []
+        for c in all_chains:
+            if c.strip() == '' or get_shortest_distance(ligands[struct], st2=all_chains[c].extractStructure())[0] > 5:
+                to_delete.extend([a.index for a in all_chains[c].atom])
+        proteins[struct].deleteAtoms(to_delete)
+        merged[struct] = ligands[struct].merge(proteins[struct])
+    return merged
+
+def merge_and_strip_old(proteins, ligands):
 
     merged = {}
     for struct in proteins.keys():
@@ -49,6 +61,7 @@ def merge_and_strip(proteins, ligands):
 def align():
     proteins, ligands = load_proteins_and_ligands()
     merged = merge_and_strip(proteins, ligands)
+    
     print '{} total, {} valid'.format(len(proteins.keys()), len(merged.keys()))
     os.system('rm -rf aligned_proteins aligned_ligands') 
     os.system('mkdir aligned_proteins aligned_ligands')
@@ -64,16 +77,18 @@ def align():
         molecules = sorted([m for m in merged[struct].molecule], key=lambda x: len(x.residue))
         
         if ligands[struct] is not None:
-            ligand = molecules.pop(0).extractStructure()
+            ligand = molecules[0].extractStructure()
             ligand._setTitle('{}_ligand'.format(struct))
             st_writer = StructureWriter('aligned_ligands/{}_ligand.mae'.format(struct))
             st_writer.append(ligand)
             st_writer.close()
- 
+            merged[struct].deleteAtoms([a.index for a in molecules[0].atom])
+            molecules.pop(0)
         st_writer = StructureWriter('aligned_proteins/{}.mae'.format(struct))
-        for m in molecules:
+        #for m in molecules:
             #assert len(m.residue) > 1, 'protein chain with only one residue found {}'.format(struct)
-            protein = m.extractStructure()
-            protein._setTitle(struct)
-            st_writer.append(protein)
+            #protein = m.extractStructure()
+            #protein._setTitle(struct)
+        merged[struct]._setTitle(struct)
+        st_writer.append(merged[struct])
         st_writer.close()

@@ -25,10 +25,18 @@ if datasets[0] == 'pdbbind':
     all_pdbbind = tests.parse_index_file()
     datasets = ['pdbbind/{}'.format(s) for s in os.listdir('{}/pdbbind'.format(DATA))]
     datasets = [d for d in datasets if 'aligned_ligands' in os.listdir('{}/{}'.format(DATA,d))]
-    #datasets = [d for d in datasets if len(os.listdir('{}/{}/aligned_ligands'.format(DATA,d))) >= 8]
     datasets.sort(key=lambda x: -len(os.listdir('{}/{}/aligned_ligands'.format(DATA,x))))
-    datasets = datasets[:3]
+    datasets = datasets[:10]
     print datasets
+
+    #for d in datasets:
+        #all_files = [f for f in os.listdir('{}/{}/raw_maes'.format(DATA,d))]
+        #aligned = [f for f in os.listdir('{}/{}/aligned_proteins'.format(DATA,d))]
+        #print '{}: {} total structs'.format(d, len(all_files))
+        #print '{} files not aligned'.format(len(all_files) - len(aligned))
+        #for f in all_files:
+            #if f not in aligned:
+                #print f
 
 command_map = {
     'm' : prep_pdbbind.move_files,
@@ -46,7 +54,7 @@ all_commands = ['m','r','l','a','p','s','g','x']
 def run_command(dataset):
     os.chdir('{}/{}'.format(DATA, dataset))    
     
-    if command != 'x': 
+    if command != 'x' and command != 'g': 
         already_done = tests.check_prerequisites(all_commands[all_commands.index(command) + 1])
         if already_done: 
             print '{} already finished {}'.format(dataset, command)

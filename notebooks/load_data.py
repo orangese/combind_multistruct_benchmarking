@@ -28,15 +28,14 @@ similarity_groups = {
 }
 
 def sort_data(receptor, crystals, glides, combine_structs=False, exclude_duplicates=False):
-    
+    if glides == {}: return crystals, {}, crystals.keys(), crystals.keys()
     exclude = {
         'B1AR_all':['2Y01','4BVN','5F8U'],
         'B2AR':['3P0G'],
         'HSP90':['4YKY','4YKZ','4YKX']
     }
     
-    
-    ligs = sorted([i for i in glides.keys()])# if i not in exclude.get(receptor,[])])
+    ligs = sorted([i for i in glides.keys()])
     structs = []
     for l in ligs:
         structs.extend([i for i in glides[l] if i not in structs])# and i not in exclude.get(receptor,[])])
@@ -69,7 +68,8 @@ def load_data(receptor,
         glide_ifp = 'ifp/xglide_ifp_3',
         w = [10,10,10,1,0],
         require_fp=True,
-        combine_structs=False):
+        combine_structs=False,
+        load_docking=True):
 
     data_set_dir = '/scratch/PI/rondror/docking_data/'+receptor
     glide_dir = '{}/{}/'.format(data_set_dir, glide)
@@ -79,10 +79,13 @@ def load_data(receptor,
     os.chdir(data_set_dir)
     
     crystals = load_crystals(crystal_fp_dir, w=w)
-    gscores, rmsds = load_gscores(glide_dir, rmsd_file)
-    ifps = load_ifps(glide_fp_dir, w=w)
+
+    glides = {}
+    if load_docking:
+        gscores, rmsds = load_gscores(glide_dir, rmsd_file)
+        ifps = load_ifps(glide_fp_dir, w=w)
        
-    glides = load_glides(gscores, rmsds, ifps, require_fp)
+        glides = load_glides(gscores, rmsds, ifps, require_fp)
     
     return sort_data(receptor, crystals, glides, combine_structs)
 
