@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --time=3:00:00
+#SBATCH --time=16:00:00
 #SBATCH --partition=rondror
 #SBATCH --tasks=5 --cpus-per-task=1
 ##SBATCH --ntasks-per-socket=2 --nodes=1

@@ -5,6 +5,7 @@ from schrodinger.structure import StructureWriter
 import os
 import subprocess
 from multiprocessing import Pool
+from tests import get_best_resolution
 
 GLIDE = "/share/PI/rondror/software/schrodinger2017-1/glide"
 
@@ -45,19 +46,22 @@ def get_grids_helper(struct):
         return struct, True
     return struct, False
 
-def get_grids():
+def get_grids(all_grids=False):
 
     with open('grid_center.txt','r') as f:
         for line in f:
             centroid = [float(i) for i in line.strip().split(',')]
             break
 
+    if all_grids:
+        unfinished_grids = [f.split('.')[0] for f in os.listdir('processed') if f.endswith('mae')]
+    else:
+        unfinished_grids = [get_best_resolution()]
+
     os.system('mkdir -p grids')
     os.chdir('grids')
-
-    unfinished_grids = [f.split('.')[0] for f in os.listdir('../processed') if f.split('.')[1] == 'mae']
-
     generate_input_files(unfinished_grids, centroid)
+
     pool = Pool(int(os.environ.get("SLURM_NTASKS", 4)))#, 10)
 
     for i in range(2):
@@ -70,7 +74,7 @@ def get_grids():
             if not done:
                 unfinished_grids.append(g)
         if len(unfinished_grids) == 0:
-            os.system('rm *.log *.in gpu*')
+            os.system('rm *.log *.in gpu* sherlock*')
             break
     else:
         print unfinished_grids, 'failed to generate grids'

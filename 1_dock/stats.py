@@ -6,7 +6,7 @@ import centroid
 
 def get_alignment_stats():
     check_ligand_alignment()
-    check_binding_pocket_alignment()
+    #check_binding_pocket_alignment()
 
 def check_ligand_alignment():
     centroids = {}
@@ -50,9 +50,9 @@ def check_binding_pocket_alignment():
 
     lig = StructureReader('aligned_ligands/{}'.format(os.listdir('aligned_ligands')[0])).next()
     print os.listdir('aligned_ligands')[0]
-    for f in os.listdir('aligned_proteins'):
+    for f in os.listdir('processed'):
         name = f.split('.')[0]
-        structs[name] = StructureReader('aligned_proteins/{}'.format(f)).next()
+        structs[name] = StructureReader('processed/{}'.format(f)).next()
         for r in sorted([r for r in structs[name].residue], key=lambda x:x.resnum):
             if r.hasMissingAtoms(): continue
             if get_shortest_distance(lig, st2=r.extractStructure())[0] > 7: continue
