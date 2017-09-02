@@ -23,7 +23,7 @@ def extract_ligands():
         ligands = asl_searcher.search(struct)
         if len(ligands) == 0: 
 	   print 'Error: Could not find a ligand for {}'.format(s)
-	   out = open("multiple_ligands.out", "a+")
+	   out = open("ligand_errors.out", "a+")
 	   out.write("Structure: {}".format(s))
 	   out.write(" Number of ligands: 0")
 	   out.write("\n")
@@ -40,7 +40,7 @@ def extract_ligands():
  	      for ligand in ligands:
 	          if ligands[0].pdbres.strip() != ligand.pdbres.strip():
 		     print "Multiple ligands detected in {}. See output file and manually remove them.".format(s)
-		     out = open("multiple_ligands.out", "a+")
+		     out = open("ligand_errors.out", "a+")
 		     out.write("Structure: {}".format(s))
 		     out.write(" Number of ligands: {}".format(len(ligands)))
 		     for ligand in ligands:
@@ -67,7 +67,7 @@ def extract_ligands():
                          st_writer.close()
 	              else:   
 		         print "{} has more than 1 ligand in chain A. See output file.".format(s)
-		         out = open("multiple_ligands.out", "a+")
+		         out = open("ligand_errors.out", "a+")
 	                 out.write("Structure: {}".format(s))
 	                 out.write(" Number of ligands: {}".format(len(ligands))) 
 	                 for ligand in ligands:
@@ -77,7 +77,7 @@ def extract_ligands():
 	                 out.close()
 	          else:	
 		      print "{} has no ligand in chain A. See output file.".format(s)
-		      out = open("multiple_ligands.out", "a+")
+		      out = open("ligand_errors.out", "a+")
 		      out.write("Structure: {}".format(s))
 		      out.write(" Number of ligands: {}".format(len(ligands)))
 		      for ligand in ligands:
