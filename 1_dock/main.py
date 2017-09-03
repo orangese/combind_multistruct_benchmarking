@@ -1,9 +1,14 @@
 #!/share/PI/rondror/software/schrodinger2017-1/run
-
+##!/share/software/modules/chemistry/schrodinger/2017-2/run
 import sys
 import os
 
 from multiprocessing import Pool
+
+from schrodinger.structure import StructureReader, StructureWriter, SmilesReader, SmilesWriter
+from schrodinger.structutils.measure import get_shortest_distance
+import schrodinger.structutils.analyze as schro
+import schrodinger.structutils.interactions.pi as pi
 
 import get_pdbs
 import align_structures
@@ -21,22 +26,27 @@ DATA = "/scratch/PI/rondror/docking_data"
 command = sys.argv[1][1]
 datasets = sys.argv[2:]
 
-if datasets[0] == 'pdbbind':
-    all_pdbbind = tests.parse_index_file()
-    datasets = ['pdbbind/{}'.format(s) for s in os.listdir('{}/pdbbind'.format(DATA))]
-    datasets = [d for d in datasets if 'aligned_ligands' in os.listdir('{}/{}'.format(DATA,d))]
-    datasets.sort(key=lambda x: -len(os.listdir('{}/{}/aligned_ligands'.format(DATA,x))))
-    datasets = datasets[:10]
-    print datasets
+p1 = ['pdbbind_final/{}'.format(s) for s in os.listdir('{}/pdbbind_final'.format(DATA))]
+p2 = ['pdbbind_part2/{}'.format(s) for s in os.listdir('{}/pdbbind_part2'.format(DATA))]
+#print p1
+os.chdir(DATA)
+for i in p1 + p2:
+    print i
+    os.chdir(i)
+    dock.dock_dataset(True)
+    os.chdir(DATA)
+    #pass 
 
-    #for d in datasets:
-        #all_files = [f for f in os.listdir('{}/{}/raw_maes'.format(DATA,d))]
-        #aligned = [f for f in os.listdir('{}/{}/aligned_proteins'.format(DATA,d))]
-        #print '{}: {} total structs'.format(d, len(all_files))
-        #print '{} files not aligned'.format(len(all_files) - len(aligned))
-        #for f in all_files:
-            #if f not in aligned:
-                #print f
+#tests.check_duplicates('{}/pdbbind_final'.format(DATA))
+#tests.check_duplicates('{}/pdbbind_part2'.format(DATA))
+
+if datasets[0] == 'pdbbind_part2':
+    datasets = ['pdbbind_part2/{}'.format(s) for s in reversed(os.listdir('{}/pdbbind_part2'.format(DATA)))]
+
+if datasets[0] == 'pdbbind_final':
+    datasets = ['pdbbind_final/{}'.format(s) for s in os.listdir('{}/pdbbind_final'.format(DATA))]
+
+print datasets
 
 command_map = {
     'm' : prep_pdbbind.move_files,
@@ -53,24 +63,8 @@ all_commands = ['m','r','l','a','p','s','g','x']
 
 def run_command(dataset):
     os.chdir('{}/{}'.format(DATA, dataset))    
-    
-    if command != 'x' and command != 'g': 
-        already_done = tests.check_prerequisites(all_commands[all_commands.index(command) + 1])
-        if already_done: 
-            print '{} already finished {}'.format(dataset, command)
-            return
-    if not tests.check_prerequisites(command):
-        print '{} not ready to {}'.format(dataset, command)
-        return
-    print 'running {} on {}'.format(command, dataset)
-    try:
-        command_map[command]()
-    except Exception as e:
-        print e
+    command_map[command]()
 
 for i, d in enumerate(datasets):
-    if d == 'pdbbind/misc': continue
     print d, len(datasets) - i
     run_command(d)
-#pool = Pool(1)#int(os.environ.get("SLURM_NTASKS",4))) # , 10)
-#pool.imap_unordered(run_command, datasets)

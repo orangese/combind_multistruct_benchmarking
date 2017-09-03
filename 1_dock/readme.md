@@ -1,5 +1,11 @@
 Make a new dataset, process all files, and get docking results.
 
+Note: the following steps require Schrodinger licenses. To check the status of these licenses:
+
+`/share/PI/rondror/software/schrodinger2017-1/licadmin STAT`
+
+`/share/PI/rondror/software/schrodinger2017-1/utilities/licutil -used`
+
 ## 1) Get structures from the Protein Data Bank (PDB)
 
 Go to `www.rcsb.org` and search for a receptor. Download all files (button at the top of the results page). The Download Tool should open. In the first section, Dowload Coordinates and Experimental Data, select two options: PDB Coordinates and Uncompressed. Deselect all other options. Launch the download.

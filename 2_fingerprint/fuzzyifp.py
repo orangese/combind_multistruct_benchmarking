@@ -1,28 +1,26 @@
 #!/share/PI/rondror/software/schrodinger2017-1/run
-#from interactions import Interactions
+
 import os
-from schrodinger import structure # Make sure you are using schrodinger python distribution!
-from schrodinger.structutils.minimize import minimize_structure
-from receptor import Receptor
-from point_atom import Atom
-from ligand import Ligand
+from schrodinger.structure import StructureReader
+from schrodinger.structutils.measure import get_shortest_distance
+
+from hbond import HBond_Container
+from saltbridge import SB_Container
+from pipi import PiPi_Container
+from picat import PiCat_Container
+from metal import Metal_Container
+from hydrophobic import Hydrophobic_Container
+from vdw import VDW_Container
 
 class FuzzyIFP:
     def __init__(self, args):
         self.params = {
-            'active_site_cutoff': '5', # angstroms
             'input': '',
             'receptor': '',
             'ligand': '',
             'output_file': '',
             'verbose':''}
         self.set_user_params(args)
-        
-        self.struct = structure.StructureReader(self.params['receptor'])
-        self.receptor = Receptor()
-        st = self.struct.next()
-        #minimize_structure(st, max_steps = 0) #Assigns partial charges
-        self.receptor.load_mae(st)
 
         target = open(self.params['verbose'],'a')
         target.write('\nFingerprinting: ' + self.params['receptor'] + '\n')
@@ -32,78 +30,73 @@ class FuzzyIFP:
             self.fp = self.fingerprint_pose_viewer()
         else:
             self.fp = [self.fingerprint_pair()]
-        
-    def get_active_site(self, ligand, receptor):
-        active_site = Receptor()
-        #Only add residues that are within RESIDUE_THRESH of the ligand center coordinate
-        for residue in receptor.residues.values():
-            added = False
-            for ligand_atom in ligand.atoms:
-                for receptor_atom in residue.atoms:
-                    if ligand_atom.coordinates.dist_to(receptor_atom.coordinates) < self.params['active_site_cutoff']:
-                        assert not added
-                        active_site.add_residue(residue.copy_of())
-                        added = True
-                        break
-                if added: break
-         
-        active_site.assign()
-        
-        #Calculate Atom ID -> Res, based on the merged structure
-        active_site.st = receptor.st
-        atomIDToRes = {}
-        for atom in active_site.st.atom:
-            cur_atom = Atom()
-            cur_atom.from_schrod(atom)
-            atomIDToRes[cur_atom.atom_id] = cur_atom.residue_id
-        active_site.atomIDToRes = atomIDToRes
-        active_site.seperate_atoms(receptor, ligand)
-        return active_site
+
+    def fingerprint(self, lig_st, prot_st, pnum=None):
+        interactions = {
+            'hbond': HBond_Container(lig_st),
+            'saltbridge': SB_Container(lig_st),
+            'pipi': PiPi_Container(lig_st),
+            'picat': PiCat_Container(lig_st),
+            'metal': Metal_Container(lig_st),
+            'hydrophobic': Hydrophobic_Container(lig_st),
+            'vdw': VDW_Container(lig_st)
+        }
+
+        num_scores = {'hbond':4, 'saltbridge':1, 'pipi':1, 'picat':2, 'metal':1,'hydrophobic':1,'vdw':2}
+
+        active_site_res = {}
+        for res in prot_st.residue:
+            if get_shortest_distance(res.extractStructure(), st2=lig_st)[0] <= 8 and not lig_st.isEquivalent(res.extractStructure(), False):
+                active_site_res[res.resnum] = res.extractStructure()
+
+        fp = {r:[] for r in active_site_res}
+        for i_type in interactions:
+            for r, r_st in active_site_res.items():
+                interactions[i_type].add_residue(r, r_st)
+            
+            interactions[i_type].filter_int()
+            i_scores = interactions[i_type].score()
+                    
+            for r in active_site_res:
+                fp[r].extend(i_scores.get(r, [0]*num_scores[i_type] ))
+                    
+        self.verbose_output(interactions, pnum)
+
+        return fp
 
     def fingerprint_pose_viewer(self):
         fp = []
- 
-        for pose_num, st in enumerate(self.struct):
-            if pose_num > 50: break # only fingerprint first 50
-            mergedReceptorSt = self.receptor.st.merge(st)
-            #minimize_structure(mergedReceptorSt, max_steps = 0)
-            mergedReceptor = Receptor()
-            mergedReceptor.load_mae(mergedReceptorSt)
-            
-            lig = Ligand()
-            lig.load_mae(st)
+        prot_st = None
+        for i, st in enumerate(StructureReader(self.params['receptor'])):
+            if i > 50: break
 
-            active_site = self.get_active_site(lig, mergedReceptor)
+            if i == 0:
+                prot_st = st
+                continue
 
-            fp.append(active_site.fingerprint(lig))
-
-            self.verbose_output(active_site, p_num=pose_num)
+            fp.append(self.fingerprint(st, prot_st, i))
             
         return fp
 
     def fingerprint_pair(self):
-        lig = Ligand()
-        st = structure.StructureReader(self.params['ligand']).next()
-        #minimize_structure(st, max_steps = 0)
-        lig.load_mae(st) #Assigns partial charges
-
-        active_site = self.get_active_site(lig, self.receptor)
+        prot_st = StructureReader(self.params['receptor']).next()
+        lig_st = StructureReader(self.params['ligand']).next()
         
-        fp = active_site.fingerprint(lig)
+        return self.fingerprint(lig_st, prot_st)
 
-        self.verbose_output(active_site)
-        return fp
-
-    def verbose_output(self, active_site, p_num=None):
+    def verbose_output(self, interactions, p_num=None):
         target = open(self.params['verbose'],'a')
 
         if p_num is not None: target.write('\nPose Number '+str(p_num) + '\n')
 
-        for res in sorted(active_site.residues.keys(), key=lambda r:int(r)):
-            if len(active_site.int_per_res[res]) > 0:
-                target.write('\nResidue ' + str(res) + '\n')
-                for i in active_site.int_per_res[res]:
-                    target.write(str(i) + '\n')
+        for i_type in interactions:
+            target.write(str(interactions[i_type])+'\n')
+
+        #for res in sorted(active_site.residues.keys(), key=lambda r:int(r)):
+        #    if len(active_site.int_per_res[res]) > 0:
+        #        target.write('\nResidue ' + str(res) + '\n')
+        #        for i in active_site.int_per_res[res]:
+        #            target.write(str(i) + '\n')
         target.close()
 
     def set_user_params(self, args):

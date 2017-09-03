@@ -4,15 +4,19 @@ from schrodinger.structutils.rmsd import ConformerRmsd
 from schrodinger.structutils.measure import get_shortest_distance
 import centroid
 
+from tests import get_best_resolution
+
 def get_alignment_stats():
     check_ligand_alignment()
     #check_binding_pocket_alignment()
 
 def check_ligand_alignment():
     centroids = {}
+    os.system('rm -rf processed')
+    os.system('rm *.txt')
     for f in os.listdir('aligned_ligands'):
         lig = StructureReader('aligned_ligands/{}'.format(f)).next()
-        centroids[f.split('.')[0]] = centroid.average_atom_pos(lig)
+        centroids[f.split('_')[0]] = centroid.average_atom_pos(lig)
 
     total_num_ligs = len(centroids.keys())
 
@@ -33,16 +37,23 @@ def check_ligand_alignment():
             if bad_pairs[worst] == 1: return None
             return worst
 
-    exclude = get_worst(centroids)
-    with open('excluded_ligands.txt', 'w') as f:
-        while exclude is not None:
-            f.write(exclude+'\n')
-            del centroids[exclude]
-            exclude = get_worst(centroids)
+    #exclude = get_worst(centroids)
+    #with open('excluded_ligands.txt', 'w') as f:
+    #    while exclude is not None:
+    #        f.write(exclude+'\n')
+    #        del centroids[exclude]
+    #        exclude = get_worst(centroids)
 
-    centroid_mean = [str(sum([centroids[l][i] for l in centroids.keys()])/len(centroids.keys())) for i in range(3)]
-    with open('grid_center.txt', 'w') as f:
-        f.write(','.join(centroid_mean))
+    #centroid_mean = [str(sum([centroids[l][i] for l in centroids.keys()])/len(centroids.keys())) for i in range(3)]
+    best_res = get_best_resolution()
+    print best_res
+    reference_centroid = centroids[best_res]
+    for c in centroids:
+        if c == best_res: continue
+        print centroid.dist(centroids[best_res], centroids[c])
+
+    #with open('grid_center.txt', 'w') as f:
+    #    f.write(','.join([str(i) for i in reference_centroid]))
 
 def check_binding_pocket_alignment():
     residues = {}
