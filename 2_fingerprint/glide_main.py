@@ -21,7 +21,10 @@ datasets = sys.argv[2:]
 for dataset in datasets:    
     os.system('mkdir -p {}{}/ifp/{}'.format(DATA, dataset, output_dir))
     os.chdir('{}{}/ifp/{}'.format(DATA, dataset, output_dir))
-
+    if dataset.split('/')[0] == 'pdbbind':
+        title = dataset.split('/')[1]
+    else:
+        title = dataset
     empty = 0
     for f in listdir('.'):
         if f.split('.')[-1] == 'fp' and os.path.getsize(f) == 0: 
@@ -33,7 +36,7 @@ for dataset in datasets:
     print '{}: {} of {} xglide folders have not been fingerprinted. submitting these...'.format(dataset, len(glideFolders), len(listdir(XGLIDE)))
     
     for i, folderGroup in enumerate(grouper(6, glideFolders)): #Fingerprint jobs are grouped into batches of 6
-        with open('{}{}.sh'.format(dataset, i), 'w') as f: #Write 6 jobs to a script
+        with open('{}{}.sh'.format(title, i), 'w') as f: #Write 6 jobs to a script
             f.write("#!/bin/bash\n")
             for folder in folderGroup:
                 if folder != None:
@@ -44,4 +47,4 @@ for dataset in datasets:
 
             f.write("wait\n") #Wait for all forks for finish
 
-        os.system('sbatch --time=03:00:00 -c 6 -p rondror {}{}.sh'.format(dataset, i))
+        os.system('sbatch --time=04:00:00 -c 6 -p rondror {}{}.sh'.format(title, i))

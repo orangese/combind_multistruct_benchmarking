@@ -34,8 +34,8 @@ def sort_data(receptor, crystals, glides, combine_structs=False, exclude_duplica
         'B2AR':['3P0G'],
         'HSP90':['4YKY','4YKZ','4YKX']
     }
-    
-    ligs = sorted([i for i in glides.keys()])
+    d_dir='/scratch/PI/rondror/docking_data/{}/unique_ligands'.format(receptor)
+    ligs = sorted([i for i in glides.keys() if '{}_ligand.mae'.format(i) in os.listdir(d_dir)])
     structs = []
     for l in ligs:
         structs.extend([i for i in glides[l] if i not in structs])# and i not in exclude.get(receptor,[])])
@@ -64,7 +64,7 @@ def sort_data(receptor, crystals, glides, combine_structs=False, exclude_duplica
 def load_data(receptor,
         rmsd_file = 'xrmsd.csv',
         glide = 'xglide',
-        crystal_ifp = 'ifp/xcrystal_ifp_3',
+        crystal_ifp = 'ifp/xcrystal_ifp_4',
         glide_ifp = 'ifp/xglide_ifp_3',
         w = [10,10,10,1,0],
         require_fp=True,
@@ -184,9 +184,11 @@ def load_glides(gscores, rmsds, ifps, require_fp):
     for lig in gscores.keys():
         glides[lig] = {}
         for struct in gscores[lig].keys():
-            if require_fp and (lig not in ifps or struct not in ifps[lig] or len(ifps[lig][struct]) == 0):
+            if require_fp and (struct not in ifps or lig not in ifps[struct] or len(ifps[struct][lig]) == 0):
+                print 1
                 continue # ligand, grid, did not fingerprint
             elif not require_fp and len(gscores[lig][struct]) == 0:
+                print 2
                 continue # did not dock
 
             glides[lig][struct] = Ligand(None)

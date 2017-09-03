@@ -1,15 +1,15 @@
-#!/share/PI/rondror/software/schrodinger2016-1/run
+##!/share/PI/rondror/software/schrodinger2016-1/run
 
 import os
 import subprocess
 from multiprocessing import Pool
-
-GLIDE = '/share/PI/rondror/software/schrodinger2017-1/glide'
-
+from tests import get_first
+GLIDE = 'glide'#'/share/PI/rondror/software/schrodinger2017-1/glide'
+#GLIDE = '/share/software/modules/chemistry/schrodinger2017-2/glide'
 XGLIDE_IN = '''GRIDFILE   ../../grids/{}/{}.zip
-LIGANDFILE   ../../aligned_ligands/{}.mae
+LIGANDFILE   ../../unique_ligands/{}.mae
 USE_REF_LIGAND   True
-REF_LIGAND_FILE   ../../aligned_ligands/{}.mae
+REF_LIGAND_FILE   ../../unique_ligands/{}.mae
 CORE_DEFINITION   allheavy
 DOCKING_METHOD   confgen
 EXPANDED_SAMPLING   True
@@ -32,41 +32,43 @@ def glide_failed(ligand, grid):
 
 def dock(pair):
     ligand, grid = pair
-
+    #print 'docking {} to {}'.format(ligand, grid)
     if '{}-to-{}'.format(ligand, grid) in os.listdir('.'):
         os.system('rm -rf {}-to-{}'.format(ligand, grid))
 
     os.system('mkdir {}-to-{}'.format(ligand, grid))
+    with open('{}-to-{}/{}-to-{}.in'.format(ligand, grid, ligand, grid), 'w+') as f:
+        f.write(XGLIDE_IN.format(grid, grid, ligand, ligand))
 
     os.chdir('{}-to-{}'.format(ligand, grid))
-    with open('{}-to-{}.in'.format(ligand, grid), 'w+') as f:
-        f.write(XGLIDE_IN.format(grid, grid, ligand, ligand))
 
     subprocess.call([GLIDE, "{}-to-{}.in".format(ligand, grid), "-WAIT"])
     os.chdir('..')
-
+    #print '{} to {} returned'.format(ligand, grid)
     return (ligand, grid, glide_exists(ligand, grid) or glide_failed(ligand, grid))
 
-def dock_dataset():
+def dock_dataset(print_only=False):
     os.system('mkdir -p xglide')
+    assert len(os.listdir('grids')) == 1
+    grid = os.listdir('grids')[0]
     os.chdir('xglide')
 
     to_dock = []
 
-    all_ligands = [f.split('.')[0] for f in os.listdir('../aligned_ligands')]
-    all_grids = [f.split('.')[0] for f in os.listdir('../grids')]
-
-    for grid in all_grids:
-        for ligand in all_ligands:
-            if not glide_exists(ligand, grid) and not glide_failed(ligand, grid):
-                to_dock.append((ligand, grid))
-
-    print len(to_dock)
-    num_licenses = 5
+    all_ligands = [f.split('.')[0] for f in os.listdir('../unique_ligands')]
+    for ligand in all_ligands:
+        if not glide_exists(ligand, grid) and not glide_failed(ligand, grid):
+            to_dock.append((ligand, grid))
+    
+    if len(to_dock) > 0: print grid, len(to_dock)
+    if print_only: return
+    #print to_dock
+    #return
+    num_licenses = 10
     pool = Pool(num_licenses)
 
     i = 0
-    while len(to_dock) > 0:
+    while len(to_dock) > 0 and i < 5:
         i += 1
         print 'iteration {}, {} jobs left to go'.format(i, len(to_dock))
 

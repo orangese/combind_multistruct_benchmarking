@@ -3,14 +3,21 @@ from matplotlib import pyplot as plt
 import matplotlib.cm as CM
 
 def print_table(a):
-    str1 = '|'
-    str2 = '|'
-    for i in ['min','ave','glide','opt']:# a.keys():#['min','ave','norm','opt','glide','us']:
-        str1 = '{} {} |'.format(str1, i)
-        str2 = '{} {} |'.format(str2, str(np.mean(a[i]))[:4])
-    
-    print str1
-    print str2
+    #str1 = '|'
+    #str2 = '|'
+    #for i in ['min','ave','glide','opt']:# a.keys():#['min','ave','norm','opt','glide','us']:
+    #    str1 = '{} {} |'.format(str1, i)
+    #    str2 = '{} {} |'.format(str2, str(np.mean(a[i]))[:4])
+    glide_ave = str(np.mean(a['glide']))[:4]
+    glide_med = str(np.median(a['glide']))[:4]
+    us_med = str(np.median(a['opt']))[:4]
+    us_ave = str(np.mean(a['opt']))[:4]
+    us_success = str(sum([1.0/len(a['opt']) for i in a['opt'] if i <= 2.0]))[:4]
+    glide_success = str(sum([1.0/len(a['glide']) for i in a['glide'] if i <= 2.0]))[:4]
+    print '| min | ave | us (median) | glide (median) | us (ave) | glide (ave) | us (<2) | glide (<2)|'
+    print '|{}|{}|{}|{}|{}|{}|{}|{}|'.format(str(np.mean(a['min']))[:4], str(np.mean(a['ave']))[:4],
+                                             us_med, glide_med, us_ave, glide_ave, us_success, glide_success)
+    #print str2
 
 def plot_docking_output(ligs, struct, xglides, n, gscore=True):
     for lig in ligs:
