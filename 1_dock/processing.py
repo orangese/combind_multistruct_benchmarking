@@ -3,44 +3,48 @@ from multiprocessing import Pool
 import subprocess
 
 from schrodinger.structure import StructureReader
-from schrodinger.application.prepwizard import fix_common_structure_mistakes
 
-SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1"
+SCHRODINGER = os.environ.get("SCHRODINGER", None)
+def process_helper(struct):
+    subprocess.call([os.path.join(SCHRODINGER, "utilities", "prepwizard"), "-WAIT", "-fix",
+                     "../aligned_proteins/{}.mae".format(struct), "{}.mae".format(struct)])
 
-def processHelper(struct):
-    subprocess.call([os.path.join(SCHRODINGER, "utilities", "prepwizard"),
-                     "-WAIT", "-j", "temp-{}".format(struct),
-                     "../aligned_proteins/{}.mae".format(struct),
-                     "{}.mae".format(struct)])
+    if is_processed(struct):
+        os.system('rm {}-protassign* {}-impref* {}.log'.format(struct, struct, struct))
+        return struct, True
+    
+    os.system('rm {}*'.format(struct))
+    return struct, False
 
-    if '{}.mae'.format(struct) in os.listdir('.'):
-        st = StructureReader('{}.mae'.format(struct)).next()
-        if st._getTitle() != struct:
-            os.system('rm {}.mae'.format(struct))
+def is_processed(struct):
+    if '{}.mae'.format(struct) not in os.listdir('.'): return False
+    
+    st = StructureReader('{}.mae'.format(struct)).next()
+    if st._getTitle() != struct: return False
 
-    return struct, '{}.mae'.format(struct) in os.listdir('.')
+    valence = {'H':set([1]), 'C':set([4]), 'N':set([3]), 'O':set([2]), 'S':set([2,4,6])}
 
-def process():
+    for a in st.atom:
+        if a.element in valence and sum([b.order for b in a.bond]) - a.formal_charge not in valence[a.element]:
+            print struct, a.element, a.bond_total, a.formal_charge, a.index
+            return False
+    return True 
+
+def process(print_only=False):
     os.system('mkdir -p processed_proteins')
-
-    #for f in os.listdir('aligned_proteins'):
-    #    if f in os.listdir('processed_proteins'):
-    #        continue
-    #    st = StructureReader('aligned_proteins/{}'.format(f)).next()
-    #    print f, fix_common_structure_mistakes(st)
-        #break
-
     os.chdir('processed_proteins')
-
-    unfinished_structs = [f.split('.')[0] for f in os.listdir('../aligned_proteins') if f not in os.listdir('.')]
-    pool = Pool(int(os.environ.get("SLURM_NTASKS", 4)))#, 10)
-
-    for i in range(20):
+    unfinished_structs = [f.split('.')[0] for f in os.listdir('../aligned_proteins') if not is_processed(f.split('.')[0])]
+    if print_only:
+        print len(unfinished_structs)
+        return
+    pool = Pool(10)
+    
+    for i in range(10):
         processing_structs = unfinished_structs
         unfinished_structs = []
         print('iteration {}, processing {} structs'.format(i+1, len(processing_structs)))
         print(processing_structs)
-        for s, done in pool.imap_unordered(processHelper, processing_structs):
+        for s, done in pool.imap_unordered(process_helper, processing_structs):
             print s, done
             if not done:
                 unfinished_structs.append(s)
@@ -49,5 +53,4 @@ def process():
     else:
         print unfinished_structs, 'failed to process'
 
-    os.system('rm temp* *missing* *.out')
     os.chdir('..')

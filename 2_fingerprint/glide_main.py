@@ -18,10 +18,14 @@ XGLIDE = '../../xglide'
 output_dir = sys.argv[1]
 datasets = sys.argv[2:]
 
+if datasets[0] == 'pdbbind_final':
+    datasets = ['pdbbind_final/{}'.format(s) for s in os.listdir('{}/pdbbind_final'.format(DATA))]
+
+
 for dataset in datasets:    
     os.system('mkdir -p {}{}/ifp/{}'.format(DATA, dataset, output_dir))
     os.chdir('{}{}/ifp/{}'.format(DATA, dataset, output_dir))
-    if dataset.split('/')[0] == 'pdbbind':
+    if dataset.split('/')[0] == 'pdbbind_final':
         title = dataset.split('/')[1]
     else:
         title = dataset
@@ -47,4 +51,4 @@ for dataset in datasets:
 
             f.write("wait\n") #Wait for all forks for finish
 
-        os.system('sbatch --time=04:00:00 -c 6 -p rondror {}{}.sh'.format(title, i))
+        os.system('sbatch --time=02:00:00 -c 6 -p rondror {}{}.sh'.format(title, i))
