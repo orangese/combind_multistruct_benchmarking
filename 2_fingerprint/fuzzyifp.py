@@ -3,6 +3,7 @@
 import os
 from schrodinger.structure import StructureReader
 from schrodinger.structutils.measure import get_shortest_distance
+from schrodinger.structutils.analyze import AslLigandSearcher
 
 from hbond import HBond_Container
 from saltbridge import SB_Container
@@ -42,15 +43,15 @@ class FuzzyIFP:
             'vdw': VDW_Container(lig_st)
         }
 
-        num_scores = {'hbond':4, 'saltbridge':1, 'pipi':1, 'picat':2, 'metal':1,'hydrophobic':1,'vdw':2}
+        num_scores = {'hbond':4, 'saltbridge':1, 'pipi':1, 'picat':2, 'metal':1,'hydrophobic':2,'vdw':2}
 
         active_site_res = {}
         for res in prot_st.residue:
-            if get_shortest_distance(res.extractStructure(), st2=lig_st)[0] <= 8 and not lig_st.isEquivalent(res.extractStructure(), False):
+            if get_shortest_distance(res.extractStructure(), st2=lig_st)[0] <= 8:
                 active_site_res[res.resnum] = res.extractStructure()
 
         fp = {r:[] for r in active_site_res}
-        for i_type in interactions:
+        for i_type in ['hbond','saltbridge','pipi','picat','metal','hydrophobic','vdw']: # interactions:
             for r, r_st in active_site_res.items():
                 interactions[i_type].add_residue(r, r_st)
             
@@ -80,6 +81,13 @@ class FuzzyIFP:
 
     def fingerprint_pair(self):
         prot_st = StructureReader(self.params['receptor']).next()
+        
+        lig_search = AslLigandSearcher()
+        lig_atoms = []
+        for l in lig_search.search(prot_st):
+            lig_atoms.extend(l.atom_indexes)
+        prot_st.deleteAtoms(lig_atoms)
+
         lig_st = StructureReader(self.params['ligand']).next()
         
         return self.fingerprint(lig_st, prot_st)

@@ -1,4 +1,4 @@
-#!/share/PI/rondror/software/schrodinger2017-1/run
+##!/share/PI/rondror/software/schrodinger2017-1/run
 from schrodinger.structure import StructureReader
 from schrodinger.structure import StructureWriter
 from schrodinger.structutils.structalign import StructAlign

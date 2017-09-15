@@ -1,7 +1,7 @@
 import sys
 import os
-import wget
-import ssl
+#import wget
+#import ssl
 from schrodinger.structure import PDBWriter, StructureReader, StructureWriter
 
 SCHRODINGER = "/share/PI/rondror/software/schrodinger2017-1"
@@ -10,15 +10,15 @@ def sdToMae(f):
     os.system(SCHRODINGER + "/ligprep -WAIT -adjust_itc -epik -isd " + f + " -omae " + f[:-3] + ".mae")
 
 def get():
-    if 'raw_pdbs' not in os.listdir('.'):
-        print 'downloading pdbs...'
-        input_file = [f for f in os.listdir('.') if os.path.isfile(f) and f.split('.')[-1] == 'txt'][0]
-        os.system('mkdir raw_pdbs')
-        with open(input_file, 'r') as f:
-            for line in f:
-                line = str.strip(line)
-                wget.download("http://files.rcsb.org/download/" + line + ".pdb", out="./raw_pdbs")
-        os.system('mv {} raw_pdbs'.format(input_file))
+#    if 'raw_pdbs' not in os.listdir('.'):
+#        print 'downloading pdbs...'
+#        input_file = [f for f in os.listdir('.') if os.path.isfile(f) and f.split('.')[-1] == 'txt'][0]
+#        os.system('mkdir raw_pdbs')
+#        with open(input_file, 'r') as f:
+#            for line in f:
+#                line = str.strip(line)
+#                wget.download("http://files.rcsb.org/download/" + line + ".pdb", out="./raw_pdbs")
+#        os.system('mv {} raw_pdbs'.format(input_file))
 
     print 'removing alternate conformations...'
     os.system('mkdir -p raw_maes')

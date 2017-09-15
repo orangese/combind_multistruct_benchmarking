@@ -10,8 +10,6 @@ DATA = "/scratch/PI/rondror/docking_data/"
 output_dir = sys.argv[1]
 datasets = sys.argv[2:]
 
-if datasets[0] == 'pdbbind_part2':
-    datasets = ['pdbbind_part2/{}'.format(s) for s in os.listdir('{}/pdbbind_part2'.format(DATA))]
 if datasets[0] == 'pdbbind_final':
     datasets = ['pdbbind_final/{}'.format(s) for s in os.listdir('{}/pdbbind_final'.format(DATA))]
 
@@ -43,6 +41,6 @@ for d in datasets:
             f.write('#!/bin/bash\n')
             f.write('OUTPUT=$({} {} -receptor {} -ligand {} -input pair -verbose {}.out)\n'.format(SCHRODINGER, FUZZY_SCRIPT, struct_path, lig_path, lig.split('_')[0])) 
             f.write('echo \"{};$OUTPUT\" >> {}.fp'.format(lig.split('_')[0], lig.split('_')[0]))
-        os.system('sbatch --time=00:20:00 -n 1 -p rondror {}.sh'.format(lig.split('_')[0]))
+        os.system('sbatch --time=01:00:00 -n 1 -p rondror {}.sh'.format(lig.split('_')[0]))
         #break
 

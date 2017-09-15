@@ -7,15 +7,15 @@ import centroid
 from tests import get_best_resolution
 
 def get_alignment_stats():
-    check_ligand_alignment()
-    #check_binding_pocket_alignment()
+    #check_ligand_alignment()
+    check_binding_pocket_alignment()
 
 def check_ligand_alignment():
     centroids = {}
     os.system('rm -rf processed')
     os.system('rm *.txt')
-    for f in os.listdir('aligned_ligands'):
-        lig = StructureReader('aligned_ligands/{}'.format(f)).next()
+    for f in os.listdir('processed_ligands'):
+        lig = StructureReader('processed_ligands/{}'.format(f)).next()
         centroids[f.split('_')[0]] = centroid.average_atom_pos(lig)
 
     total_num_ligs = len(centroids.keys())
@@ -58,15 +58,22 @@ def check_ligand_alignment():
 def check_binding_pocket_alignment():
     residues = {}
     structs = {}
-
-    lig = StructureReader('aligned_ligands/{}'.format(os.listdir('aligned_ligands')[0])).next()
-    print os.listdir('aligned_ligands')[0]
-    for f in os.listdir('processed'):
+    if len(os.listdir('processed_proteins')) != len(os.listdir('processed_ligands')):
+        print 'processing not finished.'
+        return
+    if 'residue_alignments.txt' in os.listdir('.'):
+        print 'already finished.'
+        return
+    #print 'uh oh'
+    #return
+    #lig = StructureReader('aligned_ligands/{}'.format(os.listdir('aligned_ligands')[0])).next()
+    #print os.listdir('aligned_ligands')[0]
+    for f in os.listdir('processed_proteins'):
         name = f.split('.')[0]
-        structs[name] = StructureReader('processed/{}'.format(f)).next()
+        structs[name] = StructureReader('processed_proteins/{}'.format(f)).next()
         for r in sorted([r for r in structs[name].residue], key=lambda x:x.resnum):
             if r.hasMissingAtoms(): continue
-            if get_shortest_distance(lig, st2=r.extractStructure())[0] > 7: continue
+            #if get_shortest_distance(lig, st2=r.extractStructure())[0] > 7: continue
             if r.resnum >= 1000:
                 all_r = {(r2.resnum, r2.pdbres):r2.extractStructure() for r2 in structs[name].residue}
                 if (r.resnum - 1000, r.pdbres) in all_r and (r.resnum - 1000, r.pdbres) in residues:

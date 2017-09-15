@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --time=12:00:00
+#SBATCH --time=8:00:00
 #SBATCH --partition=rondror
 #SBATCH --tasks=4 --cpus-per-task=1
 ##SBATCH --ntasks-per-socket=2 --nodes=1
 #SBATCH --mem=16GB
 #SBATCH --job-name=xdock
-#SBATCH --output=outfile3 --open-mode=append
+##SBATCH --output=$2.out --open-mode=append
 
 module load chemistry schrodinger/2017-2
 

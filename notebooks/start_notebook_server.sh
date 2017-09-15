@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=16:00:00
+#SBATCH --time=12:00:00
 #SBATCH --mem=16GB
 #SBATCH --job-name=jupyter
 #SBATCH --tasks=1
