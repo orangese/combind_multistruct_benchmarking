@@ -11,7 +11,7 @@ def grouper(n, iterable, fillvalue=None):
     return itertools.izip_longest(*args, fillvalue=fillvalue) #NOTE: izip_longest is zip_longest in python2
 
 SCRIPT = '/share/PI/rondror/$USER/combind/2_fingerprint/fuzzyifp.py'
-SCHRODINGER = '/share/PI/rondror/software/schrodinger2017-1/run'
+SCHRODINGER = '{}/run'.format(os.environ.get("SCHRODINGER", None)) # '/share/PI/rondror/software/schrodinger2017-1/run'
 DATA = '/scratch/PI/rondror/docking_data/'
 XGLIDE = '../../xglide'
 
@@ -20,12 +20,17 @@ datasets = sys.argv[2:]
 
 if datasets[0] == 'pdbbind_final':
     datasets = ['pdbbind_final/{}'.format(s) for s in os.listdir('{}/pdbbind_final'.format(DATA))]
+if datasets[0] == 'pdbbind_deck':
+    datasets = ['pdbbind_deck/{}'.format(s) for s in os.listdir('{}/pdbbind_deck'.format(DATA))]
+if datasets[0] == 'pdbbind_combo':
+    datasets = ['pdbbind_combo/{}'.format(s) for s in os.listdir('{}/pdbbind_combo'.format(DATA))]
+datasets.sort()
 
 
 for dataset in datasets:    
     os.system('mkdir -p {}{}/ifp/{}'.format(DATA, dataset, output_dir))
     os.chdir('{}{}/ifp/{}'.format(DATA, dataset, output_dir))
-    if dataset.split('/')[0] == 'pdbbind_final':
+    if dataset.split('/')[0].split('_')[0] == 'pdbbind':
         title = dataset.split('/')[1]
     else:
         title = dataset

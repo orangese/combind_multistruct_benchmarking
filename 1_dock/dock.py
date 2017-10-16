@@ -1,15 +1,12 @@
-##!/share/PI/rondror/software/schrodinger2016-1/run
-
 import os
 import subprocess
 from multiprocessing import Pool
-from tests import get_first
-GLIDE = 'glide'#'/share/PI/rondror/software/schrodinger2017-1/glide'
-#GLIDE = '/share/software/modules/chemistry/schrodinger2017-2/glide'
+
+GLIDE = '{}/glide'.format(os.environ.get("SCHRODINGER", None))
 XGLIDE_IN = '''GRIDFILE   ../../grids/{}/{}.zip
-LIGANDFILE   ../../unique_ligands/{}.mae
+LIGANDFILE   ../../final_ligands/{}.mae
 USE_REF_LIGAND   True
-REF_LIGAND_FILE   ../../unique_ligands/{}.mae
+REF_LIGAND_FILE   ../../final_ligands/{}.mae
 CORE_DEFINITION   allheavy
 DOCKING_METHOD   confgen
 EXPANDED_SAMPLING   True
@@ -32,7 +29,6 @@ def glide_failed(ligand, grid):
 
 def dock(pair):
     ligand, grid = pair
-    #print 'docking {} to {}'.format(ligand, grid)
     if '{}-to-{}'.format(ligand, grid) in os.listdir('.'):
         os.system('rm -rf {}-to-{}'.format(ligand, grid))
 
@@ -44,28 +40,22 @@ def dock(pair):
 
     subprocess.call([GLIDE, "{}-to-{}.in".format(ligand, grid), "-WAIT"])
     os.chdir('..')
-    #print '{} to {} returned'.format(ligand, grid)
     return (ligand, grid, glide_exists(ligand, grid) or glide_failed(ligand, grid))
 
 def dock_dataset(print_only=False):
     os.system('mkdir -p xglide')
-    assert len(os.listdir('grids')) == 1
-    grid = os.listdir('grids')[0]
     os.chdir('xglide')
 
     to_dock = []
-
-    all_ligands = [f.split('.')[0] for f in os.listdir('../unique_ligands')]
-    for ligand in all_ligands:
-        if not glide_exists(ligand, grid) and not glide_failed(ligand, grid):
-            to_dock.append((ligand, grid))
+    for ligand in [f.split('.')[0] for f in os.listdir('../final_ligands')]:
+        for grid in os.listdir('../grids'):
+            if not glide_exists(ligand, grid) and not glide_failed(ligand, grid):
+                to_dock.append((ligand, grid))
     
-    if len(to_dock) > 0: print grid, len(to_dock)
+    if len(to_dock) > 0: print len(to_dock), to_dock
     if print_only: return
-    #print to_dock
-    #return
-    num_licenses = 10
-    pool = Pool(num_licenses)
+    
+    pool = Pool(int(os.environ.get("SLURM_NTASKS", 2)))
 
     i = 0
     while len(to_dock) > 0 and i < 5:

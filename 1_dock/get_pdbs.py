@@ -21,6 +21,7 @@ def get():
 #        os.system('mv {} raw_pdbs'.format(input_file))
 
     print 'removing alternate conformations...'
+    os.system('rm -rf raw_maes')
     os.system('mkdir -p raw_maes')
     for f in os.listdir('raw_pdbs'):
         name = f.split('.')[0].upper()
@@ -31,6 +32,7 @@ def get():
         pw = PDBWriter('raw_maes/{}.pdb'.format(name, first_occ=True))
         pw.write(struct1)
         struct2 = StructureReader('raw_maes/{}.pdb'.format(name)).next()
+        struct2._setTitle(name)
         mw = StructureWriter('raw_maes/{}.mae'.format(name))
         mw.append(struct2)
         mw.close()

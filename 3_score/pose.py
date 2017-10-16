@@ -3,11 +3,11 @@ class Pose:
     def __init__(self, rmsd, fp, num, gscore, struct, lig):
         self.rmsd = rmsd
         self.fp = fp
-        self.num = num
+        self.rank = num
         self.gscore = gscore
         self.struct = struct
         self.lig = lig
 
     def __str__(self):
-        return ';'.join(map(str, [self.num, self.rmsd, self.fp, self.gscore]))
+        return ';'.join(map(str, [self.rank, self.rmsd, self.fp, self.gscore]))
 

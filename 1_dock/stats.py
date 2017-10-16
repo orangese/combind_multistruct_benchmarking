@@ -58,19 +58,24 @@ def check_ligand_alignment():
 def check_binding_pocket_alignment():
     residues = {}
     structs = {}
-    if len(os.listdir('processed_proteins')) != len(os.listdir('processed_ligands')):
+    if len(os.listdir('renumbered_proteins')) != len(os.listdir('processed_ligands')):
         print 'processing not finished.'
         return
     if 'residue_alignments.txt' in os.listdir('.'):
-        print 'already finished.'
-        return
+        os.system('rm residue_alignments.txt')
+        print 'deleted'#'already done' #'deleted'
+        #return
     #print 'uh oh'
     #return
     #lig = StructureReader('aligned_ligands/{}'.format(os.listdir('aligned_ligands')[0])).next()
     #print os.listdir('aligned_ligands')[0]
-    for f in os.listdir('processed_proteins'):
+    prot_dir = 'renumbered_proteins'
+    #if 'renumbered_proteins' in os.listdir('.'):
+    #    print 'hi'
+    #    prot_dir = 'renumbered_proteins'
+    for f in os.listdir(prot_dir):
         name = f.split('.')[0]
-        structs[name] = StructureReader('processed_proteins/{}'.format(f)).next()
+        structs[name] = StructureReader('{}/{}'.format(prot_dir, f)).next()
         for r in sorted([r for r in structs[name].residue], key=lambda x:x.resnum):
             if r.hasMissingAtoms(): continue
             #if get_shortest_distance(lig, st2=r.extractStructure())[0] > 7: continue
@@ -98,5 +103,9 @@ def check_binding_pocket_alignment():
                     r1 = residues[r][structs.keys()[i1]]
                     r2 = residues[r][structs.keys()[i2]]
                     if len(r1.atom) != len(r2.atom): continue
-                    rmsd = ConformerRmsd(r1, r2).calculate()
-                    f.write('{} {} {} {} {}\n'.format(r[0],r[1], structs.keys()[i1], structs.keys()[i2], rmsd))
+                    try:
+                        rmsd = ConformerRmsd(r1, r2).calculate()
+                        f.write('{} {} {} {} {}\n'.format(r[0],r[1], structs.keys()[i1], structs.keys()[i2], rmsd))
+                    except Exception as e:
+                        print e
+                        print 'error', r,  structs.keys()[i1], structs.keys()[i2]

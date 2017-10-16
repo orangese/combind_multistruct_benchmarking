@@ -51,8 +51,8 @@ class HBond_Container:
     def score(self):
         return {
             r : [
-                sum([hb.score() for hb in self.all_hdon.get(r, []) ]),
-                sum([hb.score() for hb in self.all_hacc.get(r, []) ]),
+                #sum([hb.score() for hb in self.all_hdon.get(r, []) ]),
+                #sum([hb.score() for hb in self.all_hacc.get(r, []) ]),
                 sum([hb.new_score() for hb in self.all_hdon.get(r, []) ]),
                 sum([hb.new_score() for hb in self.all_hacc.get(r, []) ])
             ] for r in self.all_res()
