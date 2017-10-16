@@ -5,6 +5,7 @@ from schrodinger.structure import StructureReader
 from schrodinger.structutils.measure import get_shortest_distance
 from schrodinger.structutils.analyze import AslLigandSearcher
 
+from halbond import HalBond_Container
 from hbond import HBond_Container
 from saltbridge import SB_Container
 from pipi import PiPi_Container
@@ -34,6 +35,7 @@ class FuzzyIFP:
 
     def fingerprint(self, lig_st, prot_st, pnum=None):
         interactions = {
+            'hal' : HalBond_Container(lig_st),
             'hbond': HBond_Container(lig_st),
             'saltbridge': SB_Container(lig_st),
             'pipi': PiPi_Container(lig_st),
@@ -43,15 +45,16 @@ class FuzzyIFP:
             'vdw': VDW_Container(lig_st)
         }
 
-        num_scores = {'hbond':4, 'saltbridge':1, 'pipi':1, 'picat':2, 'metal':1,'hydrophobic':2,'vdw':2}
+        num_scores = {'hal':2, 'hbond':2, 'saltbridge':1, 'pipi':1, 'picat':2, 'metal':1,'hydrophobic':2,'vdw':2}
 
         active_site_res = {}
         for res in prot_st.residue:
             if get_shortest_distance(res.extractStructure(), st2=lig_st)[0] <= 8:
-                active_site_res[res.resnum] = res.extractStructure()
+                res_key = '{}:{}({})'.format(res.chain.strip(), res.resnum, res.pdbres.strip())
+                active_site_res[res_key] = res.extractStructure()
 
         fp = {r:[] for r in active_site_res}
-        for i_type in ['hbond','saltbridge','pipi','picat','metal','hydrophobic','vdw']: # interactions:
+        for i_type in ['hal','hbond','saltbridge','pipi','picat','metal','hydrophobic','vdw']: # interactions:
             for r, r_st in active_site_res.items():
                 interactions[i_type].add_residue(r, r_st)
             
@@ -118,7 +121,7 @@ class FuzzyIFP:
                 self.params[key] = value
     
     def __str__(self):
-        return '\n'.join(':'.join(','.join(map(str, [key]+val)) for key, val in fp.items()) for fp in self.fp)
+        return '\n'.join(';'.join(','.join(map(str, [key]+val)) for key, val in fp.items()) for fp in self.fp)
 
 if __name__ == '__main__':
     import sys

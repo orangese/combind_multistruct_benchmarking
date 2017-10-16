@@ -52,8 +52,8 @@ def get_first():
     all_info = get_all_info()
     all_structs.sort(key=lambda x: all_info[x][1])
     for num, i in enumerate(all_structs):
-        if all_info[i][1] == all_info[all_structs[0]][1]:
-            print i, all_info[i]
+        if num <= 5 or all_info[i][1] == all_info[all_structs[1]][1]:
+            print os.getcwd().split('/')[-1], i, num, all_info[i]
         #assert num < 1, 'multiple structures with same year'
     return all_structs[0]
 
