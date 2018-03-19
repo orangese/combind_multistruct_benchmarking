@@ -10,6 +10,9 @@
 #SBATCH --output=server_host.out
 #SBATCH --dependency=singleton
 
+module load schrodinger/2017-3
+export JUPYTER_RUNTIME_DIR=$SCRATCH
+
 hostname
-jupyter-notebook --port=8895 --no-browser
+jupyter-notebook --port=8890 --no-browser
 

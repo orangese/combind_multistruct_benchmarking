@@ -1,97 +1,89 @@
 import os
+
+from parse_chembl import load_chembl_proc, load_drugs
+
 from schrodinger.structure import StructureReader, StructureWriter
-from tests import get_all_info
-
-def check_valence(st, st_name):
-    if st._getTitle() != st_name and st._getTitle() != '{}_ligand'.format(st_name):
-        print '-', st_name, st._getTitle(), 'wrong title'
-    valence = {'H':set([1]), 'C':set([4]), 'N':set([3]), 'O':set([2]), 'S':set([2,4,6]), 'P':set([5])}
-    for a in st.atom:
-        if a.element in valence and sum([b.order for b in a.bond]) - a.formal_charge not in valence[a.element]:
-            print '-', st._getTitle(), a.element, a.bond_total, a.formal_charge, a.index
-            return False
-    return True
-
-def manage_ligands():
-    #if process_ligands():
-    filter_duplicates()
-
-
-def process_proteins():
-    os.system('mkdir -p broken_proteins')
-
-    done = True
-    for p in sorted(os.listdir('raw_maes')):
-        st_name = p.split('.')[0].upper()
-        f_name = '{}.mae'.format(st_name)
-        if f_name in os.listdir('processed_proteins'):
-            if not check_valence(StructureReader('processed_proteins/{}'.format(f_name)).next(), st_name):
-                os.system('mv processed_proteins/{} broken_proteins'.format(f_name, f_name))
-                done = False
-        elif f_name in os.listdir('broken_proteins'):
-            if check_valence(StructureReader('broken_proteins/{}'.format(f_name)).next(), st_name):
-                os.system('mv broken_proteins/{} processed_proteins'.format(f_name))
-        else:
-            print '-', p, 'missing'
-
-    if 'broken_proteins' in os.listdir('.') and len(os.listdir('broken_proteins')) == 0:
-        os.system('rm -r broken_proteins')
-
-    return done 
-
-def process_ligands():
-    os.system('mkdir -p processed_ligands broken_ligands')
-
-    done = True
-    for l in sorted(os.listdir('ligands')):
-        st_name = l.split('_')[0].upper()
-        f_name = '{}_ligand.mae'.format(st_name)
-        if f_name in os.listdir('processed_ligands'):
-            if not check_valence(StructureReader('processed_ligands/{}'.format(f_name)).next(), st_name):
-                os.system('mv processed_ligands/{} broken_ligands'.format(f_name, f_name))
-                done = False
-        elif f_name in os.listdir('broken_ligands'):
-            if check_valence(StructureReader('broken_ligands/{}'.format(f_name)).next(), st_name):
-                os.system('mv broken_ligands/{} processed_ligands'.format(f_name))
-        else:
-            st = StructureReader('ligands/{}'.format(l)).next()
-            st._setTitle('{}_ligand'.format(st_name))
-            
-            if not check_valence(st, st_name):
-                st_writer = StructureWriter('broken_ligands/{}'.format(f_name))
-                done = False
-            else:
-                st_writer = StructureWriter('processed_ligands/{}'.format(f_name))
-            st_writer.append(st)
-            st_writer.close()
-
-    if 'broken_ligands' in os.listdir('.') and len(os.listdir('broken_ligands')) == 0:
-        os.system('rm -r broken_ligands')
-
-    return done 
 
 def filter_duplicates():
-    os.system('mkdir -p unique_ligands')
+    os.system('mkdir -p ligands/unique ligands/duplicate')
+    
+    ligs = load_chembl_proc()
+    drugs = load_drugs()
 
-    duplicates = {}
-    all_resol = get_all_info()
-    for l1 in os.listdir('processed_ligands'):
-        r1 = all_resol[l1.split('_')[0]][0]
-        for (l2, r2) in duplicates:
-            st_l1 = StructureReader('processed_ligands/{}'.format(l1)).next()
-            st_l2 = StructureReader('processed_ligands/{}'.format(l2)).next()
-            if st_l1.isEquivalent(st_l2, False):
-                duplicates[(l2, r2)].append((l1, r1))
+    duplicates = {} 
+    lig_st = {}
+    new_ligs_seen = 0
+    for lig_id in sorted([l.split('_')[0] for l in os.listdir('ligands/prepared_ligands')]):
+        lig_path = 'ligands/prepared_ligands/{}_lig/{}_lig_out.mae'.format(lig_id, lig_id)
+        if os.path.exists('ligands/unique/{}_lig.mae'.format(lig_id)): continue
+        if os.path.exists('ligands/duplicate/{}_lig.mae'.format(lig_id)): continue
+        if not os.path.exists(lig_path): continue
+
+        if len(duplicates.keys()) == 0:
+            for u_lig in [l.split('_')[0] for l in os.listdir('ligands/unique')]:
+                duplicates[u_lig] = [u_lig]
+                lig_st[u_lig] = StructureReader('ligands/unique/{}_lig.mae'.format(u_lig)).next()
+
+        new_ligs_seen += 1
+        #try:
+        st_list = [st for st in StructureReader(lig_path)] # all generated epik states
+        charges = [st.formal_charge for st in st_list]
+
+        if len(st_list) == 0:
+            os.system('rm -rf ligands/prepared_ligands/{}_lig'.format(lig_id))
+            print 'check lig processing', lig_path
+            continue
+        if len(st_list) == 1 or lig_id not in ligs: 
+            lig_st[lig_id] = st_list[0]
+        elif ligs[lig_id].target_prot in ['P14416', 'P61169'] and charges[0] == 0 and charges[1] == 1:
+            lig_st[lig_id] = st_list[1]#StructureReader(lig_path).next()
+        else:
+            lig_st[lig_id] = st_list[0]        
+
+        # put all drugs in the unique folder unconditionally
+        if lig_id in drugs:
+            print 'drug found',lig_id,l
+            st_wr = StructureWriter('ligands/unique/{}_lig.mae'.format(lig_id))
+            st_wr.append(lig_st[lig_id])
+            st_wr.close()
+            new_ligs_seen -= 1
+            continue
+        #print 'hmm', lig_id, drugs.keys()[:5]
+        #return        
+        for lig_id2 in duplicates:
+            if lig_st[lig_id].isEquivalent(lig_st[lig_id2], True):
+                duplicates[lig_id2].append(lig_id)
                 break
         else:
-            duplicates[(l1, r1)] = [(l1, r1)]
-    print '{} ligands, {} unique ligands'.format(len(os.listdir('processed_ligands')), len(duplicates))
-    for (l, r), dups in duplicates.items():
-        dups.sort(key=lambda x: x[0]) # break ties alphabetically (roughly chronologically)
-        dups.sort(key=lambda x: x[1]) # sort by resolution
-    #    if dups[0][0] not in os.listdir('unique_ligands'):
-        if len(dups) > 1:
-            print dups
-            for li, ri in dups[1:]:
-                assert li not in os.listdir('unique_ligands'), li
-            #os.system('cp processed_ligands/{} unique_ligands'.format(dups[0][0]))
+            duplicates[lig_id] = [lig_id]
+
+    if new_ligs_seen > 0: print 'found {} new ligands'.format(new_ligs_seen)
+    
+    for lig_id, dups in duplicates.items():
+        pdb_ligs = sorted([l for l in dups if l[:6] != 'CHEMBL'])
+        specified_stereo = [l for l in dups if l in ligs and ligs[l].valid_stereo]
+        
+        ki_sort = lambda x: ligs[x].ki
+
+        if len(pdb_ligs) > 0:
+            keep = pdb_ligs[0] # alphabetically first non-chembl ligand
+        elif len(specified_stereo) > 0:
+            specified_stereo.sort(key=ki_sort)
+            keep = specified_stereo[0] # best ki ligand with specified stereochemistry
+        else:
+            dups.sort(key=ki_sort)
+            keep = dups[0] # best ki ligand
+        
+        for l in dups:
+            path_write = 'ligands/duplicate/{}_lig.mae'.format(l)
+            path_delete = 'ligands/unique/{}_lig.mae'.format(l)
+            if l == keep:
+                path_write, path_delete = path_delete, path_write
+            os.system('rm -f {}'.format(path_delete))
+            if os.path.exists(path_write): continue
+            st_wr = StructureWriter(path_write)
+            st_wr.append(lig_st[l])
+            st_wr.close()
+
+
+

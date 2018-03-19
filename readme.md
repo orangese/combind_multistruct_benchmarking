@@ -14,7 +14,7 @@ Our code is organized into four steps:
 
 1. Docking
    
-   __Input:__ Ligand/receptor complexes downloaded from the Protein Data Bank.
+   __Input:__ Ligand/receptor complexes downloaded from the Protein Data Bank and ligands from CHEMBL.
    
    __Output:__ Docking results (a set of poses) for each ligand (cross-)docked into each receptor.
 

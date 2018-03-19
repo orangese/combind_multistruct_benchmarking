@@ -1,47 +1,31 @@
 import os
+import sys
+
 from schrodinger.structure import StructureReader, StructureWriter
-import subprocess
 
-script = '/share/PI/rondror/jbelk/combind/1_dock/adjust_residue_numbering.py'
-schro = os.environ.get("SCHRODINGER", None)
+temp_prot = [f for f in os.listdir('.') if f.split('_')[-1] == 'template.mae' and f[:4] == 'rot-']
+quer_prot = [f for f in os.listdir('.') if f.split('_')[-1] == 'query.mae' and f[:4] == 'rot-']
 
-def renumber():
-    if 'renumbered_proteins' in os.listdir('.'):
-        if len(os.listdir('renumbered_proteins')) == len(os.listdir('processed_proteins')):
-            print 'already done'
-            return
-    
-    os.system('rm -rf renumbered_proteins')
-    os.system('mkdir renumbered_proteins')
+template = StructureReader(temp_prot[0]).next()
+query = StructureReader(quer_prot[0]).next()
 
-    assert len(os.listdir('grids')) == 1
-    ref_name = '{}.mae'.format(os.listdir('grids')[0])
-    print ref_name, 'reference'
- 
-    other_names = [i for i in os.listdir('processed_proteins') if i != ref_name]
-    print len(other_names), 'others'
-    job_input = StructureWriter('renumbered_proteins/job_input.mae')
-    ref_st = StructureReader('processed_proteins/{}'.format(ref_name)).next()
+renumber_in = StructureWriter('renumber_in.mae')
+renumber_in.append(template)
+renumber_in.append(query)
+renumber_in.close()
 
-    job_input.append(ref_st)
-    for n in other_names:
-        other_st = StructureReader('processed_proteins/{}'.format(n)).next()
-        job_input.append(other_st)
-    job_input.close()
+os.system('$SCHRODINGER/run adjust_residue_numbering.py -nosuper -renumber reference renumber_in.mae renumber_out.mae')
 
-   
-    os.system('{}/run {} renumbered_proteins/job_input.mae renumbered_proteins/job_output.mae -nosuper -renumber reference'.format(schro, script))
+try:
+    for st in StructureReader('renumber_out.mae'):
+        st_wr = StructureWriter('{}_out.mae'.format(st._getTitle()))
+        st_wr.append(st)
+        st_wr.close()
+except:
+    print 'failed'
 
-    #subprocess.call(['{}/run'.format(schro), script, 'renumbered_proteins/job_input.mae',
-    #    'renumbered_proteins/job_output.mae', '-nosuper', '-renumber', 'reference'])
-    
-    for st in StructureReader('renumbered_proteins/job_output.mae'):
-        st_out = StructureWriter('renumbered_proteins/{}.mae'.format(st._getTitle()))
-        st_out.append(st)
-        st_out.close()
+query_pdb = quer_prot[0].split('_')[0].split('-')[-1]
 
-    os.system('rm renumbered_proteins/job_input.mae renumbered_proteins/job_output.mae')
-    
-    print 'renumbered {} of {} structs'.format(len(os.listdir('renumbered_proteins')), len(os.listdir('processed_proteins')))
-    for i in os.listdir('processed_proteins'):
-        if i not in os.listdir('renumbered_proteins'): print i, 'not done'
+if not os.path.exists('{}_out.mae'.format(query_pdb)):
+    print 'renumber failed', query_pdb
+    os.system('cp {} {}_out.mae'.format(quer_prot[0], query_pdb))
