@@ -14,9 +14,9 @@ class HBond_Container:
         for res_atom in res_st.atom:
             for lig_atom in self.lig_st.atom:
                 if self.valid_donor(res_atom) and self.valid_acceptor(lig_atom):
-                    self.all_hdon[resnum].extend([HBond(res_atom, lig_atom, n, True) for n in res_atom.bonded_atoms if n.element == 'H'])
+                    self.all_hdon[resnum].extend([HBond(res_atom, lig_atom, n, resnum, True) for n in res_atom.bonded_atoms if n.element == 'H'])
                 if self.valid_donor(lig_atom) and self.valid_acceptor(res_atom):
-                    self.all_hacc[resnum].extend([HBond(lig_atom, res_atom, n, False) for n in lig_atom.bonded_atoms if n.element == 'H'])
+                    self.all_hacc[resnum].extend([HBond(lig_atom, res_atom, n, resnum, False) for n in lig_atom.bonded_atoms if n.element == 'H'])
     
     def valid_donor(self, atom):
         return (atom.element in ('N', 'O')) and ('H' in [n.element for n in atom.bonded_atoms]) and atom.formal_charge >= 0
@@ -30,22 +30,33 @@ class HBond_Container:
     def filter_int(self):
         # enforces 1 hbond per h
         
-        res_h = {}
-        for r in self.all_hdon:
-            for hb in self.all_hdon[r]:
-                unique_index = (r, hb.h.index)
-                if unique_index not in res_h or res_h[unique_index].score() < hb.score():
-                    res_h[unique_index] = hb
-        self.all_hdon = {r:[hb for (hb_r,hb_h), hb in res_h.items() if hb_r == r] for r in [x[0] for x in res_h]}
+        unique_h = {}
+        for r in set(self.all_hdon.keys() + self.all_hacc.keys()):
+            for hb in self.all_hdon.get(r, []) + self.all_hacc.get(r, []):
+                #unique_index = (r, hb.h.index)
+                if hb.h.index not in unique_h or unique_h[hb.h.index].score() < hb.score():
+                    unique_h[hb.h.index] = hb
+
+        self.all_hdon = {}
+        self.all_hacc = {}
+        for h, hb in unique_h.items():
+            if hb.resIsHDonor:
+                if hb.r_ind not in self.all_hdon: self.all_hdon[hb.r_ind] = []
+                self.all_hdon[hb.r_ind].append(hb)
+            if not hb.resIsHDonor:
+                if hb.r_ind not in self.all_hacc: self.all_hacc[hb.r_ind] = []
+                self.all_hacc[hb.r_ind].append(hb)
+
+        #self.all_hdon = {r:[hb for (hb_r,hb_h), hb in res_h.items() if hb_r == r] for r in [x[0] for x in res_h]}
         #self.all_hdon = {r:self.all_hdon[r] for r in self.all_hdon if len(self.all_hdon[r]) > 0}
 
-        lig_h = {}
-        for r in self.all_hacc:
-            for hb in self.all_hacc[r]:
-                unique_index = (r, hb.h.index)
-                if unique_index not in lig_h or lig_h[unique_index].score() < hb.score():
-                    lig_h[unique_index] = hb
-        self.all_hacc = {r:[hb for (hb_r, hb_h), hb in lig_h.items() if hb_r == r] for r in [x[0] for x in lig_h]}
+        #lig_h = {}
+        #for r in self.all_hacc:
+        #    for hb in self.all_hacc[r]:
+        #        unique_index = (r, hb.h.index)
+        #        if unique_index not in lig_h or lig_h[unique_index].score() < hb.score():
+        #            lig_h[unique_index] = hb
+        #self.all_hacc = {r:[hb for (hb_r, hb_h), hb in lig_h.items() if hb_r == r] for r in [x[0] for x in lig_h]}
         #self.all_hacc = {r:self.all_hacc[r] for r in self.all_hacc if len(self.all_hacc[r]) > 0}        
 
     #def all_res(self):
@@ -79,11 +90,13 @@ class HBond_Container:
         return hdon + '\n' + hacc
 
 class HBond:
-    def __init__(self, donor, acceptor, h, resIsHDonor): # D - H ... A - X
+    def __init__(self, donor, acceptor, h, r_ind, resIsHDonor): # D - H ... A - X
         self.d = donor # h donor, \in {N,O}
         self.a = acceptor # h acceptor, \in {N,O}
         self.h = h # covalently bound to the donor
         self.resIsHDonor = resIsHDonor
+
+        self.r_ind = r_ind
 
         self.dist = measure_distance(h, acceptor) # angstroms
         self.DHA_angle = 180 - measure_bond_angle(self.d, self.h, self.a)#self.get_DHA_angle() # degrees

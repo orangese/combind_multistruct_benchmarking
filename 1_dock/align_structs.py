@@ -10,6 +10,14 @@ queue = 'rondror'
 renumber_script = '/scratch/PI/rondror/jbelk/method/code/1_dock/renumber.py'
 
 def align_successful(out_dir, struct, verbose=False):
+    if struct in ['3J5R','5IRX','5IS0','3J5Q']: 
+        in_f = 'structures/processed_files/{}/{}_out.mae'.format(struct, struct)
+        out_f = '{}/{}/{}_out.mae'.format(out_dir, struct, struct)
+        if not os.path.exists(out_f):
+            os.system('mkdir -p {}/{}'.format(out_dir, struct))
+            os.system('cp {} {}'.format(in_f, out_f))
+        return True # TRPV1 was manually aligned because 3J5R has no ligand
+
     if not os.path.exists('{}/{}/rot-{}_query.mae'.format(out_dir, struct, struct)):
         return False
     

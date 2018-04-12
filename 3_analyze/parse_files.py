@@ -2,34 +2,60 @@ import os
 
 #from containers import Pose
 
-def parse_mcss(mcss_path, load_chembl, num_poses):
-    mcss_scores = {}
+def parse_mcss_size(mcss_path, ligs1, ligs2):
+    mcss_sizes = {}
     if not os.path.exists(mcss_path): return {}
     for fname in sorted(os.listdir(mcss_path)):
         if fname.split('.')[-1] != 'csv' or fname[0] == '.': continue
-        #print fname
         l1, l2 = fname.split('.')[0].split('-')
-        if not load_chembl and 'CHEMBL' in [l1[:6],l2[:6]]: continue
+        if not (l1 in ligs1 and l2 in ligs2):
+            if not (l1 in ligs2 and l2 in ligs1):
+                continue
         size = None
         try:
             with open('{}/{}'.format(mcss_path, fname)) as f:
                 for i, line in enumerate(f):
                     line = line.strip().split(',')
                     if i == 0:
+                        s1, s2, s3 = [0 if i == 'None' else float(i) for i in line]
+                        mcss_sizes[(l1,l2)] = (s1,s2,s3)
+                        break
+        except:
+            print 'mcss error', fname
+
+    return mcss_sizes
+
+def parse_mcss(mcss_path, num_poses, all_pairs, min_size=10):
+    mcss_scores = {}
+    if not os.path.exists(mcss_path): return {}
+    for l1,l2 in all_pairs:
+        fpath = '{}/{}-{}.csv'.format(mcss_path, l1, l2)
+        if not os.path.exists(fpath): continue
+        size = None
+        try:
+            with open(fpath) as f:
+                for i, line in enumerate(f):
+                    line = line.strip().split(',')
+                    if i == 0:
                         if line[-1] == 'None': break
                         s1, s2, s3 = [float(i) for i in line]
-                        if int(s3) < 10: break
+                        if int(s3) < min_size: break
                         size = s3/(s1+s2-s3)
                         mcss_scores[(l1, l2)] = {}
                     p1,p2,rmsd = int(line[0]), int(line[1]), float(line[2])
-                    mcss_scores[(l1, l2)][(p1, p2)] = rmsd*size
+                    if rmsd*size > 100:
+                        print l1, l2, p1, p2, rmsd, size
+                    else:
+                        mcss_scores[(l1, l2)][(p1, p2)] = rmsd*size
                 else:
                     if p1+1 < min(num_poses[l1], 100) or p2+1 < min(num_poses[l2], 100) or rmsd == float(10000):
-                        print 'hmmmm', fname, p1, p2, num_poses[l1], num_poses[l2]
-                        os.system('rm {}/{}'.format(mcss_path, fname))
-        except:
-            print 'mcss error', fname
-            os.system('rm {}/{}'.format(mcss_path, fname))
+                        print 'hmmmm', fpath, p1, p2, num_poses[l1], num_poses[l2]
+                        #os.system('rm {}'.format(fpath))
+        except Exception as e:
+            print 'mcss error', fpath
+            print e
+            print i,line
+            #os.system('rm {}/{}'.format(mcss_path, fpath))
 
     return mcss_scores
 
@@ -61,11 +87,11 @@ def parse_fp_file(fp_file):
                 #ifps[pose_num][(i,r)][ss] = float(sc)*w[i]
 
     except Exception as e:
-        pass#print e#, ss
-        #print fp_file, 'fp not found'
+        print e#, ss
+        print fp_file, 'fp not found'
         #ifps.append(None)
     if len(ifps) == 0:
-        #print 'check', fp_file
+        print 'check', fp_file
         return {}
     return ifps
 

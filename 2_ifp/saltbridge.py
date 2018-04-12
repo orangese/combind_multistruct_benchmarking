@@ -35,8 +35,8 @@ class SB:
         return min(2, 4.0/self.r)
 
     def newscore(self):
-        if self.r <= 2.5: return 1
-        elif self.r <= 4: return (4.0 - self.r)/1.5
+        if self.r <= 3: return 1
+        elif self.r <= 4.5: return (4.5 - self.r)/1.5
         return 0
 
     def __str__(self):

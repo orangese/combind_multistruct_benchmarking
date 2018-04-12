@@ -9,9 +9,37 @@ from matplotlib import pyplot as plt
 import matplotlib.cm as cm
 from matplotlib import gridspec
 
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 sys.path.append('../4_analyze')
 from containers import Dataset
 from score_query import ScoreQuery
+
+def heatmap(A, row_vals, col_vals, red=10.25):
+    fig, ax = plt.subplots()
+    
+    sq_size = 0.4
+    fig.set_size_inches(sq_size*A.shape[0] + 2, sq_size*A.shape[1], forward=True)
+    
+    cmap = cm.jet
+    cmap.set_under('black')
+
+    heatmap = ax.pcolor(A, cmap=cmap, vmin=0, vmax=red)
+    ax.set_xlim((0,A.shape[0]))
+    ax.set_ylim((0,A.shape[1]))
+    plt.colorbar(heatmap)
+
+    # put the major ticks at the middle of each cell
+    ax.set_xticks(np.arange(A.shape[1]) + 0.5, minor=False)
+    ax.set_yticks(np.arange(A.shape[0]) + 0.5, minor=False)
+    ax.invert_yaxis()
+    ax.xaxis.tick_top()
+
+    #labels
+    
+    ax.set_xticklabels(col_vals, minor=False, rotation = 'vertical')
+    ax.set_yticklabels(row_vals, minor=False)
+    plt.show()
 
 def load_score_file(f_path, lig_objs):
     go = 0
@@ -104,10 +132,10 @@ def get_rmsd_matrix(c, sorted_ligs):
             fp_matrix[i,0] = 0
     return fp_matrix
 
-def show_side_by_side(c1, c2, sorted_ligs, t1='Cluster 1', t2='Cluster 2', num_i=15):
+def show_side_by_side(c1, c2, sorted_ligs, t1='Cluster 1', t2='Cluster 2', num_i=15, size=1):
     i_key, fp_mat1 = get_fp_matrix(c1, sorted_ligs, num_i=num_i)
     i_key, fp_mat2 = get_fp_matrix(c2, sorted_ligs, all_i=i_key, num_i=num_i)
-    fp_mat3 = fp_mat2 - fp_mat1
+    fp_mat3 = fp_mat1 - fp_mat2
 
     heat_max = max(np.max(fp_mat1), np.max(fp_mat2))
 
@@ -123,9 +151,9 @@ def show_side_by_side(c1, c2, sorted_ligs, t1='Cluster 1', t2='Cluster 2', num_i
     ax1.matshow(r_mat2, cmap='Set1', vmin=0, vmax=9)
     ax1.set_yticks(np.arange(len(sorted_ligs)), minor=False)
 
-    interaction_heatmap(fp_mat1, sorted_ligs, i_key, m=heat_max, fig=f, ax=ax2)
-    interaction_heatmap(fp_mat2, sorted_ligs, i_key, m=heat_max, fig=f, ax=ax3)
-    interaction_heatmap(fp_mat3, sorted_ligs, i_key, fig=f, ax=ax4, difference=True)
+    interaction_heatmap(fp_mat1, sorted_ligs, i_key, m=heat_max, fig=f, ax=ax2, size=size)
+    interaction_heatmap(fp_mat2, sorted_ligs, i_key, m=heat_max, fig=f, ax=ax3, size=size)
+    interaction_heatmap(fp_mat3, sorted_ligs, i_key, fig=f, ax=ax4, difference=True, size=size)
 
     ax0.set_xticks(np.arange(1), minor=False)
     ax0.xaxis.tick_top()
@@ -146,13 +174,13 @@ def show_side_by_side(c1, c2, sorted_ligs, t1='Cluster 1', t2='Cluster 2', num_i
     plt.tight_layout()
     plt.show()
 
-def interaction_heatmap(A, structs, res, fname='', m=None, fig=None, ax=None, difference=False):
-    sq_size = 0.9
+def interaction_heatmap(A, structs, res, fname='', m=None, fig=None, ax=None, difference=False, size=1):
+    sq_size = 0.9*size
     if fig is None:
         fig, ax = plt.subplots()
-        sq_size = 0.3
+        sq_size = 0.3*size
 
-    fig.set_size_inches(sq_size*len(res), sq_size*len(structs), forward=True)
+    fig.set_size_inches(sq_size*A.shape[0], sq_size*A.shape[1], forward=True)
 
     def i_matrix(A, res, i):
         aa = np.zeros(A.shape)
@@ -180,3 +208,75 @@ def interaction_heatmap(A, structs, res, fname='', m=None, fig=None, ax=None, di
     xlabels = ['{}, {}-{}'.format(i, r.split('(')[1].split(')')[0], r.split(':')[1].split('(')[0]) for (i,r) in res]
     ax.set_xticklabels(xlabels, minor=False, rotation = 'vertical', size=14)
     ax.set_yticklabels(structs, minor=False, size=14)
+
+def feature_heatmap(A, structs, fname='', ma=None, mi=None, fig=None, ax=None, difference=False, size=1):
+    sq_size = 0.9*size
+    if fig is None:
+        fig, ax = plt.subplots()
+        sq_size = 0.3*size
+
+    fig.set_size_inches(sq_size*A.shape[0], sq_size*A.shape[1], forward=True)
+
+    colors = {2:cm.Oranges, 3:cm.Oranges,11:cm.Greys, 13:cm.Oranges, 14:cm.Oranges, 7:cm.Purples,
+              8:cm.Greens, 9:cm.Greens, 6:cm.Purples, 4:cm.Greens, 5:cm.Purples, 10:cm.Blues}
+
+    if difference:
+        max_abs = np.max(np.abs(A))
+        img = ax.matshow(A, cmap='bwr', vmin=-max_abs, vmax=max_abs)
+    else:
+        if ma is None: ma = np.max(A)
+        if mi is None: mi = np.min(A)
+        img = ax.matshow(A, cmap=cm.Greys, vmin=mi, vmax=ma)
+
+    # put the major ticks at the middle of each cell
+    ax.set_xticks(np.arange(A.shape[1]), minor=False)
+    ax.set_yticks(np.arange(A.shape[0]), minor=False)
+    ax.xaxis.tick_top()
+    ax.set_xticklabels(structs, minor=False, rotation = 'vertical', size=14)
+    ax.set_yticklabels(structs, minor=False, size=14)
+    
+    return img
+
+def show_features(c1, mat1, c2, mat2, sorted_ligs, t1='Cluster 1', t2='Cluster 2', size=1,mi=None,ma=None):
+    num_l = len(sorted_ligs)
+    mat3 = mat1 - mat2
+
+    r_mat1 = get_rmsd_matrix(c1, sorted_ligs)
+    r_mat2 = get_rmsd_matrix(c2, sorted_ligs)
+
+    f, (ax0, ax1, ax2, ax3, ax4) = plt.subplots(1, 5, gridspec_kw = 
+                                                {'width_ratios':[1,1]+[num_l]*2 + [num_l*1.1]}, dpi=400)
+
+    ax0.matshow(r_mat1, cmap='Set1', vmin=0, vmax=9)
+    ax0.set_yticks(np.arange(len(sorted_ligs)), minor=False)
+    ax0.set_yticklabels(sorted_ligs, minor=False, size=14)
+
+    ax1.matshow(r_mat2, cmap='Set1', vmin=0, vmax=9)
+    ax1.set_yticks(np.arange(len(sorted_ligs)), minor=False)
+
+    feature_heatmap(mat1, sorted_ligs, ma=ma, mi=mi, fig=f, ax=ax2, size=size)
+    feature_heatmap(mat2, sorted_ligs, ma=ma, mi=mi, fig=f, ax=ax3, size=size)
+    img = feature_heatmap(mat3, sorted_ligs, fig=f, ax=ax4, difference=True, size=size)
+
+    ax0.set_xticks(np.arange(1), minor=False)
+    ax0.xaxis.tick_top()
+    ax0.set_xticklabels(['RMSD 1'], minor=False, rotation = 'vertical', size=14)
+    ax1.set_xticks(np.arange(1), minor=False)
+    ax1.xaxis.tick_top()
+    ax1.set_xticklabels(['RMSD 2'], minor=False, rotation = 'vertical', size=14)
+
+    ax2.set_xlabel(t1, size=20)
+    ax3.set_xlabel(t2, size=20)
+    ax4.set_xlabel('Difference', size=20)
+
+    divider = make_axes_locatable(ax4)
+    cax = divider.append_axes("right", size="8%", pad=0.05)
+    plt.colorbar(img, cax=cax)
+
+    ax1.set_yticklabels(['' for i in sorted_ligs])
+    ax2.set_yticklabels(['' for i in sorted_ligs])
+    ax3.set_yticklabels(['' for i in sorted_ligs])
+    ax4.set_yticklabels(['' for i in sorted_ligs])
+
+    plt.tight_layout()
+    plt.show()

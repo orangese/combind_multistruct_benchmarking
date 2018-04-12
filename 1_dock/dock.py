@@ -113,11 +113,11 @@ def dock_dataset(grids, num_chembl=0):
     drugs = load_drugs()
     all_ligs = sorted([l.split('_')[0] for l in os.listdir('ligands/unique')])
     pdb_ligs = [l for l in all_ligs if l[:6] != 'CHEMBL'] + [l for l in all_ligs if l in drugs]
-    chembl_ligs = [l for l in all_ligs if l in chembl_info and chembl_info[l].valid_stereo]
+    chembl_ligs = [l for l in all_ligs if l in chembl_info]# and chembl_info[l].valid_stereo]
     chembl_ligs.sort(key=lambda x: chembl_info[x].ki)
 
     for lig in pdb_ligs + chembl_ligs[:num_chembl]:
-        for grid in grids:#grids:#sorted(os.listdir('docking/grids')):
+        for grid in grids:
             dock('{}_lig'.format(lig), grid, 'glide12')
             
 def core_dock(grids):

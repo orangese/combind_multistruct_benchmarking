@@ -1,7 +1,7 @@
 import os
 import sys
 
-from parse_files import parse_glide_output, parse_fp_file, parse_mcss
+from parse_files import parse_glide_output, parse_fp_file, parse_mcss, parse_mcss_size
 from plotting_tools import plot_docking
 
 sys.path.append('../1_dock')
@@ -45,7 +45,9 @@ class Ligand:
         fps = {}
         if load_fp:
             fps = parse_fp_file(fp_path)
-        
+            if len(fps) < min(100, len(rmsds)):
+                print 'missing fp?', fp_path       
+ 
         if not len(gscores) == len(rmsds):
             print '{} {} {}'.format(dock_dir, self.lig_id, struct)
             print f_path, fp_path
@@ -64,24 +66,25 @@ class Ligand:
 
     def top_n(self, n):
         if len(self.poses) == 0:
-            #print 'warning! {} did not dock'.format(self.lig_id)
             return Pose(100, 0, {}, 300)
         return self.poses[np.argmin([self.poses[i].rmsd for i in range(min(n, len(self.poses)))])]
 
 class Docking:
-    def __init__(self, dock_dir, ifp_dir, struct, chembl_ligs, load_fp, load_chembl):
+    def __init__(self, dock_dir, ifp_dir, mcss_dir, struct):
         self.dock_dir = dock_dir
         self.ifp_dir = ifp_dir
+        self.mcss_dir = mcss_dir
 
         self.struct = struct
         self.ligands = {}
-        self.load_docking(chembl_ligs, load_fp, load_chembl)
-
+        self.num_poses = {}
         self.mcss = {}
 
-    def load_mcss(self, mcss_path, load_chembl):
-        num_poses = {l:len(lig.poses) for l, lig in self.ligands.items()}
-        self.mcss = parse_mcss(mcss_path, load_chembl, num_poses)
+    def load_mcss(self, ligands):
+        all_pairs = [(l1,l2) for l1 in ligands for l2 in ligands if (l1,l2) not in self.mcss]
+        new_pairs = parse_mcss(self.mcss_dir, self.num_poses, all_pairs)
+        for new in new_pairs:
+            self.mcss[new] = new_pairs[new]
 
     def get_mcss_score(self, l1, p1, l2, p2):
         if (l1,l2) in self.mcss: return self.mcss[(l1,l2)][(p1,p2)]
@@ -89,36 +92,14 @@ class Docking:
 
         return None
 
-    def load_docking(self, chembl_ligs, load_fp, load_chembl):
-        ligands = []
-
-        for pair in os.listdir(self.dock_dir):
-            if pair[0] == '.': continue
-            if pair[:6] == 'CHEMBL' and not load_chembl: continue
-            l, s = pair.split('-to-')
-            if 'self' == self.struct and s != l.split('_')[0]: continue
-            elif s != self.struct: continue
-            if not os.path.exists('{}/{}/{}_pv.maegz'.format(self.dock_dir, pair, pair)): continue
-            ligands.append(l)
-
+    def load(self, load_fp, ligands):
         for l in ligands:
+            if l in self.ligands: continue
+            pair = '{}-to-{}'.format(l, self.struct)
+            if not os.path.exists('{}/{}/{}_pv.maegz'.format(self.dock_dir, pair, pair)): continue
             self.ligands[l] = Ligand(l)
-
-            if l[:6] == 'CHEMBL':
-                try:
-                    self.ligands[l].ki = chembl_ligs[l].ki
-                    self.ligands[l].stereo = chembl_ligs[l].valid_stereo
-                except:
-                    print 'no ki found for', l, 'drug?'
-            else:
-                self.ligands[l].ki = None
-                self.ligands[l].stereo = None 
-
-            st = self.struct
-            if self.struct == 'self':
-                st = l.split('_')[0]
-            
-            self.ligands[l].load_poses(self.dock_dir, self.ifp_dir, st, load_fp)
+            self.ligands[l].load_poses(self.dock_dir, self.ifp_dir, self.struct, load_fp)
+            self.num_poses[l] = len(self.ligands[l].poses)
 
     def glide_perf(self, n_list=[1,5,25,100], ligands=None):
         rmsds = [ [] for n in n_list ]
@@ -134,72 +115,104 @@ class Docking:
         return rmsds
 
 class Protein:
-    def __init__(self, uniprot, data_dir):
+    def __init__(self, uniprot, dock_st, data_dir, glide_dir, ifp_dir, mcss_dir):
+
         self.uniprot = uniprot
+        self.dock_st = dock_st
+        
+        self.lm = LigandManager(uniprot, dock_st, data_dir, glide_dir, mcss_dir)
 
-        self.pdb_ids = [l.split('_')[0] for l in os.listdir('{}/{}/ligands/unique'.format(data_dir, uniprot))]
-        self.pdb_ids = sorted([l for l in self.pdb_ids
-            if l+'_lig.mae' in os.listdir('{}/{}/structures/ligands'.format(data_dir, uniprot))])
+        self.dock_dir = '{}/{}/{}'.format(data_dir, uniprot, glide_dir)
+        self.ifp_dir = '{}/{}/{}'.format(data_dir, uniprot, ifp_dir)
+        self.mcss_dir = '{}/{}/{}/{}'.format(data_dir, uniprot, mcss_dir, dock_st)
 
-        self.chembl_ligs = {}
-        try:
-            self.chembl_ligs = {'{}_lig'.format(c_id):c for c_id, c in load_chembl_proc('{}/{}'.format(data_dir, uniprot)).items()}
-        except:
-            print 'chembl not loaded'
-
-        self.docking = {}
+        self.docking = Docking(self.dock_dir, self.ifp_dir, self.mcss_dir, self.dock_st)
         self.true = {}
 
-    def load_docking(self, dock_dir, ifp_dir, load_fp, load_chembl, structs):
-        for st in structs:
-            ld = Docking(dock_dir, ifp_dir, st, self.chembl_ligs, load_fp, load_chembl)
-            if len(ld.ligands) > 0:
-                self.docking[st] = ld
+    def load_true(self, ifp_dir, ligs):
+        for l in ligs:
+            self.true[l] = Ligand(l)
+            self.true[l].load_poses(None, ifp_dir, l)
 
-    def load_true(self, ifp_dir):
-        ligs = [l.split('.')[0] for l in os.listdir(ifp_dir) if l[-2:] == 'fp']
-        ligs = [l for l in ligs if len(l.split('-to-')) == 1 and len(l) > 0] 
-        self.true = {l:Ligand(l) for l in ligs}
-        for l, lig in self.true.items():
-             lig.load_poses(None, ifp_dir, l)
+class LigandManager:
+    def __init__(self, prot, struct, data_dir, gdir, mdir):
+        self.root = '{}/{}'.format(data_dir, prot)
+        self.struct = struct
+        self.gdir = gdir
+        self.mdir = mdir
+
+        self.unique = set([l.split('.')[0] for l in os.listdir('{}/ligands/unique'.format(self.root))])
+        self.chembl_info = {'{}_lig'.format(l):info for l,info in load_chembl_proc(self.root).items()}
+
+        self.docked = []
+        self.mcss_sizes = {}
+
+    def init_docked(self):
+        glide_dir = '{}/{}'.format(self.root, self.gdir)
+        for fname in os.listdir(glide_dir):
+            try: lig, st = fname.split('-to-')
+            except: continue
+            if st == self.struct and os.path.exists('{}/{}/{}_pv.maegz'.format(glide_dir, fname, fname)):
+                self.docked.append(lig)
+        self.docked.sort()
+
+    def get_pdb(self):
+        if len(self.docked) == 0:
+            self.init_docked()
+        return [l for l in self.docked if l[:6] != 'CHEMBL']
+
+    def get_chembl(self, stereo=True, max_ki=float('inf')):
+        if len(self.docked) == 0:
+            self.init_docked()
+        tr = [l for l in self.docked if l[:6] == 'CHEMBL' and (not stereo or self.chembl_info[l].valid_stereo)]
+        tr = [l for l in tr if self.chembl_info[l].ki <= max_ki]
+        return sorted(tr, key=lambda x: self.chembl_info[x].ki)
+
+    def get_similar(self, query, num=10, stereo=True, max_ki=float('inf'), chembl=True):
+        all_ligs = self.get_chembl(stereo, max_ki)
+        if not chembl:
+            all_ligs = [l for l in self.get_pdb() if l != query]
+
+        if query not in self.mcss_sizes:
+            mcss_path = '{}/{}/{}'.format(self.root, self.mdir, self.struct) 
+            all_pairs = parse_mcss_size(mcss_path, set([query]), set(all_ligs))
+            self.mcss_sizes[query] = {}
+            for (l1,l2),sz in all_pairs.items():
+                if query == l1: 
+                    self.mcss_sizes[query][l2] = sz[2]
+                if query == l2:
+                    self.mcss_sizes[query][l1] = sz[2]
+
+        return sorted(all_ligs, key=lambda x:-self.mcss_sizes[query].get(x,0))[:num]
 
 class Dataset:
-    def __init__(self, data_dir, prots):
+    def __init__(self, prots, structs, data_dir, glide_dir, ifp_dir, mcss_dir):
+        self.data_dir = data_dir
         self.proteins = {}
         for u in prots:
-            self.proteins[u] = Protein(u, data_dir)
-        self.data_dir = data_dir
+            self.proteins[u] = Protein(u, structs[u], data_dir, glide_dir, ifp_dir, mcss_dir)
+            
 
-    def load_docking(self, gdir, fpdir, mdir, structs={},
-                     load_fp=True, load_crystal=True, load_chembl=True, load_mcss=True):
-
-        for u,p in self.proteins.items():
-            dock_dir = '{}/{}/{}'.format(self.data_dir, u, gdir)
-            ifp_dir = '{}/{}/{}'.format(self.data_dir, u, fpdir)
-            st_list = p.pdb_ids
-            if u in structs:
-                st_list = [structs[u]]
-            p.load_docking(dock_dir, ifp_dir, load_fp, load_chembl, st_list)
+    def load(self, ligs={}, load_fp=True, load_crystal=False, load_mcss=True):
+        for p, l_list in ligs.items():
+            dock = self.proteins[p].docking
+            dock.load(load_fp, l_list)
 
             if load_mcss:
-                lig_feats = load_features('{}/{}'.format(self.data_dir, u))
-                for s, st in p.docking.items():
-                    mcss_dir = '{}/{}/{}/{}'.format(self.data_dir, u, mdir, s)
-                    st.load_mcss(mcss_dir, load_chembl)
-
-                    for l, lig in st.ligands.items():
-                        lig.chrg = 'chrg' in lig_feats[l]
-                        lig.ring = 'ring' in lig_feats[l]
+                lig_feats = load_features('{}/{}'.format(self.data_dir, p))
+                dock.load_mcss(l_list)
+                for l, lig in dock.ligands.items():
+                    lig.chrg = 'chrg' in lig_feats[l]
+                    lig.ring = 'ring' in lig_feats[l]
 
             if load_crystal:
-                p.load_true(ifp_dir, load_fp) 
+                self.proteins[p].load_true(load_fp)
 
     def assign_weights(self, w):
         for p_name, p in self.proteins.items():
-            for d_name, d in p.docking.items():
-                for l_name, l in d.ligands.items():
-                    for pose in l.poses:
-                        pose.weight_fp(w)
+            for l_name, l in p.docking.ligands.items():
+                for pose in l.poses:
+                    pose.weight_fp(w)
             for l_name, l in p.true.items():
                 for pose in l.poses:
                     pose.weight_fp(w)

@@ -13,7 +13,7 @@ lig2 = sys.argv[2]
 struct = sys.argv[3]
 glide_dir = sys.argv[4]
 out_dir = sys.argv[5]
-
+mcss_dir = 'ligands/mcss/mcss7'
 class RefLig:
     def __init__(self, st):
         prop = _StructureProperty(st)
@@ -25,11 +25,12 @@ class RefLig:
         #self.mcss_st = [neutral(st.extract(x)) for x in self.mcss]
         self.size = len([a for a in st.atom if a.element != 'H'])
 
-def neutral(st):
+def neutral(st, aggressive=False):
     for a in st.atom:
         a._setAtomFormalCharge(0)
-    #for b in st.bond:
-    #    b._setOrder(1)
+    if aggressive:
+        for b in st.bond:
+            b._setOrder(1)
     return st
 
 def find_mcss_matches(st1, smarts1, st2, smarts2):
@@ -55,12 +56,12 @@ def proc_mcss(lig1, lig2, struct, glide_dir, out_dir):
 
     ref_st = {}
     try:
-        st_out = StructureReader('ligands/mcss/{}.mae'.format(name))
+        st_out = StructureReader('{}/{}.mae'.format(mcss_dir,name))
         for i, st in enumerate(st_out):
             ref_st[st._getTitle()] = RefLig(st)
     except:
         print 'invalid mcss', name
-        os.system('rm ligands/mcss/{}.mae'.format(name))
+        os.system('rm {}/{}.mae'.format(mcss_dir,name))
         return
 
     assert lig1 in ref_st and lig2 in ref_st and len(ref_st.keys()) == 2, ref_st.keys()
@@ -83,17 +84,8 @@ def proc_mcss(lig1, lig2, struct, glide_dir, out_dir):
             for j, p2 in pv2:
                 if i > 105 or j > 105: 
                     continue
-                #try:            
-                #    renumber_conformer(ref_st[lig1].st, p1)#, use_symmetry=True)
-                #    renumber_conformer(ref_st[lig2].st, p2)#, use_symmetry=True)
-                #except:
-                #    print i,j,len(ref_st[lig1].st.atom), len(p1.atom)                
-                #    print i,j,len(ref_st[lig2].st.atom), len(p2.atom)                
-                #    exit()
 
                 mcss1, mcss2, valid_mcss_pairs = find_mcss_matches(p1, smarts1, p2, smarts2)
-
-                #p1, p2 = neutral(p1), neutral(p2)
 
                 rmsd = 10000
                 for m1, m2 in valid_mcss_pairs:

@@ -1,16 +1,14 @@
 import numpy as np
 
 class LigPair:
-    def __init__(self, l1, l2, p1_list, p2_list, features, mcss):
+    def __init__(self, l1, l2, features, mcss):
         self.l1 = l1
         self.l2 = l2
-        self.p1_list = p1_list
-        self.p2_list = p2_list
 
         self.mcss = mcss
         self.active_features = [f for f in features if self.active(f)]
 
-        self.pose_pairs = self.initialize_pp()
+        self.pose_pairs = {}
         
     def active(self, f):
         if f == 'mcss':
@@ -24,21 +22,21 @@ class LigPair:
         if f == 'sb':
             return self.l1.chrg and self.l2.chrg
 
-    def initialize_pp(self):
-        l1, l2 = self.l1.lig_id, self.l2.lig_id
-        tr = {}
-        for p1 in self.p1_list:
-            for p2 in self.p2_list:
-                mcss_score = None
-                if (l1,l2) in self.mcss:
-                    mcss_score = self.mcss[(l1,l2)][(p1.rank,p2.rank)]
-                if (l2,l1) in self.mcss:
-                    mcss_score = self.mcss[(l2,l1)][(p2.rank,p1.rank)]
-                tr[(p1.rank,p2.rank)] = PosePair(p1,p2,mcss_score,self.active_features)
-        return tr
+    def get_pose_pair(self, r1, r2):
+        # r1 and r2 are ranks (glidescore indices)
+        if (r1,r2) not in self.pose_pairs:
+            l1, l2 = self.l1.lig_id, self.l2.lig_id
+            p1, p2 = self.l1.poses[r1], self.l2.poses[r2]
+            mcss_score = None
+            if (l1,l2) in self.mcss:
+                mcss_score = self.mcss[(l1,l2)][(r1,r2)]
+            if (l2,l1) in self.mcss:
+                mcss_score = self.mcss[(l2,l1)][(r2,r1)]
+            self.pose_pairs[(r1,r2)] = PosePair(p1,p2,mcss_score,self.active_features)
+        return self.pose_pairs[(r1,r2)]
 
-    def all_pose_pairs(self):
-        return [pp for ij,pp in self.pose_pairs.items()]    
+    def all_pose_pairs(self, r1_list, r2_list):
+        return [self.get_pose_pair(r1,r2) for r1 in r1_list for r2 in r2_list] 
 
 
 class PosePair:
@@ -54,6 +52,11 @@ class PosePair:
     
     def native(self):
         return self.p1.rmsd <= 2 and self.p2.rmsd <= 2
+
+    def correct(self):
+        if self.p1.rmsd <= 2 and self.p2.rmsd <= 2:
+            return 1
+        return 0
 
     def get_feature(self, feat_name, feat_def):
         if feat_name in self.x:

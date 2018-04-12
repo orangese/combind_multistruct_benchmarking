@@ -3,13 +3,13 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 def stats_hist(ev, f_name, raw=True, smoothed=True):
-    native_prop = ev.raw_data(f_name, 'native')# [(x - mean)/std for x in native_prop]
-    decoy_prop = ev.raw_data(f_name, 'decoy')#[(x - mean)/std for x in decoy_prop]
-    
-    u = ev.mean[f_name]
-    std = ev.std[f_name]
+    native_prop = ev.raw_data(f_name, 1)
+    decoy_prop = ev.raw_data(f_name, 0)
+
+    u = ev.mean[-1][f_name]
+    std = ev.std[-1][f_name]
     if u == 0 or len(native_prop) == 0: return
-    
+
     num_bins = 20
     bins = [(u - 5*std) + 10*i*std/float(num_bins) for i in range(num_bins)]
     
@@ -45,9 +45,9 @@ def stats_hist(ev, f_name, raw=True, smoothed=True):
         plt.show()
     
     if smoothed:
-        xvals = np.arange(xmin - std,xmax + std,std*0.1)#0.02)
-        y_native = [ev.evaluate(f_name, x, 'native') for x in xvals]
-        y_decoy = [ev.evaluate(f_name, x, 'decoy') for x in xvals]
+        xvals = np.arange(xmin - std,xmax + std,std*0.01)#0.02)
+        y_native = [ev.evaluate(f_name, x, 1) for x in xvals]
+        y_decoy = [ev.evaluate(f_name, x, 0) for x in xvals]
 
         plt.plot(xvals, y_decoy, linewidth=2, color='b')
         plt.plot(xvals, y_native, linewidth=2, color='g')

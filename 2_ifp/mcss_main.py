@@ -8,6 +8,7 @@ data = '/scratch/PI/rondror/jbelk/method/data'
 os.chdir(data)
 
 glide_dir = sys.argv[1]
+mcss_dir = 'ligands/mcss/mcss7'
 out_dir = sys.argv[2]
 
 d_list = sys.argv[3:]
@@ -54,7 +55,7 @@ for i, d in enumerate(d_list):
     #os.chdir('..')
     #continue    
 
-    all_mcss = sorted([m.split('.')[0] for m in os.listdir('ligands/mcss') if m.split('.')[-1] == 'mae'])
+    all_mcss = sorted([m.split('.')[0] for m in os.listdir(mcss_dir) if m.split('.')[-1] == 'mae'])
     all_mcss = [tuple(m.split('-')) for m in all_mcss if m[-3:] != '_in']
 
     pdb_ids = [l.split('.')[0] for l in os.listdir('ligands/unique')]
@@ -77,19 +78,18 @@ for i, d in enumerate(d_list):
         print len(unfinished_pairs)#, unfinished_pairs
     #break
 
+    group_size = 60
     os.chdir('mcss/{}/{}'.format(out_dir, st))
-    os.system('rm -f *.in')
-    for i, pairs in enumerate(grouper(4, unfinished_pairs)):
-    #for l1, l2 in unfinished_pairs:
-        #print l1, l2
+    os.system('rm -f *.sh')
+    for i, pairs in enumerate(grouper(group_size, unfinished_pairs)):
         with open('{}_in.sh'.format(i), 'w') as f:
-            f.write('#!/bin/bash\n')#module load schrodinger\n')
+            f.write('#!/bin/bash\nmodule load schrodinger\n')
             for p in pairs:
                 if p is None: continue
                 l1,l2=p
                 f.write('$SCHRODINGER/run python {} {} {} {} {} {}\n'.format(script, l1, l2, st, glide_dir, out_dir))
             f.write('wait\n')
-        os.system('sbatch --tasks=4 --cpus-per-task=1 --ntasks-per-socket=2 -p rondror -t 1:00:00 {}_in.sh'.format(i))
+        os.system('sbatch --tasks=4 --cpus-per-task=1 -p owners -t 1:30:00 {}_in.sh'.format(i))
 
     os.chdir('../../../..')
 

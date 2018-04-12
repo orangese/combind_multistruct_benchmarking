@@ -22,15 +22,15 @@ os.chdir('../../data')
 datasets = sys.argv[1:]
 if len(datasets) == 0: datasets = sorted(os.listdir('.'))
 
-grids = {'D2R':'6CM4','AR':'2PNU','A2AR':'2YDO','B1AR':'2VT4','B2AR':'2RH1','CHK1':'2BRN', 'PLK1':'2OWB',
-         'VITD':'2HB7','BRAF':'3IDP','JAK2':'3KRR','CDK2':'1H1S','ERA':'1A52','GCR':'3K23'}
+grids = {'D2R':'6CM4renumber','AR':'2PNU','A2AR':'2YDO','B1AR':'2VT4','B2AR':'2RH1','CHK1':'2BRN', 'PLK1':'2OWB',
+         'VITD':'2HB7','BRAF':'3IDP','JAK2':'3KRR','CDK2':'1H1S','ERA':'1A52','GCR':'3K23','TRPV1':'3J5Q'}
 
 for i, d in enumerate(datasets):
 
     #if d[0] == '.': continue
 
     if d not in grids: continue
-
+    
     # INPUT:
     # <protein>/structures/raw_files
     # should contain <lig>_lig.mae and <prot>_prot.mae
@@ -48,16 +48,16 @@ for i, d in enumerate(datasets):
     align_structs()#True)
     sort_files()
     make_grids()
-    #continue
+    
     # process ligands
     get_ligands()
     if os.path.exists('chembl/drugs.txt'):
         get_drugs()
-
-    proc_ligands()
+    
+    #proc_ligands()
     filter_duplicates()
-    output_features()
-    all_mcss(num_chembl=25)
+    #output_features()
+    #all_mcss(num_chembl=400)
 
     #continue
 
@@ -68,7 +68,7 @@ for i, d in enumerate(datasets):
     #    core_proc()
     #    core_dock(grids)
 
-    dock_dataset([grids[d]], num_chembl=25)
+    dock_dataset([grids[d]], num_chembl=0)
     
     os.chdir('..')
 

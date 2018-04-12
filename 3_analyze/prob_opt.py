@@ -3,94 +3,109 @@ import numpy as np
 from pairs import LigPair
 
 class LigSet:
-    def __init__(self, ligs, num_poses, features, mcss, t=1):
-        self.ligs = ligs
-        self.lig_ordering = sorted(ligs.keys())
-
-        self.mcss = mcss
-        self.features = features
-
-        self.all_poses = {l:lig.poses[:num_poses] for l, lig in ligs.items()}
-        self.priors = {l:self.init_prior(l, t) for l in ligs}
-
-        self.lig_pairs = self.init_lig_pairs() 
-
-    def init_prior(self, l, t):
-        probs = [np.exp(-p.gscore/float(t)) for p in self.all_poses[l]]
-        return [pr/sum(probs) for pr in probs]
-
-    def init_lig_pairs(self):
-        pairs = {}
-        for i1, l1 in enumerate(self.lig_ordering):
-            for i2, l2 in enumerate(self.lig_ordering[i1+1:]):
-                pairs[(l1,l2)] = LigPair(self.ligs[l1], self.ligs[l2],
-                    self.all_poses[l1], self.all_poses[l2], self.features, self.mcss)
-        return pairs
-
-    def get_poses(self, cluster):
-        return {l:self.all_poses[l][p] for l,p in cluster.items()}
-
-    def get_rmsd(self, cluster):
-        return np.mean([self.all_poses[l][p].rmsd for l,p in cluster.items()])
-
-class PredictStructs:
-    def __init__(self, ligset, evidence, features):
-        self.ligset = ligset
+    def __init__(self, docking_st, evidence, features, max_poses, t):
+        self.docking_st = docking_st
         self.ev = evidence
         self.features = features
+        self.max_poses = max_poses
+        self.num_poses = {}
+        self.t = float(t)
 
+        self.log_prior_cache = {}
         self.log_posterior_cache = {}
 
-    def posterior(self, pose_cluster, sample_l=None, verbose=False, en_landscape=False):
-        # pose cluster = ligand_name: integer_pose_index
-        log_prob = 0
-        if sample_l is not None:
-            log_prob += np.log(self.ligset.priors[sample_l][pose_cluster[sample_l]])
-        else:
-            for l, pnum in pose_cluster.items():
-                log_prob += np.log(self.ligset.priors[l][pnum])
-                if verbose: print l, self.ligset.priors[l][pnum]
+        self.lig_pairs = {}
 
-        if len(self.features) > 0:
-            for (l1,l2), lp in self.ligset.lig_pairs.items():
-                if sample_l is not None and sample_l != l1 and sample_l != l2: 
+    def log_prior(self, l, r):
+        if l not in self.log_prior_cache:
+            t,n=self.t,self.n(l)
+            probs = [np.exp(-p.gscore/t) for p in self.docking_st.ligands[l].poses[:n]]
+            self.log_prior_cache[l] = [np.log(pr/sum(probs)) for pr in probs]
+        return self.log_prior_cache[l][r]
+
+    def get_pose_pair(self, l1, p1, l2, p2):
+        if (l1,l2) in self.lig_pairs:
+            return self.lig_pairs[(l1,l2)].get_pose_pair(p1,p2)
+        if (l2,l1) in self.lig_pairs:
+            return self.lig_pairs[(l2,l1)].get_pose_pair(p2,p1)
+
+        self.lig_pairs[(l1,l2)] = LigPair(self.docking_st.ligands[l1], self.docking_st.ligands[l2],
+                                          self.features, self.docking_st.mcss)
+
+        return self.lig_pairs[(l1,l2)].get_pose_pair(p1,p2)
+
+    def n(self, l):
+        if l not in self.num_poses:
+            self.num_poses[l] = min(self.max_poses, len(self.docking_st.ligands[l].poses))
+        return self.num_poses[l]
+
+    def get_poses(self, cluster):
+        return {l:self.docking_st.ligands[l].poses[p] for l,p in cluster.items()}
+
+    def get_rmsd(self, cluster):
+        return np.mean([self.docking_st.ligands[l].poses[p].rmsd for l,p in cluster.items()])
+
+class PredictStructs:
+    def __init__(self, docking_st, evidence, features, num_poses, t):
+        self.ligset = LigSet(docking_st, evidence, features, num_poses, t)
+
+    def x(self, pose_cluster, k, k_def, sample_l=None, lig_order=None):
+        if lig_order is None:
+            lig_order = pose_cluster.keys()
+
+        prior = self.joint_prior(pose_cluster)
+        x = np.zeros( (len(lig_order), len(lig_order)) )
+        log_p_l_given_x = np.zeros( (len(lig_order), len(lig_order)) )
+        for i, l1 in enumerate(lig_order):
+            for j, l2 in list(enumerate(lig_order))[i+1:]:
+                if sample_l is not None and sample_l != l1 and sample_l != l2:
                     continue
+                pp = self.ligset.get_pose_pair(l1, pose_cluster[l1], l2, pose_cluster[l2])
+                k_val = pp.get_feature(k, k_def)
+                if k_val is None: continue
+                x[i,j] = k_val
+                
+                p_x_native = self.ligset.ev.evaluate(k, k_val, 1)
+                p_x_nnative = self.ligset.ev.evaluate(k, k_val, 0)
+                p_x = p_x_native*prior + p_x_nnative*(1-prior)
+               
+                log_p_l_given_x[i,j] = np.log(p_x_native*prior/p_x)
+                if p_x == 0:
+                    print l1,l2,k, k_val
+                    print p_x_native, p_x
 
-                p1,p2 = pose_cluster[l1], pose_cluster[l2]
-                prior = self.ligset.priors[l1][p1]*self.ligset.priors[l2][p2]
-                if (l1,l2,p1,p2) not in self.log_posterior_cache:
-                    pp = lp.pose_pairs[(p1,p2)]
-                    pos = 0
-                    for k, k_def in self.features.items():
-                        k_val = pp.get_feature(k, k_def)
-                        if k_val is None: continue
-                        p_x_native = self.ev.evaluate(k, k_val, 'native')
-                        p_x_nnative = self.ev.evaluate(k, k_val, 'decoy')
-                        p_x = p_x_native*prior + p_x_nnative*(1-prior)
-                        if p_x_native == 0:
-                            #print k, p_x_native, p_x_nnative, prior
-                            p_x_native = 10**(-8)
-                        pos += np.log(p_x_native*prior/p_x)
-                        if verbose: print l1, l2, k, round(k_val,2), np.log(prior*p_x_native/p_x)
-                    self.log_posterior_cache[(l1,l2,p1,p2)] = pos
-                log_prob += self.log_posterior_cache[(l1,l2,p1,p2)] - np.log(prior)
+        return x, log_p_l_given_x
+
+    def joint_prior(self, pose_cluster):
+        return np.exp(sum([self.ligset.log_prior(l,p) for l,p in pose_cluster.items()]))
+
+    def joint_posterior(self, pose_cluster, sample_l=None, verbose=False, en_landscape=False):
+        # pose cluster = ligand_name: integer_pose_index
+        
+        log_prob = 0
+        for k,k_def in self.ligset.features.items():
+            x_k, log_p_l_given_x_k = self.x(pose_cluster, k, k_def, sample_l=sample_l)
+            log_prob += np.sum(log_p_l_given_x_k)
+
+        if log_prob == 0: 
+            log_prob = np.log(self.joint_prior(pose_cluster)) # no features -- return physics score
 
         if en_landscape:
             return log_prob, self.ligset.get_rmsd(pose_cluster)
         return log_prob, None
 
-    def max_posterior(self, verbose=False, sampling=3, en_landscape=False):
-        initial_cluster = {l:0 for l in self.ligset.ligs}
+    def max_posterior(self, ligands, verbose=False, sampling=3, en_landscape=False):
+        initial_cluster = {l:0 for l in ligands}
         max_sc, best_cluster, all_clusters = self.optimize(initial_cluster,sampling=sampling, en_landscape=en_landscape)
 
         if verbose:
-            print 'cluster -1, prob = {}'.format(max_sc)
+            print 'cluster -1, score {}'.format(max_sc)#, max_sc#, rmsd:', self.joint_posterior(best_cluster, en_landscape=True)
 
         # run 10 more times starting randomly
         for i in range(15):
             rand_cluster = {}
-            for l in self.ligset.ligs:
-                rand_cluster[l] = np.random.randint(len(self.ligset.all_poses[l]))
+            for l in ligands:
+                rand_cluster[l] = np.random.randint(self.ligset.num_poses[l])
 
             new_sc, new_cluster, clusters = self.optimize(rand_cluster,sampling=sampling, en_landscape=en_landscape)
             all_clusters.extend(clusters)
@@ -98,7 +113,7 @@ class PredictStructs:
             if new_sc > max_sc:
                 max_sc, best_cluster = new_sc, new_cluster
             if verbose:
-                print 'cluster {}, prob = {}'.format(i, new_sc)
+                print 'cluster {}, score {}'.format(i,new_sc)# rmsd:'.format(i), self.joint_posterior(pose_cluster, en_landscape=True)
 
         return best_cluster, all_clusters
 
@@ -109,20 +124,20 @@ class PredictStructs:
 
         all_clusters = []
 
-        while time_since_update < sampling*(len(self.ligset.ligs))**2:
+        while time_since_update < sampling*(len(init_cluster.keys()))**2:
             time_since_update += 1
 
-            rand_lig = np.random.choice(self.ligset.lig_ordering)
+            rand_lig = np.random.choice(init_cluster.keys())
             sample_l = rand_lig
             if en_landscape: sample_l = None
 
-            max_sc, rmsd = self.posterior(pose_cluster, sample_l=sample_l, en_landscape=en_landscape)
+            max_sc, rmsd = self.joint_posterior(pose_cluster, sample_l=sample_l, en_landscape=en_landscape)
             best_p = pose_cluster[rand_lig]
             if en_landscape: all_clusters.append((max_sc, rmsd))
             
-            for p in range(len(self.ligset.all_poses[rand_lig])):
+            for p in range(self.ligset.num_poses[rand_lig]):
                 pose_cluster[rand_lig] = p
-                new_score, new_rmsd = self.posterior(pose_cluster, sample_l=sample_l, en_landscape=en_landscape)
+                new_score, new_rmsd = self.joint_posterior(pose_cluster, sample_l=sample_l, en_landscape=en_landscape)
                 if new_score > max_sc:
                     max_sc, best_p = new_score, p
                     time_since_update = 0
@@ -130,9 +145,15 @@ class PredictStructs:
 
             pose_cluster[rand_lig] = best_p
 
-        return self.posterior(pose_cluster)[0], pose_cluster, all_clusters
+        return self.joint_posterior(pose_cluster)[0], pose_cluster, all_clusters
             
-
+    def score_query(self, query, optimal_cluster):
+        eval_cluster = {l:p for l,p in optimal_cluster.items()}
+        scores = []
+        for p in range(self.ligset.n(query)):
+            eval_cluster[query] = p
+            scores.append(self.joint_posterior(eval_cluster, sample_l=query)[0])
+        return scores
 
 
 

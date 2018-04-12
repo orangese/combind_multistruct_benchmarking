@@ -90,8 +90,10 @@ def load_chembl_raw(dir_path=None):
                     continue
                 
                 if l_list[type_ind] not in ['Ki','IC50']: continue
-                if l_list[r_ind] != '=': continue
-                if l_list[c_ind] != '9': continue
+                if l_list[r_ind] not in ['=']: continue
+                #if l_list[r_ind] not in ['=','<']: continue
+                if l_list[c_ind] not in ['9']: continue
+                #if l_list[c_ind] not in ['8','9']: continue
                 if l_list[unit_ind] == '': continue
                 if l_list[smi_ind] == '': continue
  

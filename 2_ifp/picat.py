@@ -2,16 +2,18 @@ from schrodinger.structutils.measure import measure_distance
 from schrodinger.structutils.analyze import center_of_mass, find_rings
 
 class PiCat:
-    def __init__(self, ri, cation, resIsPi):
+    def __init__(self, ri, ri_ind, cation, cat_ind, resIsPi):
         self.ring = ri#[r for r in ri.ring][0] # type = ring
         self.cation = cation
+        self.ring_ind = ri_ind
+        self.cation_ind = cat_ind
         st1 = ri.extractStructure(copy_props=True)
         self.dist = measure_distance(center_of_mass(st1), cation.xyz)
         self.resIsPi = resIsPi
 
     def score(self):
-        if self.dist <= 6: return 1
-        elif self.dist <= 8: return (8 - self.dist)/2
+        if self.dist <= 4.5: return 1
+        elif self.dist <= 6: return (6 - self.dist)/1.5
         else: return 0
 
     def __str__(self):
@@ -35,17 +37,31 @@ class PiCat_Container:
         res_aro = [ri for ri in res_st.ring if ri.isAromatic() or ri.isHeteroaromatic()]
         res_cat = [a for a in res_st.atom if a.formal_charge > 0]
         
-        for aro in res_aro:
-            for cat in self.lig_cat:
-                self.all_picat[resnum].append(PiCat(aro, cat, True))
+        for i,aro in enumerate(res_aro):
+            for j,cat in enumerate(self.lig_cat):
+                self.all_picat[resnum].append(PiCat(aro, (resnum,i), cat, ('lig',j), True))
 
-        for cat in res_cat:
-            for aro in self.lig_aro:
-                self.all_picat[resnum].append(PiCat(aro, cat, False))
+        for j,cat in enumerate(res_cat):
+            for i,aro in enumerate(self.lig_aro):
+                self.all_picat[resnum].append(PiCat(aro, ('lig',i), cat, (resnum,j), False))
 
     def filter_int(self):
-        self.all_picat = {r:[picat for picat in self.all_picat[r] if picat.score() > 0] for r in self.all_picat}
-        self.all_picat = {r:self.all_picat[r] for r in self.all_picat if len(self.all_picat[r]) > 0}    
+        picat_list = []
+        for r,r_picat in self.all_picat.items():
+            picat_list.extend(r_picat)
+        picat_list.sort(key=lambda x: -x.score()) 
+        self.all_picat = {}
+        used_ri = set()
+        used_ca = set()
+        for picat in picat_list:
+            i1, i2 = picat.ring_ind, picat.cation_ind
+            r = i1[0] if picat.resIsPi else i2[0]
+            if i1 not in used_ri and i2 not in used_ca and picat.score() > 0:
+                if r not in self.all_picat:
+                    self.all_picat[r] = []
+                self.all_picat[r].append(picat)
+                used_ri.add(i1)
+                used_ca.add(i2)
 
     def assign_ss_to_ring(self, ring):
         all_ss = []

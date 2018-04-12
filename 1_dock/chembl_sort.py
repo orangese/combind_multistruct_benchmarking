@@ -44,7 +44,7 @@ def proc_ligands():
     add_h = '$SCHRODINGER/utilities/prepwizard -WAIT -noepik -noprotassign -noimpref {}_in.mae {}_in_epik.mae\n' 
     epik_command = '$SCHRODINGER/epik -WAIT -ph 7.0 -pht 2.0 -imae {}_in_epik.mae -omae {}_out.mae\n'
 
-    group_size = 25
+    group_size = 15
     group_index = 0
 
     os.system('mkdir -p ligands/prepared_ligands')
@@ -64,26 +64,26 @@ def proc_ligands():
 
         with open('ligands/prepared_ligands/batch-{}.sh'.format(group_index/group_size),'a') as f:
             if group_index % group_size == 0:
-                f.write('#!/bin/bash\nmodule load schrodinger/2017-3\n')
+                f.write('#!/bin/bash\nmodule load schrodinger\n')
             f.write('cd {}\n'.format(name))
             f.write('sh process_in.sh > slurm.out\n')
             f.write('cd ..\n')
 
         with open('ligands/prepared_ligands/{}/process_in.sh'.format(name), 'w') as f:
-            f.write('#!/bin/bash\nmodule load schrodinger/2017-3\n')
+            f.write('#!/bin/bash\nmodule load schrodinger\n')
             f.write(add_h.format(name, name))
             f.write(epik_command.format(name, name))
 
         if group_index % group_size == group_size - 1:# == group_size:
 
             os.chdir('ligands/prepared_ligands')
-            os.system('sbatch -p rondror -t 4:00:00 batch-{}.sh'.format(group_index/group_size))
+            os.system('sbatch -p owners -t 1:00:00 batch-{}.sh'.format(group_index/group_size))
             os.chdir('../..')
         group_index += 1
 
     if group_index % group_size != 0 and os.path.exists('ligands/prepared_ligands/batch-{}.sh'.format(group_index/group_size)):
         os.chdir('ligands/prepared_ligands')
-        os.system('sbatch -p rondror -t 4:00:00 batch-{}.sh'.format(group_index/group_size))
+        os.system('sbatch -p owners -t 1:00:00 batch-{}.sh'.format(group_index/group_size))
         os.chdir('../..')
 
 

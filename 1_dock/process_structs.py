@@ -3,8 +3,8 @@ import sys
 
 from schrodinger.structure import StructureReader, StructureWriter
 
-command = '$SCHRODINGER/utilities/prepwizard -WAIT -epik_pHt 2.0 -f 3 -samplewater -keepfarwat -watdist 0 {}_in.mae {}_out.mae'
-
+#command = '$SCHRODINGER/utilities/prepwizard -WAIT -epik_pHt 2.0 -f 3 -samplewater -keepfarwat -watdist 0 {}_in.mae {}_out.mae'
+command = '$SCHRODINGER/utilities/prepwizard -WAIT -nopropka {}_in.mae {}_out.mae'
 
 def load_complex(pdb_id):
     prot_in = 'structures/raw_files/{}_prot.mae'.format(pdb_id)
