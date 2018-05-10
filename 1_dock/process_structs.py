@@ -3,8 +3,11 @@ import sys
 
 from schrodinger.structure import StructureReader, StructureWriter
 
-#command = '$SCHRODINGER/utilities/prepwizard -WAIT -epik_pHt 2.0 -f 3 -samplewater -keepfarwat -watdist 0 {}_in.mae {}_out.mae'
-command = '$SCHRODINGER/utilities/prepwizard -WAIT -nopropka {}_in.mae {}_out.mae'
+#command1 = '$SCHRODINGER/utilities/prepwizard -WAIT -epik_pHt 2.0 -f 3 -samplewater -keepfarwat -watdist 0 {}_in.mae {}_out.mae'
+#command2 = '$SCHRODINGER/utilities/prepwizard -WAIT -nopropka -watdist 0 {}_in.mae {}_out.mae'
+#command3 = '$SCHRODINGER/utilities/prepwizard -WAIT {}_in.mae {}_out.mae'
+
+command = '$SCHRODINGER/utilities/prepwizard -WAIT -watdist 0 {}_in.mae {}_out.mae'
 
 def load_complex(pdb_id):
     prot_in = 'structures/raw_files/{}_prot.mae'.format(pdb_id)
@@ -35,7 +38,6 @@ def load_complex(pdb_id):
     return merged_st
 
 def process_structs():
-    #all_files = 'structures/processed_files'
     os.system('mkdir -p structures/processed_files')
 
     all_f = sorted(os.listdir('structures/raw_files'))
@@ -43,26 +45,24 @@ def process_structs():
 
     for pdb_id in all_prot:
         if pdb_id[0] == '.': continue
-        #if not os.path.exists('structures/aligned_files/{}/{}_out.mae'.format(pdb_id, pdb_id)):
-        #    print 'not aligned', pdb_id
-        #    continue
 
-        if os.path.exists('structures/processed_files/{}/{}_out.mae'.format(pdb_id, pdb_id)):
+        o_dir = '{}'.format(pdb_id)
+
+        if os.path.exists('structures/processed_files/{}/{}_out.mae'.format(o_dir, o_dir)):
             continue
-        
-        os.system('rm -rf structures/processed_files/{}'.format(pdb_id))
-        os.system('mkdir -p structures/processed_files/{}'.format(pdb_id))
-        #os.system('cp structures/aligned_files/{}/{}_out.mae {}/{}/{}_in.mae'.format(pdb_id, pdb_id, all_files, pdb_id, pdb_id))
+      
+        os.system('rm -rf structures/processed_files/{}'.format(o_dir))
+        os.system('mkdir -p structures/processed_files/{}'.format(o_dir))
 
         merged_st = load_complex(pdb_id)
-        st_wr = StructureWriter('structures/processed_files/{}/{}_in.mae'.format(pdb_id, pdb_id))
+        st_wr = StructureWriter('structures/processed_files/{}/{}_in.mae'.format(o_dir, o_dir))
         st_wr.append(merged_st)
         st_wr.close()
 
-        os.chdir('structures/processed_files/{}'.format(pdb_id))
-        print 'processing', pdb_id
+        os.chdir('structures/processed_files/{}'.format(o_dir))
+        print 'processing', o_dir
         with open('process_in.sh', 'w') as f:
-            f.write('#!/bin/bash\nmodule load schrodinger/2017-3\n')
-            f.write(command.format(pdb_id, pdb_id))
-        os.system('sbatch -p rondror -t 00:30:00 -o slurm.out process_in.sh')
+            f.write('#!/bin/bash\nmodule load schrodinger\n')
+            f.write(command.format(o_dir, o_dir))
+        os.system('sbatch -p owners -t 00:30:00 -o slurm.out process_in.sh')
         os.chdir('../../..')

@@ -99,7 +99,7 @@ class FuzzyIFP:
         return fp
 
     def fingerprint_pair(self):
-        pdb = self.params['output_file'].split('.')[0]
+        pdb = self.params['output_file'].split('_')[0]
 
         prot_st = StructureReader('../../structures/proteins/{}_prot.mae'.format(pdb)).next()
         lig_st = StructureReader('../../structures/ligands/{}_lig.mae'.format(pdb)).next()

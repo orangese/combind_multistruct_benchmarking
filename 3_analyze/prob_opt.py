@@ -23,16 +23,16 @@ class LigSet:
             self.log_prior_cache[l] = [np.log(pr/sum(probs)) for pr in probs]
         return self.log_prior_cache[l][r]
 
-    def get_pose_pair(self, l1, p1, l2, p2):
+    def get_lig_pair(self, l1, l2):
         if (l1,l2) in self.lig_pairs:
-            return self.lig_pairs[(l1,l2)].get_pose_pair(p1,p2)
+            return self.lig_pairs[(l1,l2)]#.pose_pairs[(p1,p2)]
         if (l2,l1) in self.lig_pairs:
-            return self.lig_pairs[(l2,l1)].get_pose_pair(p2,p1)
+            return self.lig_pairs[(l2,l1)]#.pose_pairs[(p2,p1)]
 
         self.lig_pairs[(l1,l2)] = LigPair(self.docking_st.ligands[l1], self.docking_st.ligands[l2],
-                                          self.features, self.docking_st.mcss)
+                                          self.features, self.docking_st.mcss, self.max_poses, self.max_poses)
 
-        return self.lig_pairs[(l1,l2)].get_pose_pair(p1,p2)
+        return self.lig_pairs[(l1,l2)]#.pose_pairs[(p1,p2)]
 
     def n(self, l):
         if l not in self.num_poses:
@@ -53,42 +53,39 @@ class PredictStructs:
         if lig_order is None:
             lig_order = pose_cluster.keys()
 
-        prior = self.joint_prior(pose_cluster)
         x = np.zeros( (len(lig_order), len(lig_order)) )
         log_p_l_given_x = np.zeros( (len(lig_order), len(lig_order)) )
         for i, l1 in enumerate(lig_order):
             for j, l2 in list(enumerate(lig_order))[i+1:]:
                 if sample_l is not None and sample_l != l1 and sample_l != l2:
                     continue
-                pp = self.ligset.get_pose_pair(l1, pose_cluster[l1], l2, pose_cluster[l2])
-                k_val = pp.get_feature(k, k_def)
+                #pp = self.ligset.get_pose_pair(l1, pose_cluster[l1], l2, pose_cluster[l2])
+                lp = self.ligset.get_lig_pair(l1, l2)
+                k_val = lp.get_feature(k, pose_cluster[l1],pose_cluster[l2])
                 if k_val is None: continue
+                assert k_val <= 1 and k_val >= 0, '{} {}'.format(fname, kval)
                 x[i,j] = k_val
-                
+         
+                prior = np.exp(self.ligset.log_prior(l1,pose_cluster[l1])+self.ligset.log_prior(l2,pose_cluster[l2]))
+       
                 p_x_native = self.ligset.ev.evaluate(k, k_val, 1)
                 p_x_nnative = self.ligset.ev.evaluate(k, k_val, 0)
                 p_x = p_x_native*prior + p_x_nnative*(1-prior)
                
-                log_p_l_given_x[i,j] = np.log(p_x_native*prior/p_x)
+                log_p_l_given_x[i,j] = np.log(p_x_native/p_x)
                 if p_x == 0:
                     print l1,l2,k, k_val
                     print p_x_native, p_x
 
         return x, log_p_l_given_x
 
-    def joint_prior(self, pose_cluster):
-        return np.exp(sum([self.ligset.log_prior(l,p) for l,p in pose_cluster.items()]))
-
     def joint_posterior(self, pose_cluster, sample_l=None, verbose=False, en_landscape=False):
         # pose cluster = ligand_name: integer_pose_index
         
-        log_prob = 0
+        log_prob = sum([self.ligset.log_prior(l,p) for l,p in pose_cluster.items()])
         for k,k_def in self.ligset.features.items():
             x_k, log_p_l_given_x_k = self.x(pose_cluster, k, k_def, sample_l=sample_l)
             log_prob += np.sum(log_p_l_given_x_k)
-
-        if log_prob == 0: 
-            log_prob = np.log(self.joint_prior(pose_cluster)) # no features -- return physics score
 
         if en_landscape:
             return log_prob, self.ligset.get_rmsd(pose_cluster)

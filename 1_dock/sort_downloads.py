@@ -18,19 +18,20 @@ class PDB:
 # taken from schrodinger "solvent" asl definition
 solvent = ['hoh', 'spc', 't4p', 't3p', 't5p', 't4pe', 'dod', 'GOL', 'EDO', 'DMS', 'PEG', 'MPD', 
            'PG4', 'BME', 'PGE', 'IPA', '1PE', 'EOH', 'P6G', 'DMF', 'MOH', 'POL', '2PE', 'PE4',
-           'ETA', '15P', '12P', 'P33', 'PE5', 'TBU', 'CCN', 'CXE', '7PE', 'NME', 'PE3', 'PE6',
+           'ETA', '15P', '12P', 'P33', 'PE5', 'TBU', 'CCN', 'CXE', '7PE', 'NME', 'PE3', 'PE6', 'NHE',
            'ACN', 'P4C', 'PE8', 'NEH', 'XPE', '1BO', 'N8E', 'DMN', 'CE1', 'PYE', 'C10', 'SBT', 'MB3']
 solvent = [x.lower() for x in solvent]
 
-ignore_title = ['mutant', 'mutation', 't877a', 'w741l', 'cryptic', 'allosteric']
+ignore_title = ['mutant', 'mutation', 't877a', 'w741l', 'cryptic']#, 'fragment']#, 'allosteric']
 orthosteric = ['dht','tes'] # ar
+            
 allosteric = ['8vb','8z5','z24','imw', # plk1
-              '2an'] # cdk2
-
+              '2an', # cdk2
+              'ld2'] # mr
 ignore_ligands = solvent + allosteric + ['', 'dtt', 'epe', 'mes', 'tla', 'tar', 'nmm', 
                  'eu','au','edt', 'ola','olb','olc','css', 'cso', 'clr', 'pg0', 'srt', 'cxs', 'tpo', 'sog',
                  'ccs','cme','ben','glc','mli','ocs','aly','sgm','ptr','csd','kcx','ste','cit','iod','hto',
-                 'hez','jzr','cps','bog']
+                 'hez','jzr','cps','bog','acp','anp','adp','atp','ags']
 
 ignore_pdb = ['1h00','1h01','1h07','1h08', # cdk2 2 small molecules on top of each other?
               '5tlx','5kcf','5kct','5kra','5tlp', # era multiple small molecules per structure
@@ -62,9 +63,10 @@ def sort_downloads():
                     method_i = line.index('exp. method')
                     continue
                 line = [s.strip('"') for s in line.split('","')]
-                
+                 
                 if line[pdb_i] in ignore_pdb: continue
                 if line[lig_i] in ignore_ligands: continue
+                #print line[pdb_i],line[lig_i]
                 if line[method_i] == 'solution nmr': continue
                 u_list = [p.strip('"\n') for p in [x.strip() for x in line[prot_i].strip().split(',')]]
                 
@@ -74,7 +76,7 @@ def sort_downloads():
                 
                 y,m,d = line[date_i].split('-')
                 st_date = date(int(y),int(m),int(d))
-
+                
                 if line[pdb_i] not in structs: structs[line[pdb_i]] = []
                 structs[line[pdb_i]].append(PDB(line[pdb_i], line[chain_i], 
                     line[title_i], st_date, line[lig_i], uniprot))
@@ -126,7 +128,7 @@ def sort_downloads():
                     #print lname, 'not found'
                     continue
                 #break#continue
-                to_delete = evaluate_asl(prot_st, 'solvent or ions or metals or res.pt {}'.format(lname.upper()))
+                to_delete = evaluate_asl(prot_st, 'solvent or res.pt {}'.format(lname.upper()))
                 prot_st.deleteAtoms(to_delete)
             
                 prot_wr = StructureWriter('structures/raw_files/{}_prot.mae'.format(l.pdb.upper()))

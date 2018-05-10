@@ -1,8 +1,6 @@
 import os
 import sys
 
-from utils import redo
-
 from schrodinger.structure import StructureReader, StructureWriter
 
 out_dir = 'structures/aligned_files'
@@ -10,13 +8,13 @@ queue = 'rondror'
 renumber_script = '/scratch/PI/rondror/jbelk/method/code/1_dock/renumber.py'
 
 def align_successful(out_dir, struct, verbose=False):
-    if struct in ['3J5R','5IRX','5IS0','3J5Q']: 
+    if struct in ['5IRX','5IS0','3J5Q']: 
         in_f = 'structures/processed_files/{}/{}_out.mae'.format(struct, struct)
         out_f = '{}/{}/{}_out.mae'.format(out_dir, struct, struct)
         if not os.path.exists(out_f):
             os.system('mkdir -p {}/{}'.format(out_dir, struct))
             os.system('cp {} {}'.format(in_f, out_f))
-        return True # TRPV1 was manually aligned because 3J5R has no ligand
+        return True # TRPV1 was manually aligned because 3J5Q has no ligand
 
     if not os.path.exists('{}/{}/rot-{}_query.mae'.format(out_dir, struct, struct)):
         return False
@@ -28,7 +26,7 @@ def align_successful(out_dir, struct, verbose=False):
         for line in f:
             tmp = line.strip().split()
             if len(tmp) > 0 and tmp[0] == 'Alignment':
-                if float(tmp[2]) > 0.1:
+                if float(tmp[2]) > 0.15:
                     print '-- Alignment warning!', struct, float(tmp[2])
                     return False
                 return True
@@ -36,7 +34,7 @@ def align_successful(out_dir, struct, verbose=False):
                 print '{} to {} Alignment RMSD: {}'.format(struct, template, tmp[1])
         else:
             print 'alignment failure', struct
-            return False#redo(struct)
+            return False
 
 def align_structs(verbose=False):
 
@@ -88,7 +86,7 @@ def align_structs(verbose=False):
         asl = '-asl "(not chain.name L) '#and not res.sec strand'
         
         if os.path.exists('../../../structures/raw_files/{}_lig.mae'.format(struct)):
-            asl += ' and (fillres within 15.0 chain. L)"'
+            asl += ' and (fillres within 20.0 chain. L)"'
         else:
             asl += '"'
         

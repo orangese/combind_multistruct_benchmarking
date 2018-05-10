@@ -1,13 +1,14 @@
 import os
 
-#from containers import Pose
-
-def parse_mcss_size(mcss_path, ligs1, ligs2):
+def parse_mcss_size(mcss_path, ligs1, ligs2, struct):
     mcss_sizes = {}
+    #print mcss_path
     if not os.path.exists(mcss_path): return {}
     for fname in sorted(os.listdir(mcss_path)):
-        if fname.split('.')[-1] != 'csv' or fname[0] == '.': continue
-        l1, l2 = fname.split('.')[0].split('-')
+        #print fname
+        if fname.split('-to-')[-1] != '{}.csv'.format(struct): continue# or fname[0] == '.': continue
+        l1, l2 = fname.split('-to-')[0].split('-')
+        #print fname, l1, l2
         if not (l1 in ligs1 and l2 in ligs2):
             if not (l1 in ligs2 and l2 in ligs1):
                 continue
@@ -28,8 +29,8 @@ def parse_mcss_size(mcss_path, ligs1, ligs2):
 def parse_mcss(mcss_path, num_poses, all_pairs, min_size=10):
     mcss_scores = {}
     if not os.path.exists(mcss_path): return {}
-    for l1,l2 in all_pairs:
-        fpath = '{}/{}-{}.csv'.format(mcss_path, l1, l2)
+    for l1,l2,st in all_pairs:
+        fpath = '{}/{}-{}-to-{}.csv'.format(mcss_path, l1, l2, st)
         if not os.path.exists(fpath): continue
         size = None
         try:
@@ -46,11 +47,11 @@ def parse_mcss(mcss_path, num_poses, all_pairs, min_size=10):
                     if rmsd*size > 100:
                         print l1, l2, p1, p2, rmsd, size
                     else:
-                        mcss_scores[(l1, l2)][(p1, p2)] = rmsd*size
+                        mcss_scores[(l1, l2)][(p1, p2)] = rmsd#*size
                 else:
                     if p1+1 < min(num_poses[l1], 100) or p2+1 < min(num_poses[l2], 100) or rmsd == float(10000):
                         print 'hmmmm', fpath, p1, p2, num_poses[l1], num_poses[l2]
-                        #os.system('rm {}'.format(fpath))
+                        os.system('rm {}'.format(fpath))
         except Exception as e:
             print 'mcss error', fpath
             print e

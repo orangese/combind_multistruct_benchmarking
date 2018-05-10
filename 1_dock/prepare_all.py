@@ -8,28 +8,27 @@ from process_structs import process_structs
 from sort_files import sort_files
 
 from unique_ligands import filter_duplicates
-from ligand_features import output_features
-from mcss import all_mcss
+from init_mcss import init_mcss
 
-from core_proc import core_proc
 from grids import make_grids
-from dock import dock_dataset, core_dock
+from dock import dock
+from fp import fp
+from mcss import mcss
 
-from chembl_sort import get_ligands, get_drugs, proc_ligands
+from chembl_sort import get_ligands, proc_ligands
+from pick_helpers import pick_helpers, load_helpers
 
 os.chdir('../../data')
 
 datasets = sys.argv[1:]
-if len(datasets) == 0: datasets = sorted(os.listdir('.'))
 
-grids = {'D2R':'6CM4renumber','AR':'2PNU','A2AR':'2YDO','B1AR':'2VT4','B2AR':'2RH1','CHK1':'2BRN', 'PLK1':'2OWB',
-         'VITD':'2HB7','BRAF':'3IDP','JAK2':'3KRR','CDK2':'1H1S','ERA':'1A52','GCR':'3K23','TRPV1':'3J5Q'}
+#grids = {'D2R':'6CM4','AR':'2PNU','A2AR':'2YDO','B1AR':'2VT4','B2AR':'2RH1','CHK1':'2BRN', 'PLK1':'2OWB',
+#         'VITD':'2HB7','BRAF':'3IDP','JAK2':'3KRR','CDK2':'1H1S','ERA':'1A52','GCR':'3K23','TRPV1':'3J5Q','SIGMA1':'5HK1'}
+
+grids = {'D2R':'6CM4','AR':'2PNU','B1AR':'2VT4','TRPV1':'3J5Q','SIGMA1':'5HK1','5HT2B':'4IB4','DTRANSP':'4M48',
+         'M3':'4U15'}
 
 for i, d in enumerate(datasets):
-
-    #if d[0] == '.': continue
-
-    if d not in grids: continue
     
     # INPUT:
     # <protein>/structures/raw_files
@@ -43,33 +42,40 @@ for i, d in enumerate(datasets):
     pdb_st = None
     if os.path.exists('structures/downloads'):    
         pdb_st = sort_downloads()
-    
+     
+    # 1. prepare proteins    
     process_structs()
-    align_structs()#True)
+    align_structs()
     sort_files()
     make_grids()
-    
-    # process ligands
-    get_ligands()
-    if os.path.exists('chembl/drugs.txt'):
-        get_drugs()
-    
-    #proc_ligands()
+    dock(os.listdir('docking/grids'))
+     
+    # 2. prepare ligands
+    get_ligands()    
+    proc_ligands()
     filter_duplicates()
-    #output_features()
-    #all_mcss(num_chembl=400)
+    #init_mcss()
 
-    #continue
+    # 3. decide what ligands to use
+    pick_helpers()
+    h = load_helpers('best_affinity.txt')
+    init_mcss(h)
 
-    #grids = sorted([st for st in os.listdir('structures/aligned_files')
-    #                if st[0] != '.' and st+'_lig.mae' not in os.listdir('ligands/duplicate')])
+    # 4. dock/fp/mcss those ligands
+    if d in grids:
+        dock([grids[d]], h)
+        fp(grids[d])
+        mcss(grids[d], h)    
 
-    #if os.path.exists('docking/core'):
-    #    core_proc()
-    #    core_dock(grids)
-
-    dock_dataset([grids[d]], num_chembl=0)
-    
     os.chdir('..')
+
+
+
+
+
+
+
+
+
 
 

@@ -2,24 +2,25 @@
 from matplotlib import pyplot as plt
 import numpy as np
 
-def stats_hist(ev, f_name, raw=True, smoothed=True):
-    native_prop = ev.raw_data(f_name, 1)
-    decoy_prop = ev.raw_data(f_name, 0)
+def stats_hist(ev, f_name, raw=True, smoothed=True, conditional=True):
+    green_ind = 1
+    blue_ind = 0
+    if not conditional:
+        blue_ind = -1
 
-    u = ev.mean[-1][f_name]
-    std = ev.std[-1][f_name]
-    if u == 0 or len(native_prop) == 0: return
+    native_prop = ev.raw_data[f_name][green_ind]
+    decoy_prop = ev.raw_data[f_name][blue_ind]
 
-    num_bins = 20
-    bins = [(u - 5*std) + 10*i*std/float(num_bins) for i in range(num_bins)]
-    
+    u = ev.mean[f_name][-1]#np.mean(data)
+    std = ev.std[f_name][-1]#(np.mean([(val-u)**2 for val in data]))**0.5
+    if u == None: return
+
     plt.rcParams['figure.figsize'] = (10,7.5)
     plt.rcParams['figure.dpi'] = 400
     plt.rcParams['font.size'] = 20
     
-    data = native_prop+decoy_prop
-    xmin, xmax = min(data) - 0.5*std, max(data) + 0.5*std
-    binwidth = 0.4*std
+    xmin, xmax = -0.18,1.18#min(data) - 0.5*std, max(data) + 0.5*std
+    binwidth = 0.05#0.4*std
     bins = np.arange(xmin, xmax + binwidth, binwidth)
     
     if raw:
@@ -46,13 +47,22 @@ def stats_hist(ev, f_name, raw=True, smoothed=True):
     
     if smoothed:
         xvals = np.arange(xmin - std,xmax + std,std*0.01)#0.02)
-        y_native = [ev.evaluate(f_name, x, 1) for x in xvals]
-        y_decoy = [ev.evaluate(f_name, x, 0) for x in xvals]
+
+        norm = 1
+        if not conditional:
+            norm = len(native_prop)/float(len(decoy_prop))
+
+        y_native = [norm*ev.evaluate(f_name, x, green_ind) for x in xvals]
+        y_decoy = [ev.evaluate(f_name, x, blue_ind) for x in xvals]
 
         plt.plot(xvals, y_decoy, linewidth=2, color='b')
         plt.plot(xvals, y_native, linewidth=2, color='g')
 
-        plt.fill_between(xvals, 0, y_decoy, facecolor='b',alpha=0.2)
+        if not conditional:
+            plt.fill_between(xvals, 0, y_native, facecolor='b',alpha=0.02)
+            plt.fill_between(xvals, y_native, y_decoy, facecolor='b',alpha=0.2)
+        else:
+            plt.fill_between(xvals, 0, y_decoy, facecolor='b',alpha=0.2)
         plt.fill_between(xvals, 0, y_native, facecolor='g',alpha=0.2)
 
         plt.xlim(xmin, xmax)
