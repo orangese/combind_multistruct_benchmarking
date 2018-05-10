@@ -70,8 +70,13 @@ class PredictStructs:
        
                 p_x_native = self.ligset.ev.evaluate(k, k_val, 1)
                 p_x_nnative = self.ligset.ev.evaluate(k, k_val, 0)
+
+                # option A:
                 p_x = p_x_native*prior + p_x_nnative*(1-prior)
-               
+
+                # option B:
+                #p_x = self.ligset.ev.evaluate(k, k_val, -1)               
+
                 log_p_l_given_x[i,j] = np.log(p_x_native/p_x)
                 if p_x == 0:
                     print l1,l2,k, k_val
