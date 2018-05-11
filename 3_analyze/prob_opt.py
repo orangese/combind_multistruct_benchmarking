@@ -1,5 +1,5 @@
 import numpy as np
-
+import random
 from pairs import LigPair
 
 class PredictStructs:
@@ -19,9 +19,17 @@ class PredictStructs:
 
 
     # Optimization algorithms
-    def find_best_cluster(self, ligands, sampling=3, en_landscape=False):
+    def find_best_cluster(self, ligands, sampling=3, optimization = 'MAX', en_landscape=False):
         initial_cluster = {l:0 for l in ligands}
-        return self._optimize_cluster(initial_cluster, sampling, en_landscape)
+
+        if optimization == 'MAX':
+            return self._optimize_cluster(initial_cluster, sampling, en_landscape)
+        elif optimization == 'ANNEAL':
+            return self._anneal_cluster(initial_cluster, sampling)
+        elif optimization == 'GIBBS':
+            return self._sample_cluster(initial_cluster, sampling)
+        else:
+            assert False, "{} not a valid optimization scheme".format(optimization)
 
     def _optimize_cluster(self, pose_cluster, sampling, en_landscape):
         """
@@ -58,6 +66,100 @@ class PredictStructs:
                 rmsds += [get_rmsd(pose_cluster)]
 
         return pose_cluster, (log_posteriors, rmsds)
+
+    def _anneal_cluster(self, pose_cluster, sampling):
+        """
+        Optimize pose cluster using simulated annealing.
+
+        This method has been tested, but I haven't put any effort
+        into tuning the cooling schedule. It isn't immediately way better.
+
+        Keeps track of the energy of the current pose cluster by
+        summing the difference in partial energy at each switch.
+        Should verify that this doesn't lead to numerical issues,
+        but I really doubt it.s
+        """
+        
+        
+        energy = 0
+        best_energy  = energy
+        best_cluster = {k:v for k, v in pose_cluster.items()}
+        
+        # Linear cooling schedule
+        T_START = 2
+        COOLING = 0.5
+        CHAIN_LENGTH = sampling*self.max_poses*len(pose_cluster)
+        T = lambda i: float(T_START - COOLING*int(i/CHAIN_LENGTH))
+
+        for i in range(CHAIN_LENGTH*int(T_START/COOLING) + 1):
+
+            query = np.random.choice(pose_cluster.keys())
+            current_pose  = pose_cluster[query]
+            proposed_pose = random.randint(0, self._num_poses(query)-1)
+
+            current_partial  = self._partial_log_posterior(pose_cluster, query)
+            pose_cluster[query] = proposed_pose
+            proposed_partial = self._partial_log_posterior(pose_cluster, query)
+        
+            if (proposed_partial > current_partial
+                or T(i) > 0 and random.random() < np.exp((proposed_partial - current_partial) / T(i))):
+                pose_cluster[query] = proposed_pose
+                energy += proposed_partial - current_partial
+            else:
+                pose_cluster[query] = current_pose
+                
+            if energy > best_energy:
+                best_energy  = energy
+                best_cluster = {k:v for k, v in pose_cluster.items()}
+
+        return best_cluster
+
+    def _sample_cluster(self, pose_cluster, sampling):
+        """
+        Find poses maximizing marginal log posterior using
+        Gibbs sampling procedure.
+
+        Again, this method has been run, but not extensively tuned.
+        In the limited benchmarking I did with these parameters, it
+        seemed to do comparably with our standard method, but with
+        much more computational effort.
+        """
+        
+        # These parameters would need to be optimized
+        T = 3.0
+        BURN = 1000
+        SAMP = 100
+
+        samples = {ligname:{} for ligname in pose_cluster}
+        for i in range(sampling*self.max_poses*len(pose_cluster)):
+            query = np.random.choice(pose_cluster.keys())
+            current_pose  = pose_cluster[query]
+            proposed_pose = random.randint(0, self._num_poses(query)-1)
+
+            current_partial  = self._partial_log_posterior(pose_cluster, query)
+            pose_cluster[query] = proposed_pose
+            proposed_partial = self._partial_log_posterior(pose_cluster, query)
+
+            if (proposed_partial > current_partial
+                or random.random() < np.exp((proposed_partial - current_partial) / T)):
+                pose_cluster[query] = proposed_pose
+            else:
+                pose_cluster[query] = current_pose
+
+            if i > BURN and not i % SAMP:
+                for ligname, pose in pose_cluster.items():
+                    if pose not in samples[ligname]: samples[ligname][pose] = 0
+                    samples[ligname][pose] += 1
+
+        # Set pose cluster to maximum marginal
+        for ligname, poses in samples.items():
+            best = (0, 0)
+            for pose, count in poses.items():
+                if count > best[1]:
+                    best = (pose, count)
+            pose_cluster[ligname] = best[0]
+
+        return pose_cluster
 
 
     # Methods to score sets of ligands
