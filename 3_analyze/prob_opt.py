@@ -112,7 +112,7 @@ class PredictStructs:
                 best_energy  = energy
                 best_cluster = {k:v for k, v in pose_cluster.items()}
 
-        return best_cluster
+        return best_cluster, ([], [])
 
     def _sample_cluster(self, pose_cluster, sampling):
         """
@@ -159,7 +159,7 @@ class PredictStructs:
                     best = (pose, count)
             pose_cluster[ligname] = best[0]
 
-        return pose_cluster
+        return pose_cluster, ([], [])
 
 
     # Methods to score sets of ligands
@@ -177,7 +177,25 @@ class PredictStructs:
         for i, (ligname1, pose1) in enumerate(pose_cluster.items()):
             for ligname2, pose2 in pose_cluster.items()[i+1:]:
                 log_prob += self._log_likelihood_ratio_pair(pose_cluster, ligname1, ligname2)
-        return energy
+        return log_prob
+
+    def likelihood_and_feature_matrix(self, pose_cluster, k, lig_order):
+        """
+        Returns the feature values and likelihood ratios, P(X|l)/P(X)
+        for feature 'fname' for poses in 'pose_cluster'
+        as len(pose_cluster) x len(pose_cluster) numpy arrays.
+        """
+        x                    = np.zeros((len(pose_cluster), len(pose_cluster)))
+        log_likelihood_ratio = np.zeros((len(pose_cluster), len(pose_cluster)))
+
+        for i, ligname1 in enumerate(lig_order):
+            for j, ligname2 in enumerate(lig_order):
+                if j <= i: continue
+                k_val, p_x_native, p_x = self._likelihoods_for_pair_and_single_feature(k, pose_cluster,
+                                                                                   ligname1, ligname2)
+                x[i, j] = k_val
+                log_likelihood_ratio[i, j] = np.log(p_x_native) - np.log(p_x)
+        return x, log_likelihood_ratio
 
     def _partial_log_posterior(self, pose_cluster, query):
         """
@@ -206,30 +224,39 @@ class PredictStructs:
         
         if pair_key not in self.log_likelihood_ratio_cache:
             log_likelihood = 0
-            for k, k_def in self.features.items():
-
-                k_val = self._get_feature(k, ligname1, ligname2,
-                                          pose_cluster[ligname1], pose_cluster[ligname2])
-                
-                if k_val is None: continue
-                assert k_val <= 1 and k_val >= 0, "{} {}".format(k, k_val)
-
-                p_x_native  = self.ev.evaluate(k, k_val, 1)
-                
-                # Choose between 3 potential options for reference distribution
-                if self.reference == 'DECOY':
-                    p_x= self.ev.evaluate(k, k_val, 0)
-                elif self.reference == 'ALL':
-                    p_x = self.ev.evaluate(k, k_val, -1)   
-                elif self.reference == 'LTP':
-                    prior = (  self._get_prior(ligname1, pose_cluster[ligname1])
-                             * self._get_prior(ligname2, pose_cluster[ligname2]))
-                    p_x = (  self.ev.evaluate(k, k_val, 1) * prior
-                           + self.ev.evaluate(k, k_val, 0) * (1 - prior))            
-
+            for k in self.features:
+                _, p_x_native, p_x = self._likelihoods_for_pair_and_single_feature(k, pose_cluster,
+                                                                                   ligname1, ligname2)
                 log_likelihood += np.log(p_x_native) - np.log(p_x)
             self.log_likelihood_ratio_cache[pair_key] = log_likelihood
         return self.log_likelihood_ratio_cache[pair_key]
+
+
+    def _likelihoods_for_pair_and_single_feature(self, k, pose_cluster, ligname1, ligname2):
+        """
+        Returns the feature value 'x' and its likelihoods P(x|l) and P(x)
+        for feature 'fname' and poses pose_cluster[ligname1] and pose_cluster[ligname2].
+        """
+        k_val = self._get_feature(k, ligname1, ligname2,
+                                  pose_cluster[ligname1], pose_cluster[ligname2])
+        
+        if k_val is None: return 0, 1, 1
+        assert k_val <= 1 and k_val >= 0, "{} {}".format(k, k_val)
+
+        p_x_native  = self.ev.evaluate(k, k_val, 1)
+        
+        # Choose between 3 potential options for reference distribution
+        if self.reference == 'DECOY':
+            p_x= self.ev.evaluate(k, k_val, 0)
+        elif self.reference == 'ALL':
+            p_x = self.ev.evaluate(k, k_val, -1)   
+        elif self.reference == 'LTP':
+            prior = (  self._get_prior(ligname1, pose_cluster[ligname1])
+                     * self._get_prior(ligname2, pose_cluster[ligname2]))
+            p_x = (  self.ev.evaluate(k, k_val, 1) * prior
+                   + self.ev.evaluate(k, k_val, 0) * (1 - prior))
+        return k_val, p_x_native, p_x
+
 
     def _get_feature(self, fname, l1, l2, p1, p2):
         if l1 > l2:
