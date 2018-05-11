@@ -109,7 +109,7 @@ def dock(grids, chembl=None):
     if not os.path.exists('ligands/unique'): return
     all_ligs = sorted([l.split('.')[0] for l in os.listdir('ligands/unique')])
     to_dock = set([l for l in all_ligs if l[:6] != 'CHEMBL'])
-
+    
     if chembl is not None:
         for q, c_list in chembl.items():
             to_dock.update(c_list)

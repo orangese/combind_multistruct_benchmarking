@@ -15,15 +15,18 @@ from containers import Dataset
 from statistics import Statistics
 from prob_opt import PredictStructs
 
-stats_data = Dataset(stats_prots, struct_dict, data_dir, glide_dir, ifp_dir, mcss_dir)
-stats_data.load({p:prot.lm.get_pdb() for p,prot in stats_data.proteins.items()})
+stats_data = Dataset(stats_prots, data_dir, glide_dir, ifp_dir, mcss_dir)
+stats_data.load({p:prot.lm.pdb for p,prot in stats_data.proteins.items()})
 
 stats = Statistics(stats_data, stats_prots, num_stats_ligs, num_stats_poses, features, smooth)
 
-predict_data = Dataset([p], struct_dict, data_dir, glide_dir, ifp_dir, mcss_dir)
-ps = PredictStructs(predict_data.proteins[p].docking, stats.evidence, features, num_poses, t)
+predict_data = Dataset([p], data_dir, glide_dir, ifp_dir, mcss_dir)
+predict_data.load({p:prot.lm.pdb for p, prot in predict_data.proteins.items()})
+
+prot = predict_data.proteins[p]
+ps = PredictStructs(prot.docking[prot.lm.default_st], stats.evidence, features, num_poses, t)
     
-chembl_ligs = predict_data.proteins[p].lm.get_similar(q, num=num_pred_chembl, stereo=req_stereo, chembl=use_chembl)
+chembl_ligs = prot.lm.get_similar(q, chembl_file, num=num_pred_chembl, mcss_sort=mcss_sort)
 predict_data.load({p:[q]+chembl_ligs})
         
 best_cluster, en_landscape = ps.max_posterior(chembl_ligs)

@@ -13,7 +13,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 sys.path.append('../4_analyze')
 from containers import Dataset
-from score_query import ScoreQuery
+#from score_query import ScoreQuery
 
 def heatmap(A, row_vals, col_vals, red=10.25):
     fig, ax = plt.subplots()

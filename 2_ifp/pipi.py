@@ -6,8 +6,8 @@ class PiPi:
         self.r1 = r1#[r for r in r1.ring][0] # type = ring
         self.r2 = r2#[r for r in r2.ring][0]
 
-        self.i1 = i1
-        self.i2 = i2
+        self.i1 = i1 # protein ring unique id
+        self.i2 = i2 # ligand ring unique id
 
         self.dist = self.get_dist()
         self.lig_ring = self.r2
@@ -52,7 +52,7 @@ class PiPi_Container:
         res_aro = [ri for ri in res_st.ring if ri.isAromatic() or ri.isHeteroaromatic()]
         for i1, r1 in enumerate(res_aro):
             for i2, r2 in enumerate(self.lig_aro):
-                self.all_pipi[resnum].append(PiPi(r1, i1, r2, i2))
+                self.all_pipi[resnum].append(PiPi(r1, (i1,resnum), r2, i2))
 
     def filter_int(self):
         filtered_pipi = {}
