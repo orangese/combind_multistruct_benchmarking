@@ -5,15 +5,16 @@ from pairs import PosePair, LigPair
 from stats_plots import stats_hist
 
 class Statistics:
-    def __init__(self, all_data, proteins, num_ligands, num_poses, features, smooth):
+    def __init__(self, all_data, proteins, num_ligands, num_poses, features, smooth, normalize_fp):
         self.all_data = all_data
         self.proteins = {p:{} for p in proteins} # maps proteins to ligpairs
         self.ligands = {p:prot.lm.pdb for p, prot in all_data.proteins.items()}
         self.features = features
         self.smooth = smooth
+        self.normalize_fp = normalize_fp
         self.evidence = self.create_distributions(num_ligands, num_poses)
 
-    def create_distributions(self, num_ligs, num_poses):#_pairs):
+    def create_distributions(self, num_ligs, num_poses):
         all_pairs = []
         for p in self.proteins:
             s,struct = self.all_data.proteins[p].docking.items()[0]
@@ -29,10 +30,10 @@ class Statistics:
                 for i2 in range(i1+1, num_ligs):
                     l1,l2 = self.ligands[p][i1], self.ligands[p][i2]
                     lp = LigPair(struct.ligands[l1],struct.ligands[l2],
-                                 self.features,struct.mcss, num_poses, num_poses)
+                                 self.features,struct.mcss, num_poses, self.normalize_fp)
                     self.proteins[p][(l1,l2)] = lp
 
-        return Evidence(self.proteins, self.features, self.smooth)
+        return Evidence(self.proteins, self.features, self.smooth, self.normalize_fp)
 
     def show_stats(self, f_name, raw=True, smoothed=True, conditional=True):
         stats_hist(self.evidence, f_name, raw, smoothed, conditional)
@@ -45,10 +46,11 @@ class Statistics:
                 stats_hist(new_ev, f_name, raw, smoothed, conditional)
 
 class Evidence:
-    def __init__(self, all_data, features, smooth=0.25):
+    def __init__(self, all_data, features, smooth, normalize_fp):
         self.all_data = all_data
         self.features = features
         self.smooth = smooth
+        self.normalize_fp = normalize_fp # Only used to verify consistency
 
         # 0: decoy
         # 1: correct
@@ -83,6 +85,7 @@ class Evidence:
         for f_name in self.features:
             for p, lps in self.all_data.items():
                 for key,lp in lps.items():
+                    lp.init_pose_pairs()
                     for (r1,r2),pp in lp.pose_pairs.items():
                         pp_x = lp.get_feature(f_name, r1, r2)
                         if pp_x is not None:
@@ -101,7 +104,3 @@ class Evidence:
             cache[f_val] = sum([mult*gauss(f_val,f) for f,mult in freq_map])
 
         return cache[f_val]
-
-
-
-
