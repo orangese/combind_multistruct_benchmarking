@@ -43,10 +43,10 @@ class LigPair:
         if mi == ma or pp_x is None: return None # ignore feature
         if f_name == 'mcss': 
             return 1 - pp_x/ma
-        return pp_x/ma#(pp_x - mi)/(ma - mi)
+        return pp_x/ma #(pp_x - mi)/(ma - mi)
 
 class PosePair:
-    def __init__(self, p1, p2, mcss_score):#, active_features):
+    def __init__(self, p1, p2, mcss_score): #, active_features):
         self.p1 = p1
         self.p2 = p2
     
