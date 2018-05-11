@@ -1,7 +1,6 @@
 *.log
-notebooks/*.pyc
-1_dock/*.pyc
-2_fingerprint/*.pyc
-3_score/*.pyc
+*/*.pyc
 notebooks/*.out
 notebooks/.ipynb_checkpoints/*
+*/.fuse*
+.fuse*
