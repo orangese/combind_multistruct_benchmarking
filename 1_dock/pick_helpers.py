@@ -5,13 +5,6 @@ from parse_chembl import load_chembl_proc
 
 
 def pick_helpers():
-    chembl_info = load_chembl_proc()
-    all_ligs = sorted([l.split('.')[0] for l in os.listdir('ligands/unique')])
-    pdb_ligs = [l for l in all_ligs if l[:6] != 'CHEMBL']
-    # most basic filtering: ki < 1 uM and molecular weight < 1000 Da
-    chembl_ligs = [l for l in all_ligs if l in chembl_info and chembl_info[l].ki <= 1000 and chembl_info[l].mw <= 1000]
-
-    num_chembl = 30
 
     parent = 'chembl/helpers'
     os.system('mkdir -p {}'.format(parent))
@@ -20,6 +13,19 @@ def pick_helpers():
         'best_affinity.txt': lambda c: chembl_info[c].ki,
         'best_mcss.txt': lambda c: -chembl_info[c].mcss.get(q,(0,0,0))[2]
     }
+
+    for f in all_options:
+        if not os.path.exists('{}/{}'.format(parent, f)):
+            break
+    else: return
+
+    chembl_info = load_chembl_proc(load_mcss=True)
+    all_ligs = sorted([l.split('.')[0] for l in os.listdir('ligands/unique')])
+    pdb_ligs = [l for l in all_ligs if l[:6] != 'CHEMBL']
+    # most basic filtering: ki < 1 uM and molecular weight < 1000 Da
+    chembl_ligs = [l for l in all_ligs if l in chembl_info and chembl_info[l].ki <= 1000 and chembl_info[l].mw <= 1000]
+
+    num_chembl = 30
     
     for f, sort_f in all_options.items():
         fpath = '{}/{}'.format(parent, f)

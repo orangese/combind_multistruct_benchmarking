@@ -34,24 +34,15 @@ class PiPi:
         return str1+str2+str3
 
 class PiPi_Container:
-    def __init__(self, lig_st, sub_st_map, ind):
-        self.lig_st = lig_st
-        self.sub_st_map = sub_st_map
+    def __init__(self, lig, ind):
+        self.lig = lig
         self.ind = ind
-        #self.lig_aro = [ri.extractStructure(copy_props=True) for ri in lig_st.ring if ri.isAromatic() or ri.isHeteroaromatic()]
-        self.lig_aro = [ri for ri in lig_st.ring if ri.isAromatic() or ri.isHeteroaromatic()]
-        #for i, ri in enumerate(lig_st.ring):
-        #    print i, ri.isAromatic(), ri.isHeteroaromatic()
-        #    print sorted([(a.index, a.element) for a in ri.atom]), self.assign_ss_to_ring(ri)
-        #    b = ri.extractStructure(copy_props=True)
-        #    print sorted([(a.index, a.element) for a in b.atom]), self.assign_ss_to_ring(b)
         self.all_pipi = {}
 
-    def add_residue(self, resnum, res_st):
+    def add_residue(self, resnum, res):
         self.all_pipi[resnum] = []
-        res_aro = [ri for ri in res_st.ring if ri.isAromatic() or ri.isHeteroaromatic()]
-        for i1, r1 in enumerate(res_aro):
-            for i2, r2 in enumerate(self.lig_aro):
+        for i1, r1 in enumerate(res.aro):
+            for i2, r2 in enumerate(self.lig.aro):
                 self.all_pipi[resnum].append(PiPi(r1, (i1,resnum), r2, i2))
 
     def filter_int(self):
@@ -72,31 +63,15 @@ class PiPi_Container:
                 used_i1.add(i1)
                 used_i2.add(i2) 
 
-    def assign_ss_to_ring(self, ring):
-        all_ss = []
-        for a in ring.atom:
-            if a.element == 'H': continue
-            all_ss.extend(self.sub_st_map.get(a.index, ['']))
-        #print 'ring', self.lig_st._getTitle(), all_ss
-        return str(sorted(all_ss, key=lambda x:-len([i for i in all_ss if i == x]))[0])
-
     def score(self):
         all_scores = {}
         for r, pipi_list in self.all_pipi.items():
             for p in pipi_list:
-                majority_ss = ''# '{},{}'.format(p.i1, p.i2)#majority_ss = self.assign_ss_to_ring(p.lig_ring)
-                key1 = (self.ind[0], r, majority_ss)
-                key2 = (self.ind[1], r, majority_ss)
+                key1 = (self.ind[0], r, '')
+                key2 = (self.ind[1], r, '')
                 all_scores[key1] = all_scores.get(key1, 0) + p.score()
                 all_scores[key2] = all_scores.get(key2, 0) + p.newscore()
         return all_scores
-
-        #return {
-        #    r : [
-        #        sum([pipi.score() for pipi in self.all_pipi[r]]),
-        #        sum([pipi.newscore() for pipi in self.all_pipi[r]])
-        #    ] for r in self.all_pipi
-        #}
 
     def __str__(self):
         return '\nAll PiPi:\n' + '\n'.join([str(r) + '\n'.join([str(i) for i in self.all_pipi[r]]) for r in sorted(self.all_pipi.keys())])

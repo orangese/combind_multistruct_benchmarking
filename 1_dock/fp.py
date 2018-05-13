@@ -19,7 +19,7 @@ def grouper(n, iterable, fillvalue=None):
 def get_fp(fp_list):
     if len(fp_list) > 0:
         print len(fp_list), 'fp left'
-    group_size = 6
+    group_size = 1
     os.chdir(output_dir)
     for i, pairs in enumerate(grouper(group_size, fp_list)):
         with open('{}fp.sh'.format(i), 'w') as f:
@@ -30,7 +30,7 @@ def get_fp(fp_list):
                 output_file = '{}.fp'.format(p)
                 f.write('$SCHRODINGER/run {} -mode pv -input_file {} -output_file {}\n'.format(FUZZY_SCRIPT, input_file, output_file)) 
             f.write('wait\n')
-        os.system('sbatch --tasks={} --cpus-per-task=1 --ntasks-per-socket=2 --time=02:00:00 -n 1 -p {} {}fp.sh'.format(group_size, queue, i))
+        os.system('sbatch --tasks={} --cpus-per-task=1 --time=02:00:00 -p {} {}fp.sh'.format(group_size, queue, i))
     os.chdir('../..')
 
 def structure_fp():

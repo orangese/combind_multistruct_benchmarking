@@ -24,71 +24,50 @@ class PiCat:
 
 
 class PiCat_Container:
-    def __init__(self, lig_st, sub_st_map, ind):
-        self.lig_st = lig_st
-        self.sub_st_map = sub_st_map
+    def __init__(self, lig, ind):
+        self.lig = lig
         self.ind = ind
-        self.lig_aro = [ri for ri in lig_st.ring if ri.isAromatic() or ri.isHeteroaromatic()]
-        self.lig_cat = [a for a in lig_st.atom if a.formal_charge > 0]
         self.all_picat = {}
 
-    def add_residue(self, resnum, res_st):
+    def add_residue(self, resnum, res):
         self.all_picat[resnum] = []
-        res_aro = [ri for ri in res_st.ring if ri.isAromatic() or ri.isHeteroaromatic()]
-        res_cat = [a for a in res_st.atom if a.formal_charge > 0]
         
-        for i,aro in enumerate(res_aro):
-            for j,cat in enumerate(self.lig_cat):
-                self.all_picat[resnum].append(PiCat(aro, (resnum,i), cat, ('lig',j), True))
+        for i,aro in enumerate(res.aro):
+            for j,cat in enumerate(self.lig.cat):
+                self.all_picat[resnum].append(PiCat(aro, (i,resnum), cat, j, True))
 
-        for j,cat in enumerate(res_cat):
-            for i,aro in enumerate(self.lig_aro):
-                self.all_picat[resnum].append(PiCat(aro, ('lig',i), cat, (resnum,j), False))
+        for j,cat in enumerate(res.cat):
+            for i,aro in enumerate(self.lig.aro):
+                self.all_picat[resnum].append(PiCat(aro, i, cat, (j,resnum), False))
 
     def filter_int(self):
-        picat_list = []
-        for r,r_picat in self.all_picat.items():
-            picat_list.extend(r_picat)
-        picat_list.sort(key=lambda x: -x.score()) 
+        filtered_picat = {}
+        for r in self.all_picat:
+            for picat in self.all_picat[r]:
+                filtered_picat[(r, picat.ring_ind, picat.cation_ind)] = picat
+        ranked_picat = sorted(filtered_picat.keys(), key=lambda x: -filtered_picat[x].score())
         self.all_picat = {}
-        used_ri = set()
-        used_ca = set()
-        for picat in picat_list:
-            i1, i2 = picat.ring_ind, picat.cation_ind
-            r = i1[0] if picat.resIsPi else i2[0]
-            if i1 not in used_ri and i2 not in used_ca and picat.score() > 0:
+        used_i1 = set()
+        used_i2 = set()
+        for picat_key in ranked_picat:
+            r, i1, i2 = picat_key
+            if i1 not in used_i1 and i2 not in used_i2 and filtered_picat[picat_key].score() > 0:
                 if r not in self.all_picat:
                     self.all_picat[r] = []
-                self.all_picat[r].append(picat)
-                used_ri.add(i1)
-                used_ca.add(i2)
-
-    def assign_ss_to_ring(self, ring):
-        all_ss = []
-        for a in ring.atom:
-            if a.element == 'H': continue
-            all_ss.extend(self.sub_st_map.get(a.index, ['']))
-        #print 'ring', all_ss
-        return str(sorted(all_ss, key=lambda x:-len([i for i in all_ss if i == x]))[0])
+                self.all_picat[r].append(filtered_picat[picat_key])
+                used_i1.add(i1)
+                used_i2.add(i2)
 
     def score(self):
         all_scores = {}
         for r, pc_list in self.all_picat.items():#all_res():
             for pc in pc_list:
                 if pc.resIsPi:
-                    lig_sub_st = ','.join([str(j) for j in self.sub_st_map.get(pc.cation.index, '')])
-                    key = (self.ind[0], r, lig_sub_st)
+                    key = (self.ind[0], r, '')#lig_sub_st)
                 else:
-                    lig_sub_st = self.assign_ss_to_ring(pc.ring)
-                    key = (self.ind[1], r, lig_sub_st)
+                    key = (self.ind[1], r, '')#lig_sub_st)
                 all_scores[key] = all_scores.get(key, 0) + pc.score()
         return all_scores
-        #return {
-        #    r : [
-        #        sum([picat.score() for picat in self.all_picat[r] if picat.resIsPi]),
-        #        sum([picat.score() for picat in self.all_picat[r] if not picat.resIsPi])
-        #    ] for r in self.all_picat
-        #}
 
     def __str__(self):
         return 'Cation-Pi: '+''.join([str(r) + ''.join(['\n'+str(i) for i in self.all_picat[r]]) for r in sorted(self.all_picat.keys())])

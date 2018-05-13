@@ -1,9 +1,8 @@
 from schrodinger.structutils.measure import measure_distance, measure_bond_angle
 import math
 class HBond_Container:
-    def __init__(self, lig_st, sub_st_map, ind):
-        self.lig_st = lig_st
-        self.sub_st_map = sub_st_map
+    def __init__(self, lig, ind):
+        self.lig = lig
         self.ind = ind
         self.all_hdon = {}
         self.all_hacc = {}
@@ -11,21 +10,14 @@ class HBond_Container:
     def add_residue(self, resnum, res_st):
         self.all_hdon[resnum] = []
         self.all_hacc[resnum] = []
-        for res_atom in res_st.atom:
-            for lig_atom in self.lig_st.atom:
-                if self.valid_donor(res_atom) and self.valid_acceptor(lig_atom):
-                    self.all_hdon[resnum].extend([HBond(res_atom, lig_atom, n, resnum, True) for n in res_atom.bonded_atoms if n.element == 'H'])
-                if self.valid_donor(lig_atom) and self.valid_acceptor(res_atom):
-                    self.all_hacc[resnum].extend([HBond(lig_atom, res_atom, n, resnum, False) for n in lig_atom.bonded_atoms if n.element == 'H'])
-    
-    def valid_donor(self, atom):
-        return (atom.element in ('N', 'O')) and ('H' in [n.element for n in atom.bonded_atoms]) and atom.formal_charge >= 0
 
-    def valid_acceptor(self, atom): # h bond helper #2
-        #halogens = ['F','Cl','Br','I']
-        if atom.element not in ['N', 'O']:# + halogens:
-            return False
-        return atom.formal_charge <= 0
+        for res_atom in res_st.hdon:
+            for lig_atom in self.lig.hacc:
+                self.all_hdon[resnum].extend([HBond(res_atom, lig_atom, n, resnum, True) for n in res_atom.bonded_atoms if n.element == 'H'])
+
+        for res_atom in res_st.hacc:
+            for lig_atom in self.lig.hdon:
+                self.all_hacc[resnum].extend([HBond(lig_atom, res_atom, n, resnum, False) for n in lig_atom.bonded_atoms if n.element == 'H'])
 
     def filter_int(self):
         # enforces 1 hbond per h
@@ -33,7 +25,6 @@ class HBond_Container:
         unique_h = {}
         for r in set(self.all_hdon.keys() + self.all_hacc.keys()):
             for hb in self.all_hdon.get(r, []) + self.all_hacc.get(r, []):
-                #unique_index = (r, hb.h.index)
                 if hb.h.index not in unique_h or unique_h[hb.h.index].score() < hb.score():
                     unique_h[hb.h.index] = hb
 
@@ -47,42 +38,17 @@ class HBond_Container:
                 if hb.r_ind not in self.all_hacc: self.all_hacc[hb.r_ind] = []
                 self.all_hacc[hb.r_ind].append(hb)
 
-        #self.all_hdon = {r:[hb for (hb_r,hb_h), hb in res_h.items() if hb_r == r] for r in [x[0] for x in res_h]}
-        #self.all_hdon = {r:self.all_hdon[r] for r in self.all_hdon if len(self.all_hdon[r]) > 0}
-
-        #lig_h = {}
-        #for r in self.all_hacc:
-        #    for hb in self.all_hacc[r]:
-        #        unique_index = (r, hb.h.index)
-        #        if unique_index not in lig_h or lig_h[unique_index].score() < hb.score():
-        #            lig_h[unique_index] = hb
-        #self.all_hacc = {r:[hb for (hb_r, hb_h), hb in lig_h.items() if hb_r == r] for r in [x[0] for x in lig_h]}
-        #self.all_hacc = {r:self.all_hacc[r] for r in self.all_hacc if len(self.all_hacc[r]) > 0}        
-
-    #def all_res(self):
-    #    return self.all_hacc.keys() + [r for r in self.all_hdon if r not in self.all_hacc]
-
     def score(self):
         all_scores = {}
         for r, hb_list in self.all_hdon.items():#all_res():
             for hb in hb_list:
-                lig_sub_st = ','.join([str(j) for j in self.sub_st_map.get(hb.a.index, '')])
-                key = (self.ind[0], r, lig_sub_st)
+                key = (self.ind[0], r, '')
                 all_scores[key] = all_scores.get(key, 0) + hb.new_score()
         for r, hb_list in self.all_hacc.items():
             for hb in hb_list:#self.all_hacc.get(r, []):
-                lig_sub_st = ','.join([str(j) for j in self.sub_st_map.get(hb.d.index, '')])
-                key = (self.ind[1], r, lig_sub_st)
+                key = (self.ind[1], r, '')
                 all_scores[key] = all_scores.get(key, 0) + hb.new_score()
         return all_scores
-        #return {
-        #    r : [
-                #sum([hb.score() for hb in self.all_hdon.get(r, []) ]),
-                #sum([hb.score() for hb in self.all_hacc.get(r, []) ]),
-        #        sum([hb.new_score() for hb in self.all_hdon.get(r, []) ]),
-        #        sum([hb.new_score() for hb in self.all_hacc.get(r, []) ])
-        #    ] for r in self.all_res()
-        #}
 
     def __str__(self):
         hdon = 'H Donors: \n' + ''.join([str(r) + ''.join(['\n'+str(i) for i in self.all_hdon[r]]) for r in sorted(self.all_hdon.keys())])

@@ -11,6 +11,9 @@ def valid_sb(atom1, atom2):
     # (2) formal charges must not be (approximately) cancelled by neighboring atoms
     return q1*q2 < 0 and local_q1*local_q2 < 0 and 'Zn' not in [atom1.element, atom2.element]
 
+def valid_sb2(atom1, atom2):
+    return atom1.formal_charge*atom2.formal_charge < 0
+
 class SB:
     def __init__(self, atom1, atom2):
         # atom 1 and atom 2 must have opposite formal charges (see residue.py)
@@ -47,26 +50,34 @@ class SB:
         return '\nSB score: {}, {} '.format(self.score(), self.newscore()) + at1 + at2 + '\n+r: ' + str(self.r)
 
 class SB_Container:
-    def __init__(self, lig_st, sub_st_map, ind):
-        self.lig_st = lig_st
-        self.sub_st_map = sub_st_map
+    def __init__(self, lig, ind):
+        self.lig = lig
+        #self.lig_chrg = [a for a in lig_st.atom if a.formal_charge != 0]
+
+        #self.sub_st_map = sub_st_map
         self.ind = ind
         self.all_sb = {}
 
-    def add_residue(self, resnum, res_st):
-        self.all_sb[resnum] = []
-        for res_atom in res_st.atom:
-            for lig_atom in self.lig_st.atom:
+    def add_residue(self, resnum, res):
+        #res_chrg = [a for a in res_st.atom if a.formal_charge != 0]
+        #if len(res_chrg) == 0: return
+        key1 = (self.ind[0],resnum,'')
+        key2 = (self.ind[1],resnum,'')
+        self.all_sb[key1] = []
+        self.all_sb[key2] = []
+        for res_atom in res.chrg:
+            for lig_atom in self.lig.chrg:
                 if valid_sb(res_atom, lig_atom):
-                    self.all_sb[resnum].append(SB(res_atom, lig_atom))
+                    self.all_sb[key1].append(SB(res_atom, lig_atom))
+                if valid_sb2(res_atom, lig_atom):
+                    self.all_sb[key2].append(SB(res_atom, lig_atom))
 
     def filter_int(self):
         # enforces 1 sb per ligand formal charge
-        #pass        
         used_fc = {}
         for r in self.all_sb:
             for sb in self.all_sb[r]:
-                unique_index = sb.lig_atom.index
+                unique_index = (sb.lig_atom.index,r[0])
                 if unique_index not in used_fc or used_fc[unique_index][0].newscore() < sb.newscore():
                     used_fc[unique_index] = (sb, r)
         self.all_sb = {r:[sb for hid, (sb, sb_r) in used_fc.items() if sb_r == r] for r in self.all_sb}
@@ -75,16 +86,8 @@ class SB_Container:
         all_scores = {}
         for r, sb_list in self.all_sb.items():
             for sb in sb_list:
-                lig_sub_st = ','.join([str(j) for j in self.sub_st_map.get(sb.lig_atom.index, '')])
-                key = (self.ind[0], r, lig_sub_st)
-                all_scores[key] = all_scores.get(key, 0) + sb.newscore()
+                all_scores[r] = all_scores.get(r, 0) + sb.newscore()
         return all_scores
-#        return {
-#            r : [
-#                sum([sb.score() for sb in self.all_sb[r]]),
-#                sum([sb.newscore() for sb in self.all_sb[r]])
-#            ] for r in self.all_sb
-#        }
 
     def __str__(self):
         return 'Salt Bridges: ' + ''.join([str(r) + '\n' + ''.join(['\n'+str(i) for i in self.all_sb[r]]) for r in sorted(self.all_sb.keys())])

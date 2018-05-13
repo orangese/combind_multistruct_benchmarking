@@ -54,7 +54,7 @@ for i, d in enumerate(datasets):
     get_ligands()    
     proc_ligands()
     filter_duplicates()
-    #init_mcss()
+    init_mcss()
 
     # 3. decide what ligands to use
     pick_helpers()

@@ -12,6 +12,33 @@ from picat import PiCat_Container
 from hydrophobic import Hydrophobic_Container
 #from vdw import VDW_Container
 
+nonpolar = {'H': 1.2, 'C':1.7, 'F':1.47, 'Cl':1.75, 'I':1.98, 'Br':1.85}
+def valid_donor(atom):
+    return (atom.element in ('N', 'O')) and ('H' in [n.element for n in atom.bonded_atoms]) and atom.formal_charge >= 0
+def valid_acceptor(atom):
+    if atom.element not in ['N', 'O']:
+        return False
+    return atom.formal_charge <= 0
+def is_nonpolar(atom):
+    if atom.element == 'H' and [n.element for n in atom.bonded_atoms][0] in nonpolar:
+        return True
+    return atom.element != 'H' and atom.element in nonpolar
+def is_nonpolar2(atom):
+    if atom.element == 'H': return False
+    return atom.element in nonpolar
+
+class AtomGroup:
+    def __init__(self, st, st_id):
+        self.st = st
+        self.st_id = st_id
+        self.hacc = [a for a in st.atom if valid_acceptor(a)]
+        self.hdon = [a for a in st.atom if valid_donor(a)]
+        self.chrg = [a for a in st.atom if a.formal_charge != 0]
+        self.aro = [ri for ri in st.ring if ri.isAromatic() or ri.isHeteroaromatic()]
+        self.cat = [a for a in st.atom if a.formal_charge < 0]
+        self.nonpolar1 = set([a for a in st.atom if is_nonpolar(a)])
+        self.nonpolar2 = set([a for a in st.atom if is_nonpolar2(a)])
+
 class FuzzyIFP:
     def __init__(self, args):
         self.params = {
@@ -25,50 +52,44 @@ class FuzzyIFP:
         #target.write('\nFingerprinting: ' + self.params['input_file'] + '\n')
         #target.close()
 
-        #if self.params['input'] == 'pose_viewer':
+        self.protein = {}
+
         if self.params['mode'] == 'pv':
             self.fp = self.fingerprint_pose_viewer()
         elif self.params['mode'] == 'st':
             self.fp = self.fingerprint_pair()
         self.write_fp()
-        #else:
-        #    self.fp = [self.fingerprint_pair()]
 
-    def fingerprint(self, lig_st, prot_st, sub_st_map, pnum=None):
+    def fingerprint(self, lig_st, prot_st, pnum=None):
+        lig = AtomGroup(lig_st, 'lig')
         interactions = {
             #'hal' : HalBond_Container(lig_st, sub_st_map, [1]),
-            'hbond': HBond_Container(lig_st, sub_st_map, [2,3]),
-            'saltbridge': SB_Container(lig_st, sub_st_map, [4]),
-            'pipi': PiPi_Container(lig_st, sub_st_map, [5,6]),
-            'picat': PiCat_Container(lig_st, sub_st_map, [7,8]),
+            'hbond': HBond_Container(lig, [2,3]),
+            'saltbridge': SB_Container(lig, [4,1]),
+            'pipi': PiPi_Container(lig, [5,6]),
+            'picat': PiCat_Container(lig, [7,8]),
             #'metal': Metal_Container(lig_st, sub_st_map, [9]),
-            'hydrophobic': Hydrophobic_Container(lig_st, sub_st_map,[10,11])
+            'hydrophobic': Hydrophobic_Container(lig, [10,11])
             #'vdw': VDW_Container(lig_st)
         }
 
-        #num_scores = {'hal':2, 'hbond':2, 'saltbridge':1, 'pipi':2, 'picat':2, 'metal':1,'hydrophobic':2}#,'vdw':2}
-
-        active_site_res = {}
+        fp = {}
+        active_res = []
         for res in prot_st.residue:
             if get_shortest_distance(res.extractStructure(), st2=lig_st)[0] <= 8:
                 res_key = '{}:{}({})'.format(res.chain.strip(), res.resnum, res.pdbres.strip())
-                active_site_res[res_key] = res.extractStructure()
+                if res_key not in self.protein:
+                    self.protein[res_key] = AtomGroup(res.extractStructure(), res_key)
+                active_res.append(res_key)
 
-        fp = {} # {r:[] for r in active_site_res}
-        for i_type in interactions:# ['hal','hbond','saltbridge','pipi','picat','metal','hydrophobic']:#, 'other']:#,'vdw']: # interactions:
-            if i_type != 'other':
-                for r, r_st in active_site_res.items():
-                    interactions[i_type].add_residue(r, r_st)
-            
-                interactions[i_type].filter_int()
-                i_scores = interactions[i_type].score()
-                for sc_key, sc in i_scores.items(): fp[sc_key] = sc     
-            #for r in active_site_res:
-                #if i_type == 'other':
-                #    fp[r].extend([fp[r][0] + fp[r][2], fp[r][1] + fp[r][3]])
-                #else:
-                
-            #    fp[r].extend(i_scores.get(r, [0]*num_scores[i_type] ))
+        for i_type in interactions:
+            for res_key in active_res:
+                interactions[i_type].add_residue(res_key, self.protein[res_key])
+            interactions[i_type].filter_int()
+            i_scores = interactions[i_type].score()
+            for sc_key, sc in i_scores.items(): 
+                fp[sc_key] = sc     
+        
         #self.verbose_output(interactions, pnum)
 
         return fp
@@ -76,25 +97,15 @@ class FuzzyIFP:
     def fingerprint_pose_viewer(self):
         fp = []
         prot_st = None
-
-        #os.chdir(self.params['data_dir'])
-
-        #ref_ligand = StructureReader(self.params['ligand']).next()
-        ref_ligand = None
-        sub_st_map = {}
-
+        
         for i, st in enumerate(StructureReader(self.params['input_file'])):
             if i > 105: break
 
             if i == 0:
                 prot_st = st
                 continue
-
-            renumbered_st = st
-            if ref_ligand is not None: 
-                renumbered_st = renumber_conformer(ref_ligand, st, use_symmetry=True)
-
-            fp.append(self.fingerprint(renumbered_st, prot_st, sub_st_map, i))
+            
+            fp.append(self.fingerprint(st, prot_st, i))
             
         return fp
 
@@ -104,15 +115,7 @@ class FuzzyIFP:
         prot_st = StructureReader('../../structures/proteins/{}_prot.mae'.format(pdb)).next()
         lig_st = StructureReader('../../structures/ligands/{}_lig.mae'.format(pdb)).next()
         
-        #lig_search = AslLigandSearcher()
-        #lig_atoms = []
-        #for l in lig_search.search(prot_st):
-        #    lig_atoms.extend(l.atom_indexes)
-        #prot_st.deleteAtoms(lig_atoms)
-
-        #lig_st = StructureReader(self.params['ligand']).next()
-        
-        return [self.fingerprint(lig_st, prot_st, {})]
+        return [self.fingerprint(lig_st, prot_st)]
 
     def verbose_output(self, interactions, p_num=None):
         #target = open(self.params['verbose'],'a')
