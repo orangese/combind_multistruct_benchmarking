@@ -258,7 +258,7 @@ class PredictStructs:
             p_x = (  self.ev.evaluate(k, k_val, 1) * prior
                    + self.ev.evaluate(k, k_val, 0) * (1 - prior))
         elif self.reference == 'OLD':
-            p_x_native = k_val if k != 'mcss' else 1.0
+            p_x_native = np.exp(k_val) if k != 'mcss' else 1.0
             p_x = 1.0
 
         return k_val, p_x_native, p_x

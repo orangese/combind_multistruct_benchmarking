@@ -171,7 +171,7 @@ class LigandManager:
     def get_similar(self, query, fname, num=10, mcss_sort=False, struct=None):
         if struct is None: struct = self.default_st
         if fname not in self.helpers:
-            self.helpers[fname] = load_helpers(fname, self.root)
+            self.helpers[fname] = load_helpers(self.root)[fname]
 
         # mcss has two steps:
         # 1. we use the canvasMCS tool to find the MCSS between two ligands (output: smarts)
