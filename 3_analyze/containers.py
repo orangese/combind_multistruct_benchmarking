@@ -162,8 +162,8 @@ class LigandManager:
         self.helpers = {}
 
     def get_chembl(self, stereo=True, max_ki=float('inf')):
-        if len(self.chembl_info, load_mcss=True) == 0:
-            self.chembl_info = load_chembl_proc(self.root)
+        if len(self.chembl_info) == 0:
+            self.chembl_info = load_chembl_proc(self.root, load_mcss=True)
         tr = [l for l in self.unique if l[:6] == 'CHEMBL' and (not stereo or self.chembl_info[l].valid_stereo)]
         tr = [l for l in tr if self.chembl_info[l].ki <= max_ki]
         return sorted(tr, key=lambda x: self.chembl_info[x].ki)
