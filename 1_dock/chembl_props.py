@@ -18,12 +18,40 @@ def read_molw(dir_path=None):
 
 def write_molw():
     if not os.path.exists('ligands/unique'): return
-    from schrodinger.structure import StructureReader, StructureWriter
+    from schrodinger.structure import StructureReader
     with open('chembl/molw.txt', 'w') as fname:
         for f in os.listdir('ligands/unique'):
             st = StructureReader('ligands/unique/{}'.format(f)).next()
             mw = st.total_weight
             fname.write('{},{}\n'.format(f.split('.')[0],mw))
+
+def write_duplicates():
+    if not os.path.exists('ligands/unique'): return
+    duplicates = []
+    from schrodinger.structure import StructureReader
+    all_ligs = {f.split('.')[0] : StructureReader('ligands/unique/'+f).next() for f in os.listdir('ligands/unique')}
+    for l1 in [l for l in all_ligs if l[:6] != 'CHEMBL']:
+        for l2 in [l for l in all_ligs if l[:6] == 'CHEMBL']:
+            if all_ligs[l1].isEquivalent(all_ligs[l2]):
+                duplicates.append((l1, l2))
+    with open('chembl/duplicates.txt','w') as f:
+        for l1,l2 in duplicates:
+            f.write('{},{}\n'.format(l1,l2))
+
+def read_duplicates(dir_path=None):
+    duplicates = []
+    fpath = 'chembl/duplicates.txt'
+    if dir_path is not None:
+        fpath = '{}/{}'.format(dir_path, fpath)
+    if not os.path.exists(fpath) and os.path.exists('chembl'):
+        print 'writing duplicates'
+        write_duplicates()
+    if not os.path.exists(fpath): return {}
+    with open(fpath) as f:
+        for line in f:
+            l1, l2 = line.strip().split(',')
+            duplicates.append((l1,l2))
+    return duplicates
 
 def read_mcss(dir_path=None):
     mcss = {}

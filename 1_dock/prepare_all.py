@@ -29,11 +29,6 @@ grids = {'D2R':'6CM4','AR':'2PNU','B1AR':'2VT4','TRPV1':'3J5Q','SIGMA1':'5HK1','
          'M3':'4U15'}
 
 for i, d in enumerate(datasets):
-    
-    # INPUT:
-    # <protein>/structures/raw_files
-    # should contain <lig>_lig.mae and <prot>_prot.mae
-    # <protein>/chembl/<protein>_<organism>.xls
 
     print i, d
 
@@ -55,6 +50,11 @@ for i, d in enumerate(datasets):
     proc_ligands()
     filter_duplicates()
     init_mcss()
+
+    if False: # force redo of chembl info (do this if new chembl ligands have been added)
+        os.system('rm -f chembl/helpers/*')
+        os.system('rm -f chembl/duplicates.txt')
+        os.system('rm -f chembl/molw.txt')
 
     # 3. decide what ligands to use
     pick_helpers()

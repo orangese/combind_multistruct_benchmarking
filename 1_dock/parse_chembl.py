@@ -36,7 +36,7 @@ class CHEMBL:
             self.valid_stereo = False
 
         self.st = desalt(smi_st)
-        self.st._setTitle('{}_lig'.format(self.chembl_id))
+        self.st.title = '{}_lig'.format(self.chembl_id)
 
         return self.valid_stereo
 
@@ -57,11 +57,15 @@ def load_chembl_proc(dir_path=None, load_mcss=False):
                 ligs[chembl_id].valid_stereo = True if stereo == 'True' else False
     
     mw = read_molw(dir_path)
+    dups = {l2:l1 for l1, l2 in read_duplicates(dir_path)}
     if load_mcss:
         mcss = read_mcss(dir_path)
     for chembl, lig in ligs.items():
         if chembl in mw:
             lig.mw = mw[chembl]
+        if chembl in dups:
+            lig.dup = dups[chembl]
+            #print chembl, dups[chembl]
         if load_mcss:
             for q in mcss:
                 if chembl in mcss[q]:

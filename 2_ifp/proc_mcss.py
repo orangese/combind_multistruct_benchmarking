@@ -14,10 +14,11 @@ mcss_dir = '../../ligands/mcss/{}'.format(out_dir)
 
 def neutral(st,aggressive=True):
     for a in st.atom:
-        a._setAtomFormalCharge(0)
+        a.formal_charge = 0#_setAtomFormalCharge(0)
     if aggressive:
         for b in st.bond:
-            b._setOrder(1)
+            b.order = 1#_setOrder(1)
+    st.retype()
     return st
 
 def load_mcss(lig1, lig2):

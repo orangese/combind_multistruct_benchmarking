@@ -18,7 +18,7 @@ os.system('$SCHRODINGER/run adjust_residue_numbering.py -nosuper -renumber refer
 
 try:
     for st in StructureReader('renumber_out.mae'):
-        st_wr = StructureWriter('{}_out.mae'.format(st._getTitle()))
+        st_wr = StructureWriter('{}_out.mae'.format(st.title))
         st_wr.append(st)
         st_wr.close()
 except:

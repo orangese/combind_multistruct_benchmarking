@@ -21,7 +21,7 @@ def check_h(st):
 def split_complex(st, pdb_id):
 
     prot_st = st.extract([a.index for a in st.atom if a.chain != 'L'])
-    prot_st._setTitle('{}_prot'.format(pdb_id))
+    prot_st.title = '{}_prot'.format(pdb_id)
 
     lig_path = 'structures/ligands/{}_lig.mae'.format(pdb_id)
     prot_path = 'structures/proteins/{}_prot.mae'.format(pdb_id)
@@ -29,7 +29,7 @@ def split_complex(st, pdb_id):
     if not os.path.exists(lig_path) and len([a.index for a in st.atom if a.chain == 'L']) > 0:
 
         lig_st = st.extract([a.index for a in st.atom if a.chain == 'L'])
-        lig_st._setTitle('{}_lig'.format(pdb_id))
+        lig_st.title = '{}_lig'.format(pdb_id)
 
         if not check_h(lig_st):# or not check_w(lig_st):
             print 'lig error', pdb_id#, lig_out_dir

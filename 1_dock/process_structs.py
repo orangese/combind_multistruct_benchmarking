@@ -16,25 +16,25 @@ def load_complex(pdb_id):
     prot_st = StructureReader(prot_in).next()
     
     if not os.path.exists(lig_in): 
-        prot_st._setTitle(pdb_id)
+        prot_st.title = pdb_id
         return prot_st
 
     lig_st = StructureReader(lig_in).next()
 
     assert len(lig_st.chain) == 1, pdb_id
     for c in lig_st.chain:
-        c._setChainName('L')
+        c.name = 'L'
 
     alpha = 'ABCDEFGHIJKMNOPQRST'
     alpha_count = 0 
     for c in prot_st.chain:
-        if c._getChainName().strip() == '': continue
+        if c.name.strip() == '': continue
 
-        c._setChainName(alpha[alpha_count])
+        c.name = alpha[alpha_count]
         alpha_count += 1
     
     merged_st = lig_st.merge(prot_st)
-    merged_st._setTitle(pdb_id)
+    merged_st.title = pdb_id
     return merged_st
 
 def process_structs():

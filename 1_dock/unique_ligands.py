@@ -45,7 +45,6 @@ def filter_duplicates():
 
     if new_ligs_seen > 0: 
         print 'found {} new ligands'.format(new_ligs_seen)
-        os.system('rm -f chembl/duplicates.txt')    
 
     for lig_id, dups in duplicates.items():
         pdb_ligs = sorted([l for l in dups if l[:6] != 'CHEMBL'])
@@ -61,10 +60,6 @@ def filter_duplicates():
                 keep.append(stereo[0]) # best ki ligand with specified stereochemistry
             else:
                 keep.append(chembl_ligs[0]) # best ki ligand
-
-        if len(keep) > 1:
-            with open('chembl/duplicates.txt','a') as f:
-                f.write('{},{}\n'.format(keep[0],keep[1]))
         
         for l in dups:
             path_write = 'ligands/duplicate/{}.mae'.format(l)

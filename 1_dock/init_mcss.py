@@ -11,7 +11,7 @@ out_dir = 'ligands/mcss/mcss{}'.format(atom_typing)
 
 command = '$SCHRODINGER/utilities/canvasMCS -JOB {} -WAIT -imae {}_in.mae -omae {}.mae -atomtype {} -nobreakaring -exclusive'
 
-group_size=50
+group_size=100
 def grouper(n, iterable, fillvalue=None):
     args = [iter(iterable)] * n 
     return itertools.izip_longest(*args, fillvalue=fillvalue)
@@ -79,8 +79,8 @@ def get_mcss(mcss_pairs):
                 name = '{}-{}'.format(l1, l2) 
                 st1 = StructureReader('../../unique/{}.mae'.format(l1)).next()
                 st2 = StructureReader('../../unique/{}.mae'.format(l2)).next()
-                st1._setTitle(l1)
-                st2._setTitle(l2)
+                st1.title = l1#setTitle(l1)
+                st2.title = l2#_setTitle(l2)
 
                 st_wr = StructureWriter('{}_in.mae'.format(name))
                 st_wr.append(st1)
@@ -96,13 +96,12 @@ def get_size_file(size_pairs):
     for l1,l2 in size_pairs:
         with open('{}/{}-{}.txt'.format(out_dir, l1, l2),'w') as f:
             for st in StructureReader('{}/{}-{}.mae'.format(out_dir, l1, l2)):
-                title = st._getTitle()
                 prop = _StructureProperty(st)
                 smarts = prop['s_canvas_MCS_SMARTS']
                 msize = prop['i_canvas_MCS_Atom_Count'] 
                 size = len([a for a in st.atom if a.element != 'H'])
 
-                f.write('{},{},{},{}\n'.format(title, size, msize, smarts))
+                f.write('{},{},{},{}\n'.format(st.title, size, msize, smarts))
 
 
 
