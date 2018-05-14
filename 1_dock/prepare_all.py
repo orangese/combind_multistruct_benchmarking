@@ -58,7 +58,7 @@ for i, d in enumerate(datasets):
 
     # 3. decide what ligands to use
     pick_helpers()
-    h = load_helpers('best_affinity.txt')
+    h = load_helpers()
     init_mcss(h)
 
     # 4. dock/fp/mcss those ligands

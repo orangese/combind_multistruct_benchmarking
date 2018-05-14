@@ -3,7 +3,7 @@ import sys
 
 def read_molw(dir_path=None):
     molw = {}
-    fpath = 'chembl/mw.txt'
+    fpath = 'chembl/molw.txt'
     if dir_path is not None:
         fpath = '{}/{}'.format(dir_path, fpath)
     if not os.path.exists(fpath) and os.path.exists('chembl'):
@@ -19,11 +19,11 @@ def read_molw(dir_path=None):
 def write_molw():
     if not os.path.exists('ligands/unique'): return
     from schrodinger.structure import StructureReader, StructureWriter
-    with open('chembl/mw.txt', 'w') as fname:
+    with open('chembl/molw.txt', 'w') as fname:
         for f in os.listdir('ligands/unique'):
             st = StructureReader('ligands/unique/{}'.format(f)).next()
             mw = st.total_weight
-            fname.write('{},{}\n'.format(f.split('_')[0],mw))
+            fname.write('{},{}\n'.format(f.split('.')[0],mw))
 
 def read_mcss(dir_path=None):
     mcss = {}

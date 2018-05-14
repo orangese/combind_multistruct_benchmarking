@@ -42,7 +42,7 @@ class Statistics:
         for p,lps in self.proteins.items():
             for (l1,l2),lp in sorted(lps.items()):
                 print l1, l2
-                new_ev = Evidence({p:{(l1,l2):lp}}, {f_name:self.features[f_name]}, self.smooth)
+                new_ev = Evidence({p:{(l1,l2):lp}}, {f_name:self.features[f_name]}, self.smooth, self.normalize_fp)
                 stats_hist(new_ev, f_name, raw, smoothed, conditional)
 
 class Evidence:

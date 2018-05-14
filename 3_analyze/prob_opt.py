@@ -11,7 +11,7 @@ class PredictStructs:
         self.T = float(T)
         self.reference = reference
         self.normalize_fp = normalize_fp
-        assert self.reference in ['DECOY', 'ALL', 'LTP']
+        assert self.reference in ['DECOY', 'ALL', 'LTP', 'OLD']
         assert self.T >= 0
         assert self.normalize_fp == evidence.normalize_fp
 
@@ -76,15 +76,14 @@ class PredictStructs:
         This method has been tested, but I haven't put any effort
         into tuning the cooling schedule. It isn't immediately way better.
 
-        Keeps track of the energy of the current pose cluster by
-        summing the difference in partial energy at each switch.
+        Keeps track of the score of the current pose cluster by
+        summing the difference in partial score at each switch.
         Should verify that this doesn't lead to numerical issues,
-        but I really doubt it.s
+        but I really doubt it.
         """
         
-        
-        energy = 0
-        best_energy  = energy
+        log_likelihood = 0 # confusing to call this energy because we are maximizing it
+        best_log_likelihood = 0
         best_cluster = {k:v for k, v in pose_cluster.items()}
         
         # Linear cooling schedule
@@ -106,12 +105,12 @@ class PredictStructs:
             if (proposed_partial > current_partial
                 or T(i) > 0 and random.random() < np.exp((proposed_partial - current_partial) / T(i))):
                 pose_cluster[query] = proposed_pose
-                energy += proposed_partial - current_partial
+                log_likelihood += proposed_partial - current_partial
             else:
                 pose_cluster[query] = current_pose
                 
-            if energy > best_energy:
-                best_energy  = energy
+            if log_likelihood > best_log_likelihood:
+                best_log_likelihood = log_likelihood
                 best_cluster = {k:v for k, v in pose_cluster.items()}
 
         return best_cluster, ([], [])
@@ -258,6 +257,10 @@ class PredictStructs:
                      * self._get_prior(ligname2, pose_cluster[ligname2]))
             p_x = (  self.ev.evaluate(k, k_val, 1) * prior
                    + self.ev.evaluate(k, k_val, 0) * (1 - prior))
+        elif self.reference == 'OLD':
+            p_x_native = k_val if k != 'mcss' else 1.0
+            p_x = 1.0
+
         return k_val, p_x_native, p_x
 
 

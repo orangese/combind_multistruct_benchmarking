@@ -111,8 +111,9 @@ def dock(grids, chembl=None):
     to_dock = set([l for l in all_ligs if l[:6] != 'CHEMBL'])
     
     if chembl is not None:
-        for q, c_list in chembl.items():
-            to_dock.update(c_list)
+        for f, f_data in chembl.items():
+            for q, c_list in f_data.items():
+                to_dock.update(c_list)
 
     for lig in to_dock:
         if len(lig.strip()) == 0: continue

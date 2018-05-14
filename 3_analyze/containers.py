@@ -162,7 +162,7 @@ class LigandManager:
         self.helpers = {}
 
     def get_chembl(self, stereo=True, max_ki=float('inf')):
-        if len(self.chembl_info) == 0:
+        if len(self.chembl_info, load_mcss=True) == 0:
             self.chembl_info = load_chembl_proc(self.root)
         tr = [l for l in self.unique if l[:6] == 'CHEMBL' and (not stereo or self.chembl_info[l].valid_stereo)]
         tr = [l for l in tr if self.chembl_info[l].ki <= max_ki]
@@ -182,7 +182,7 @@ class LigandManager:
         #    - here we re-sort based on the output of step 2 (identical to step 1 with failed pairs excluded)
         if mcss_sort:
             if len(self.chembl_info) == 0:
-                self.chembl_info = load_chembl_proc(self.root)
+                self.chembl_info = load_chembl_proc(self.root, load_mcss=True)
             if fname not in self.mcss_sizes:
                 self.mcss_sizes[fname] = {}
             if query not in self.mcss_sizes[fname]:
@@ -196,9 +196,6 @@ class LigandManager:
                         self.mcss_sizes[fname][query][l1] = sz[2]
 
                 ligs = self.helpers[fname][query]
-                #print query
-                #print [self.chembl_info[c].mcss.get(query,(0,0,0))[2] for c in ligs]
-                #print [self.mcss_sizes[fname][query].get(c,0) for c in ligs]
 
                 self.helpers[fname][query].sort(key=lambda x:-self.mcss_sizes[fname][query].get(x,0))
 

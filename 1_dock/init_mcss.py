@@ -11,21 +11,22 @@ out_dir = 'ligands/mcss/mcss{}'.format(atom_typing)
 
 command = '$SCHRODINGER/utilities/canvasMCS -JOB {} -WAIT -imae {}_in.mae -omae {}.mae -atomtype {} -nobreakaring -exclusive'
 
-group_size=200
+group_size=50
 def grouper(n, iterable, fillvalue=None):
     args = [iter(iterable)] * n 
-    return itertools.izip_longest(*args, fillvalue=fillvalue) #NOTE: izip_longest is zip_longest in python2
+    return itertools.izip_longest(*args, fillvalue=fillvalue)
 
 def init_mcss(chembl=None):
 
     all_pairs = set([])
     if chembl is not None:
-        for q,c in chembl.items():
-            for i in range(len(c)):
-                for j in range(i+1,len(c)):
-                    all_pairs.add((c[i],c[j]))
+        for f, f_data in chembl.items():
+            for q,c in f_data.items():
+                for i in range(len(c)):
+                    for j in range(i+1,len(c)):
+                        all_pairs.add((c[i],c[j]))
     else:
-        chembl_info = load_chembl_proc()#{'{}_lig'.format(l):lig for l, lig in load_chembl_proc().items()}
+        chembl_info = load_chembl_proc()
         all_ligs = sorted([l.split('.')[0] for l in os.listdir('ligands/unique')])
         pdb_ligs = [l for l in all_ligs if l[:6] != 'CHEMBL']
         chembl_ligs = [l for l in all_ligs if l in chembl_info and chembl_info[l].ki <= 1000 and chembl_info[l].mw <= 1000]

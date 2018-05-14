@@ -76,7 +76,7 @@ class FuzzyIFP:
         fp = {}
         active_res = []
         for res in prot_st.residue:
-            if get_shortest_distance(res.extractStructure(), st2=lig_st)[0] <= 8:
+            if get_shortest_distance(res.extractStructure(), st2=lig_st, cutoff=8) is not None:
                 res_key = '{}:{}({})'.format(res.chain.strip(), res.resnum, res.pdbres.strip())
                 if res_key not in self.protein:
                     self.protein[res_key] = AtomGroup(res.extractStructure(), res_key)
