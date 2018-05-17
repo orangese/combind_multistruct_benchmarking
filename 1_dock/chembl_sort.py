@@ -25,8 +25,8 @@ def get_ligands():
     with open('chembl/chembl_info.txt', 'a') as f:
         for lig_name in sorted(ligs.keys(), key=lambda x: ligs[x].ki):
             if lig_name+'_lig' not in written_ligs:
-                if os.path.exists('ligands/raw_files/{}_lig.mae'.format(lig_name)): 
-                    os.system('rm ligands/raw_files/{}_lig.mae'.format(lig_name)) 
+                #if os.path.exists('ligands/raw_files/{}_lig.mae'.format(lig_name)): 
+                    #os.system('rm ligands/raw_files/{}_lig.mae'.format(lig_name)) 
                     #continue
                 valid_stereo = ligs[lig_name].check_stereo()
                 f.write('{},{},{},{},{}\n'.format(lig_name, ligs[lig_name].target_prot, valid_stereo, 

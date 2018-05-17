@@ -3,7 +3,7 @@ import random
 from pairs import LigPair
 
 class PredictStructs:
-    def __init__(self, docking_st, evidence, features, max_poses, T, reference, normalize_fp):
+    def __init__(self, docking_st, evidence, features, max_poses, T, reference='ALL', normalize_fp=True):
         self.docking_st = docking_st
         self.ev = evidence
         self.features = features
@@ -19,19 +19,33 @@ class PredictStructs:
         self.log_likelihood_ratio_cache = {}
         self.lig_pairs = {}
 
+    def max_posterior(self, ligands, verbose=False, sampling=3, mode='MAX', restart=15, en_landscape=False):
 
-    # Optimization algorithms
-    def find_best_cluster(self, ligands, sampling=3, optimization = 'MAX', en_landscape=False):
+        opt = self._optimize_cluster
+        if mode == 'ANNEAL':
+            opt = self._anneal_cluster
+
         initial_cluster = {l:0 for l in ligands}
+        max_sc, best_cluster, all_scores, all_rmsds = opt(initial_cluster,sampling=sampling, en_landscape=en_landscape)
 
-        if optimization == 'MAX':
-            return self._optimize_cluster(initial_cluster, sampling, en_landscape)
-        elif optimization == 'ANNEAL':
-            return self._anneal_cluster(initial_cluster, sampling)
-        elif optimization == 'GIBBS':
-            return self._sample_cluster(initial_cluster, sampling)
-        else:
-            assert False, "{} not a valid optimization scheme".format(optimization)
+        if verbose:
+            print 'cluster -1, score {}'.format(max_sc)
+
+        for i in range(restart):
+            rand_cluster = {}
+            for l in ligands:
+                rand_cluster[l] = np.random.randint(self._num_poses(l))
+
+            new_sc, new_cluster, scores, rmsds = opt(rand_cluster,sampling=sampling, en_landscape=en_landscape)
+            all_scores.extend(scores)
+            all_rmsds.extend(rmsds)
+
+            if new_sc > max_sc:
+                max_sc, best_cluster = new_sc, new_cluster
+            if verbose:
+                print 'cluster {}, score {}'.format(i,new_sc)
+
+        return best_cluster, all_scores, all_rmsds
 
     def _optimize_cluster(self, pose_cluster, sampling, en_landscape):
         """
@@ -67,9 +81,9 @@ class PredictStructs:
                 log_posteriors += [log_posterior(pose_cluster)]
                 rmsds += [get_rmsd(pose_cluster)]
 
-        return pose_cluster, (log_posteriors, rmsds)
+        return self.log_posterior(pose_cluster), pose_cluster, log_posteriors, rmsds
 
-    def _anneal_cluster(self, pose_cluster, sampling):
+    def _anneal_cluster(self, pose_cluster, sampling, en_landscape):
         """
         Optimize pose cluster using simulated annealing.
 
@@ -113,55 +127,7 @@ class PredictStructs:
                 best_log_likelihood = log_likelihood
                 best_cluster = {k:v for k, v in pose_cluster.items()}
 
-        return best_cluster, ([], [])
-
-    def _sample_cluster(self, pose_cluster, sampling):
-        """
-        Find poses maximizing marginal log posterior using
-        Gibbs sampling procedure.
-
-        Again, this method has been run, but not extensively tuned.
-        In the limited benchmarking I did with these parameters, it
-        seemed to do comparably with our standard method, but with
-        much more computational effort.
-        """
-        
-        # These parameters would need to be optimized
-        T = 3.0
-        BURN = 1000
-        SAMP = 100
-
-        samples = {ligname:{} for ligname in pose_cluster}
-        for i in range(sampling*self.max_poses*len(pose_cluster)):
-            query = np.random.choice(pose_cluster.keys())
-            current_pose  = pose_cluster[query]
-            proposed_pose = random.randint(0, self._num_poses(query)-1)
-
-            current_partial  = self._partial_log_posterior(pose_cluster, query)
-            pose_cluster[query] = proposed_pose
-            proposed_partial = self._partial_log_posterior(pose_cluster, query)
-
-            if (proposed_partial > current_partial
-                or random.random() < np.exp((proposed_partial - current_partial) / T)):
-                pose_cluster[query] = proposed_pose
-            else:
-                pose_cluster[query] = current_pose
-
-            if i > BURN and not i % SAMP:
-                for ligname, pose in pose_cluster.items():
-                    if pose not in samples[ligname]: samples[ligname][pose] = 0
-                    samples[ligname][pose] += 1
-
-        # Set pose cluster to maximum marginal
-        for ligname, poses in samples.items():
-            best = (0, 0)
-            for pose, count in poses.items():
-                if count > best[1]:
-                    best = (pose, count)
-            pose_cluster[ligname] = best[0]
-
-        return pose_cluster, ([], [])
-
+        return self.log_posterior(pose_cluster), best_cluster, [], []
 
     # Methods to score sets of ligands
     def log_posterior(self, pose_cluster):
@@ -263,6 +229,14 @@ class PredictStructs:
 
         return k_val, p_x_native, p_x
 
+    def score_query(self, query, optimal_cluster):
+         print 'fixme'
+#        eval_cluster = {l:p for l,p in optimal_cluster.items()}
+#        scores = []
+#        for p in range(self.ligset.n(query)):
+#            eval_cluster[query] = p
+#            scores.append(self.joint_posterior(eval_cluster, sample_l=query)[0])
+#        return scores
 
     def _get_feature(self, fname, l1, l2, p1, p2):
         if l1 > l2:
