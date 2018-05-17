@@ -51,7 +51,7 @@ for i, d in enumerate(datasets):
     filter_duplicates()
     init_mcss()
 
-    if True: # force redo of chembl info (do this if new chembl ligands have been added)
+    if False: # force redo of chembl info (do this if new chembl ligands have been added)
         os.system('rm -f chembl/helpers/*')
         os.system('rm -f chembl/duplicates.txt')
         os.system('rm -f chembl/molw.txt')
