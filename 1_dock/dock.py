@@ -96,7 +96,7 @@ def dock_pair(ligand, grid, out_dir, restrain=None):
             f.write(core_def.format(restrain))
 
     with open('{}-to-{}/{}-{}.sh'.format(ligand, grid, ligand, grid), 'w') as f:
-        f.write('#!/bin/bash\nmodule load schrodinger/2017-3\n')
+        f.write('#!/bin/bash\nmodule load schrodinger\n')
         f.write('$SCHRODINGER/glide -WAIT {}-to-{}.in\n'.format(ligand, grid))
         if ligand[:6] != 'CHEMBL':
             f.write('$SCHRODINGER/run rmsd.py -use_neutral_scaffold -pv second -c rmsd.csv {} {}-to-{}_pv.maegz'.format(ref_lig_file, ligand, grid))
