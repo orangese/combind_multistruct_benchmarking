@@ -156,6 +156,8 @@ class LigandManager:
         self.unique = set([l.split('.')[0] for l in os.listdir('{}/ligands/unique'.format(self.root))])
         self.pdb = sorted([l for l in self.unique if l[:6] != 'CHEMBL'])
         self.grids = sorted(os.listdir('{}/docking/grids'.format(self.root)))
+        self.docked = set([l.split('-to-')[0] for l in os.listdir('{}/{}'.format(self.root, gdir))
+            if os.path.exists('{}/{}/{}/{}_pv.maegz'.format(self.root, gdir, l, l))])
 
         self.chembl_info = {}
         self.mcss_sizes = {}
@@ -171,7 +173,9 @@ class LigandManager:
     def get_similar(self, query, fname, num=10, mcss_sort=False, struct=None):
         if struct is None: struct = self.default_st
         if fname not in self.helpers:
-            self.helpers[fname] = load_helpers(self.root)[fname]
+            self.helpers[fname] = load_helpers(self.root)[fname]# [l for l in load_helpers(self.root)[fname] if l in self.docked]
+            for q in self.helpers[fname]:
+                self.helpers[fname][q] = [l for l in self.helpers[fname][q] if l in self.docked]
 
         # mcss has two steps:
         # 1. we use the canvasMCS tool to find the MCSS between two ligands (output: smarts)

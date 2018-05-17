@@ -22,7 +22,7 @@ def parse_mcss_size(mcss_path, ligs1, ligs2, struct):
                         mcss_sizes[(l1,l2)] = (s1,s2,s3)
                         break
         except:
-            print 'mcss error', fname
+            print 'mcss size error', fname
 
     return mcss_sizes
 
@@ -53,10 +53,10 @@ def parse_mcss(mcss_path, num_poses, all_pairs, min_size=10):
                         print 'hmmmm', fpath, p1, p2, num_poses[l1], num_poses[l2]
                         os.system('rm {}'.format(fpath))
         except Exception as e:
-            print 'mcss error', fpath
+            print 'mcss parse error', fpath
             print e
             print i,line
-            #os.system('rm {}/{}'.format(mcss_path, fpath))
+            os.system('rm {}'.format(fpath))
 
     return mcss_scores
 

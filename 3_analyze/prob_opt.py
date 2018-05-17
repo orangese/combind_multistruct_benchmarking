@@ -78,8 +78,8 @@ class PredictStructs:
             pose_cluster[query] = best_p
 
             if en_landscape:
-                log_posteriors += [log_posterior(pose_cluster)]
-                rmsds += [get_rmsd(pose_cluster)]
+                log_posteriors += [self.log_posterior(pose_cluster)]
+                rmsds += [self.get_rmsd(pose_cluster)]
 
         return self.log_posterior(pose_cluster), pose_cluster, log_posteriors, rmsds
 
@@ -271,7 +271,8 @@ class PredictStructs:
         return {l:self.docking_st.ligands[l].poses[p] for l,p in cluster.items()}
 
     def get_rmsd(self, cluster):
-        return np.mean([self.docking_st.ligands[l].poses[p].rmsd for l,p in cluster.items()])
+        tmp = [self.docking_st.ligands[l].poses[p].rmsd for l,p in cluster.items()]
+        return np.mean([r for r in tmp if r is not None])
 
     def _num_poses(self, ligname):
         return min(self.max_poses, len(self.docking_st.ligands[ligname].poses))
