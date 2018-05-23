@@ -4,7 +4,7 @@ import sys
 from parse_chembl import load_chembl_proc
 
 XGLIDE_IN = '''GRIDFILE   ../../grids/{}/{}.zip
-LIGANDFILE   ../../../{}/{}.mae
+LIGANDFILE   ../../../{}/{}/{}.mae
 DOCKING_METHOD   confgen
 CANONICALIZE   True
 EXPANDED_SAMPLING   {}
@@ -42,7 +42,7 @@ settings = { # peptides, pr, exp, enh, lig_source
     'glide9': (True,  'SP', 'True',  4, 'lig_raw'),
     'glide10':(True,  'SP', 'False', 4, 'lig_raw'),
     'glide11':(False, 'SP', 'False', 4, 'ligands/unique'),
-    'glide12':(False, 'SP', 'False', 2, 'ligands/unique')
+    'glide12':(False, 'SP', 'False', 2, 'ligands/prepared_ligands')
 }
 
 queue = 'owners'
@@ -85,7 +85,7 @@ def dock_pair(ligand, grid, out_dir, restrain=None):
     ref_lig_file = '../../../structures/ligands/{}.mae'.format(ligand)
 
     with open('{}-to-{}/{}-to-{}.in'.format(ligand, grid, ligand, grid), 'w') as f:
-        f.write(XGLIDE_IN.format(grid, grid, lig_source, ligand, exp, precision, nenhanced, lig_source, ligand))
+        f.write(XGLIDE_IN.format(grid, grid, lig_source, ligand, ligand, exp, precision, nenhanced, lig_source, ligand))
         if peptides:
             f.write(peptide_settings)
         #elif ligand[:6] != 'CHEMBL': 
@@ -105,10 +105,12 @@ def dock_pair(ligand, grid, out_dir, restrain=None):
     os.system('sbatch -p {} -t {} -o dock.out {}-{}.sh'.format(queue, time, ligand, grid))
     os.chdir('../../..')
 
-def dock(grids, chembl=None):
-    if not os.path.exists('ligands/unique'): return
-    all_ligs = sorted([l.split('.')[0] for l in os.listdir('ligands/unique')])
-    to_dock = set([l for l in all_ligs if l[:6] != 'CHEMBL'])
+def dock(grids, chembl=None, maxnum=25):
+    l_dir = 'ligands/prepared_ligands'
+    l_path = '{}/{}/{}.mae'
+    if not os.path.exists(l_dir): return
+    all_ligs = sorted([l for l in os.listdir(l_dir) if os.path.exists(l_path.format(l_dir,l,l))])
+    to_dock = set([l for l in all_ligs if l[:6] != 'CHEMBL'][:maxnum])
     
     if chembl is not None:
         for f, f_data in chembl.items():
@@ -117,7 +119,7 @@ def dock(grids, chembl=None):
 
     for lig in to_dock:
         if len(lig.strip()) == 0: continue
-        for grid in grids:
+        for grid in grids[:maxnum]:
             dock_pair(lig, grid, 'glide12')
             
 

@@ -17,29 +17,40 @@ def read_molw(dir_path=None):
     return molw
 
 def write_molw():
-    if not os.path.exists('ligands/unique'): return
+    l_dir = 'ligands/prepared_ligands'
+    l_path = '{}/{}/{}.mae'
+
+    if not os.path.exists(l_dir): return
     from schrodinger.structure import StructureReader
     with open('chembl/molw.txt', 'w') as fname:
-        for f in os.listdir('ligands/unique'):
-            st = StructureReader('ligands/unique/{}'.format(f)).next()
+        for f in os.listdir(l_dir):
+            if not os.path.exists(l_path.format(l_dir, f, f)): continue
+            st = StructureReader(l_path.format(l_dir, f,f)).next()
             mw = st.total_weight
-            fname.write('{},{}\n'.format(f.split('.')[0],mw))
+            fname.write('{},{}\n'.format(f,mw))
 
 def write_duplicates():
-    if not os.path.exists('ligands/unique'): return
-    duplicates = []
+    l_dir = 'ligands/prepared_ligands'
+    l_path = '{}/{}/{}.mae'
+
+    if not os.path.exists(l_dir): return
+    duplicates = {}
     from schrodinger.structure import StructureReader
-    all_ligs = {f.split('.')[0] : StructureReader('ligands/unique/'+f).next() for f in os.listdir('ligands/unique')}
-    for l1 in [l for l in all_ligs if l[:6] != 'CHEMBL']:
-        for l2 in [l for l in all_ligs if l[:6] == 'CHEMBL']:
-            if all_ligs[l1].isEquivalent(all_ligs[l2]):
-                duplicates.append((l1, l2))
+    all_ligs = [l for l in os.listdir(l_dir) if os.path.exists(l_path.format(l_dir, l, l))]
+    all_ligs = {l : StructureReader(l_path.format(l_dir,l,l)).next() for l in all_ligs}
+    for l1 in all_ligs:#[l for l in all_ligs if l[:6] != 'CHEMBL']:
+        for l2 in duplicates:
+            if all_ligs[l1].isEquivalent(all_ligs[l2], True):
+                duplicates[l2].append(l1)
+                break
+        else:
+            duplicates[l1] = [l1]
     with open('chembl/duplicates.txt','w') as f:
-        for l1,l2 in duplicates:
-            f.write('{},{}\n'.format(l1,l2))
+        for l_list in duplicates:
+            f.write('{}\n'.format(','.join(l_list)))
 
 def read_duplicates(dir_path=None):
-    duplicates = []
+    duplicates = {}
     fpath = 'chembl/duplicates.txt'
     if dir_path is not None:
         fpath = '{}/{}'.format(dir_path, fpath)
@@ -49,24 +60,25 @@ def read_duplicates(dir_path=None):
     if not os.path.exists(fpath): return {}
     with open(fpath) as f:
         for line in f:
-            l1, l2 = line.strip().split(',')
-            duplicates.append((l1,l2))
+            l_list = line.strip().split(',')
+            duplicates[l_list[0]] = l_list#.append((l1,l2))
     return duplicates
 
 def read_mcss(dir_path=None):
     mcss = {}
 
-    ligpath = 'ligands/unique'
+    l_dir = 'ligands/prepared_ligands'
+    l_path = '{}/{}/{}.mae'
     mcsspath = 'ligands/mcss/mcss7'
     if dir_path is not None:
-        ligpath = '{}/{}'.format(dir_path, ligpath)
+        l_dir = '{}/{}'.format(dir_path, l_dir)
         mcsspath = '{}/{}'.format(dir_path, mcsspath)
 
-    if not os.path.exists(ligpath) or not os.path.exists(mcsspath): 
+    if not os.path.exists(l_dir) or not os.path.exists(mcsspath): 
         print os.listdir('.')
         return {} 
 
-    all_ligs = sorted([l.split('.')[0] for l in os.listdir(ligpath)])
+    all_ligs = sorted([l for l in os.listdir(l_dir) if os.path.exists(l_path.format(l_dir, l, l))])
     pdb_ligs = [l for l in all_ligs if l[:6] != 'CHEMBL']
     for q in pdb_ligs:
         qpairs = [f for f in os.listdir(mcsspath) if f.split('-')[0] == q and f[-3:] == 'txt']

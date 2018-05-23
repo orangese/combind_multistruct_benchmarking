@@ -14,7 +14,7 @@ def grouper(n, iterable, fillvalue=None):
     args = [iter(iterable)] * n
     return itertools.izip_longest(*args, fillvalue=fillvalue) #NOTE: izip_longest is zip_longest in python2
 
-def mcss(st,h=None):
+def mcss(st_list,h=None):
     if not os.path.exists(glide_dir): return
 
     os.system('mkdir -p mcss')
@@ -36,29 +36,30 @@ def mcss(st,h=None):
 
     unfinished_pairs = []
     for l1, l2 in all_mcss:
-        #if l1[:6] == 'CHEMBL' or l2[:6] == 'CHEMBL': continue
-        pv1, pv2 = '{}-to-{}'.format(l1, st), '{}-to-{}'.format(l2, st)
-        if not os.path.exists('{}/{}/{}_pv.maegz'.format(glide_dir, pv1, pv1)): continue
-        if not os.path.exists('{}/{}/{}_pv.maegz'.format(glide_dir, pv2, pv2)): continue
-        if os.path.exists('mcss/{}/{}-{}-to-{}.csv'.format(out_dir, l1, l2, st)): continue
+        for st in st_list:
+            #if l1[:6] == 'CHEMBL' or l2[:6] == 'CHEMBL': continue
+            pv1, pv2 = '{}-to-{}'.format(l1, st), '{}-to-{}'.format(l2, st)
+            if not os.path.exists('{}/{}/{}_pv.maegz'.format(glide_dir, pv1, pv1)): continue
+            if not os.path.exists('{}/{}/{}_pv.maegz'.format(glide_dir, pv2, pv2)): continue
+            if os.path.exists('mcss/{}/{}-{}-to-{}.csv'.format(out_dir, l1, l2, st)): continue
         
-        if h is not None:
-            for f, f_data in h.items():
-                for q, hlist in f_data.items():
-                    hlist = set(hlist)
-                    if l1 in hlist and l2 in hlist:
-                        unfinished_pairs.append((l1, l2, st))
-                        break
-                if len(unfinished_pairs) == 0: continue
-                if unfinished_pairs[-1] == (l1, l2, st): break
+            if h is not None:
+                for f, f_data in h.items():
+                    for q, hlist in f_data.items():
+                        hlist = set(hlist)
+                        if l1 in hlist and l2 in hlist:
+                            unfinished_pairs.append((l1, l2, st))
+                            break
+                    if len(unfinished_pairs) == 0: continue
+                    if unfinished_pairs[-1] == (l1, l2, st): break
 
-        if l1[:6] != 'CHEMBL' and l2[:6] != 'CHEMBL':
-            unfinished_pairs.append((l1,l2,st))
+            if l1[:6] != 'CHEMBL' and l2[:6] != 'CHEMBL':
+                unfinished_pairs.append((l1,l2,st))
 
     if len(unfinished_pairs) > 0:
-        print len(unfinished_pairs), 'mcss left'
+        print len(unfinished_pairs), 'mcss rmsd left'
     
-    group_size = 18
+    group_size = 12
     os.chdir('mcss/{}'.format(out_dir))
     os.system('rm -f *.sh')
     for i, pairs in enumerate(grouper(group_size, unfinished_pairs)):

@@ -39,14 +39,32 @@ def proc_ligands():
     add_h = '$SCHRODINGER/utilities/prepwizard -WAIT -noepik -noprotassign -noimpref {}_in.mae {}_in_epik.mae\n' 
     epik_command = '$SCHRODINGER/epik -WAIT -ph 7.0 -pht 2.0 -imae {}_in_epik.mae -omae {}_out.mae\n'
 
-    group_size = 5
+    group_size = 15
 
     os.system('mkdir -p ligands/prepared_ligands')
     os.system('rm -f ligands/prepared_ligands/*.sh')
     os.system('rm -f ligands/prepared_ligands/*.out')
 
-    unfinished = [l.split('.')[0] for l in os.listdir('ligands/raw_files')]
-    unfinished = [l for l in unfinished if not os.path.exists('ligands/prepared_ligands/{}/{}_out.mae'.format(l,l))]
+    all_u = [l.split('.')[0] for l in os.listdir('ligands/raw_files')]
+    all_u = [l for l in all_u if not os.path.exists('ligands/prepared_ligands/{}/{}.mae'.format(l,l))]
+
+    if len(all_u) > 0:
+        print len(all_u), 'unfinished ligands'
+
+    unfinished = []
+    for l in all_u:
+        prepped = 'ligands/prepared_ligands/{}/{}_out.mae'.format(l,l)
+        if os.path.exists(prepped):
+            st = StructureReader(prepped).next() # first epik state
+            st.title = l
+            st_wr = StructureWriter('ligands/prepared_ligands/{}/{}.mae'.format(l,l))
+            st_wr.append(st)
+            st_wr.close()
+        else:
+            unfinished.append(l)
+
+    if len(unfinished) > 0:
+        print len(unfinished), 'unprocessed ligands'
 
     for i, ligs in enumerate(grouper(group_size, unfinished)):
         with open('ligands/prepared_ligands/batch-{}.sh'.format(i),'w') as f:

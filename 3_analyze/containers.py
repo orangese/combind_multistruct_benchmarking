@@ -153,8 +153,8 @@ class LigandManager:
 
         self.default_st = self.all_st[prot]
 
-        self.unique = set([l.split('.')[0] for l in os.listdir('{}/ligands/unique'.format(self.root))])
-        self.pdb = sorted([l for l in self.unique if l[:6] != 'CHEMBL'])
+        self.all_ligs = set([l for l in os.listdir('{}/ligands/prepared_ligands'.format(self.root))])
+        self.pdb = sorted([l for l in self.all_ligs if l[:6] != 'CHEMBL'])
         self.grids = sorted(os.listdir('{}/docking/grids'.format(self.root)))
         self.docked = set([l.split('-to-')[0] for l in os.listdir('{}/{}'.format(self.root, gdir))
             if os.path.exists('{}/{}/{}/{}_pv.maegz'.format(self.root, gdir, l, l))])
@@ -166,7 +166,7 @@ class LigandManager:
     def get_chembl(self, stereo=True, max_ki=float('inf')):
         if len(self.chembl_info) == 0:
             self.chembl_info = load_chembl_proc(self.root, load_mcss=True)
-        tr = [l for l in self.unique if l[:6] == 'CHEMBL' and (not stereo or self.chembl_info[l].valid_stereo)]
+        tr = [l for l in self.all_ligs if l[:6] == 'CHEMBL' and (not stereo or self.chembl_info[l].valid_stereo)]
         tr = [l for l in tr if self.chembl_info[l].ki <= max_ki]
         return sorted(tr, key=lambda x: self.chembl_info[x].ki)
 

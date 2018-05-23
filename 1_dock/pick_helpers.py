@@ -31,7 +31,7 @@ def pick_helpers():
     else: return
 
     chembl_info = load_chembl_proc(load_mcss=True)
-    all_ligs = sorted([l.split('.')[0] for l in os.listdir('ligands/unique')])
+    all_ligs = sorted([l.split('.')[0] for l in os.listdir('ligands/prepared_ligands')])
     pdb_ligs = [l for l in all_ligs if l[:6] != 'CHEMBL']
 
     num_chembl = 30

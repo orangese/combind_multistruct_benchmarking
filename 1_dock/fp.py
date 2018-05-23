@@ -46,7 +46,7 @@ def structure_fp():
         os.system('sbatch --time=00:10:00 -n 1 -p {} {}.sh'.format(queue, pdb))
     os.chdir('../..')
 
-def fp(grid):
+def fp(grids):
     if not os.path.exists(glide_dir): return
 
     os.system('mkdir -p ifp')
@@ -66,7 +66,7 @@ def fp(grid):
         if not os.path.exists(input_file): continue
         if os.path.exists(output_file): continue
         l, s = dock.split('-to-')
-        if s != grid: continue
+        if s not in grids: continue
         #print dock
         unfinished.append(dock)
         
