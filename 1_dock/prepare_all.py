@@ -77,16 +77,17 @@ for i, d in enumerate(datasets):
         h = load_helpers()
         init_mcss(h)
 
+    if len(os.listdir('docking/grids')) == 0: 
+        os.chdir('..')
+        continue
+
     # 4. dock/fp/mcss those ligands
+    h = load_helpers()
+    to_prep = [sorted(os.listdir('docking/grids'))[0]]
+    if d in grids and grids[d] not in to_prep:
+        to_prep += grids[d]
+
     if '4' in todo:
-        if len(os.listdir('docking/grids')) == 0: 
-            os.chdir('..')
-            continue
-
-        to_prep = [sorted(os.listdir('docking/grids'))[0]]
-        if d in grids and grids[d] not in to_prep:
-            to_prep += grids[d]
-
         dock(to_prep, h)
         fp(to_prep)
         mcss(to_prep, h)    
