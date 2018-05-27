@@ -151,17 +151,24 @@ class LigandManager:
             'TRPV1':'3J5Q','SIGMA1':'5HK1','5HT2B':'4IB4','DTRANSP':'4M48',
             'M3':'4U15'}
 
-        self.default_st = self.all_st[prot]
-
         self.all_ligs = set([l for l in os.listdir('{}/ligands/prepared_ligands'.format(self.root))])
         self.pdb = sorted([l for l in self.all_ligs if l[:6] != 'CHEMBL'])
         self.grids = sorted(os.listdir('{}/docking/grids'.format(self.root)))
-        self.docked = set([l.split('-to-')[0] for l in os.listdir('{}/{}'.format(self.root, gdir))
-            if os.path.exists('{}/{}/{}/{}_pv.maegz'.format(self.root, gdir, l, l))])
+
+        self.default_st = self.all_st.get(prot, self.pdb[0].split('_')[0])
 
         self.chembl_info = {}
         self.mcss_sizes = {}
         self.helpers = {}
+
+    def get_docked(self, struct=None, pdb_only=False):
+        if struct == None: struct = self.default_st
+        docked = [l.split('-to-')[0] for l in os.listdir('{}/{}'.format(self.root, self.gdir))
+            if os.path.exists('{}/{}/{}/{}_pv.maegz'.format(self.root, self.gdir, l, l))
+            and l.split('-to-')[1] == struct]
+        if not pdb_only: return docked
+        return [l for l in docked if l[:6] != 'CHEMBL']
+
 
     def get_chembl(self, stereo=True, max_ki=float('inf')):
         if len(self.chembl_info) == 0:
@@ -173,9 +180,10 @@ class LigandManager:
     def get_similar(self, query, fname, num=10, mcss_sort=False, struct=None):
         if struct is None: struct = self.default_st
         if fname not in self.helpers:
-            self.helpers[fname] = load_helpers(self.root)[fname]# [l for l in load_helpers(self.root)[fname] if l in self.docked]
+            self.helpers[fname] = load_helpers(self.root)[fname]
             for q in self.helpers[fname]:
-                self.helpers[fname][q] = [l for l in self.helpers[fname][q] if l in self.docked]
+                self.helpers[fname][q] = [l for l in self.helpers[fname][q] 
+                    if l in set(self.get_docked(struct))]
 
         # mcss has two steps:
         # 1. we use the canvasMCS tool to find the MCSS between two ligands (output: smarts)

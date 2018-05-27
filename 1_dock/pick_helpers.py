@@ -4,7 +4,7 @@ import sys
 from parse_chembl import load_chembl_proc
 
 
-def pick_helpers():
+def pick_helpers(maxnum=20):
 
     parent = 'chembl/helpers'
     os.system('mkdir -p {}'.format(parent))
@@ -31,8 +31,8 @@ def pick_helpers():
     else: return
 
     chembl_info = load_chembl_proc(load_mcss=True)
-    all_ligs = sorted([l.split('.')[0] for l in os.listdir('ligands/prepared_ligands')])
-    pdb_ligs = [l for l in all_ligs if l[:6] != 'CHEMBL']
+    all_ligs = sorted([l for l in os.listdir('ligands/prepared_ligands')])
+    pdb_ligs = [l for l in all_ligs if l[:6] != 'CHEMBL'][:maxnum]
 
     num_chembl = 30
     

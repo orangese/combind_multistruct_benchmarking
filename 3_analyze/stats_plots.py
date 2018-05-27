@@ -18,9 +18,14 @@ def stats_hist(ev, f_name, raw=True, smoothed=True, conditional=True):
     plt.rcParams['figure.figsize'] = (10,7.5)
     plt.rcParams['figure.dpi'] = 400
     plt.rcParams['font.size'] = 20
-    
-    xmin, xmax = -0.5, 1.5# -0.18,1.18#min(data) - 0.5*std, max(data) + 0.5*std
-    binwidth = 0.05#0.4*std
+
+    if ev.normalize_fp:    
+        xmin, xmax = -0.5, 1.5# -0.18,1.18#min(data) - 0.5*std, max(data) + 0.5*std
+        binwidth = 0.05#0.4*std
+    else:
+        xmin, xmax = min(ev.raw_data[f_name][-1]) - 0.5*std, max(ev.raw_data[f_name][-1]) + 0.5*std
+        binwidth = 0.4*std
+
     bins = np.arange(xmin, xmax + binwidth, binwidth)
     
     if raw:

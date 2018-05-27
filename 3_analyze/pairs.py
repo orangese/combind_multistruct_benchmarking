@@ -33,7 +33,7 @@ class LigPair:
         mi, ma = 0.0, 1.0
         if self.normalize_fp:
             mi,ma = self.feat_map[f_name]
-            if mi == ma: return None # Does this ever actually happen??
+            if mi == ma: return None
 
         if f_name == 'mcss': return 1 - pp_x/ma
         return pp_x/ma

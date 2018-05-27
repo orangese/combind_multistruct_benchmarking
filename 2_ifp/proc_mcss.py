@@ -31,8 +31,10 @@ def load_mcss(lig1, lig2):
     return smarts1, smarts2, int(s1), int(s2), int(m1)
 
 def find_mcss_matches(st1, smarts1, st2, smarts2):
-    mcss1 = evaluate_smarts(st1, smarts1, unique_sets=True)
-    mcss2 = evaluate_smarts(st2, smarts2, unique_sets=True)
+    try: mcss1 = evaluate_smarts(st1, smarts1, unique_sets=True)
+    except: mcss1 = evaluate_smarts(st1, smarts2, unique_sets=True)
+    try: mcss2 = evaluate_smarts(st2, smarts2, unique_sets=True)
+    except: mcss2 = evaluate_smarts(st2, smarts1, unique_sets=True)
     mcss1_st = [neutral(st1.extract(x)) for x in mcss1]
     mcss2_st = [neutral(st2.extract(x)) for x in mcss2]
     #print smarts1, smarts2
@@ -53,8 +55,8 @@ def proc_mcss(lig1, lig2, struct, glide_dir, out_dir):
      
     smarts1, smarts2, s1, s2, m = load_mcss(lig1, lig2)
 
-    st1 = StructureReader('../../ligands/unique/{}.mae'.format(lig1)).next()
-    st2 = StructureReader('../../ligands/unique/{}.mae'.format(lig2)).next()
+    st1 = StructureReader('../../ligands/prepared_ligands/{}/{}.mae'.format(lig1,lig1)).next()
+    st2 = StructureReader('../../ligands/prepared_ligands/{}/{}.mae'.format(lig2,lig2)).next()
     mcss1, mcss2, valid_mcss_pairs = find_mcss_matches(st1, smarts1, st2, smarts2)
    
     if len(valid_mcss_pairs) == 0:

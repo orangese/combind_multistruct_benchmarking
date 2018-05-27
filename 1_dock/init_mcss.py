@@ -19,7 +19,7 @@ def grouper(n, iterable, fillvalue=None):
     args = [iter(iterable)] * n 
     return itertools.izip_longest(*args, fillvalue=fillvalue)
 
-def init_mcss(chembl=None, max_num=25):
+def init_mcss(chembl=None, max_num=20):
 
     all_pairs = set([])
     if chembl is not None:
@@ -42,7 +42,7 @@ def init_mcss(chembl=None, max_num=25):
                 l1, l2 = pdb_ligs[i1], pdb_ligs[i2]
                 all_pairs.add((l1, l2))
 
-        for l1 in pdb_ligs:
+        for l1 in pdb_ligs[:max_num]:
             for l2 in chembl_ligs:
                 all_pairs.add((l1, l2))
 
@@ -99,14 +99,19 @@ def get_mcss(mcss_pairs):
 
 def get_size_file(size_pairs):
     for l1,l2 in size_pairs:
-        with open('{}/{}-{}.txt'.format(out_dir, l1, l2),'w') as f:
-            for st in StructureReader('{}/{}-{}.mae'.format(out_dir, l1, l2)):
-                prop = _StructureProperty(st)
-                smarts = prop['s_canvas_MCS_SMARTS']
-                msize = prop['i_canvas_MCS_Atom_Count'] 
-                size = len([a for a in st.atom if a.element != 'H'])
+        try:
+            with open('{}/{}-{}.txt'.format(out_dir, l1, l2),'w') as f:
+                for st in StructureReader('{}/{}-{}.mae'.format(out_dir, l1, l2)):
+                    prop = _StructureProperty(st)
+                    smarts = prop['s_canvas_MCS_SMARTS']
+                    msize = prop['i_canvas_MCS_Atom_Count'] 
+                    size = len([a for a in st.atom if a.element != 'H'])
 
-                f.write('{},{},{},{}\n'.format(st.title, size, msize, smarts))
+                    f.write('{},{},{},{}\n'.format(st.title, size, msize, smarts))
+        except:
+            print 'size file error', l1, l2
+            os.system('rm {}/{}-{}.mae'.format(out_dir, l1, l2))
+            os.system('rm {}/{}-{}.txt'.format(out_dir, l1, l2))
 
 
 

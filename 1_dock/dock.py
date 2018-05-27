@@ -105,19 +105,19 @@ def dock_pair(ligand, grid, out_dir, restrain=None):
     os.system('sbatch -p {} -t {} -o dock.out {}-{}.sh'.format(queue, time, ligand, grid))
     os.chdir('../../..')
 
-def dock(grids, chembl=None, maxnum=25):
+def dock(grids, chembl=None, maxnum=20):
     l_dir = 'ligands/prepared_ligands'
     l_path = '{}/{}/{}.mae'
     if not os.path.exists(l_dir): return
     all_ligs = sorted([l for l in os.listdir(l_dir) if os.path.exists(l_path.format(l_dir,l,l))])
-    to_dock = set([l for l in all_ligs if l[:6] != 'CHEMBL'][:maxnum])
-    
+    to_dock = set([l for l in all_ligs if l[:6] != 'CHEMBL'])
+   
     if chembl is not None:
         for f, f_data in chembl.items():
             for q, c_list in f_data.items():
                 to_dock.update(c_list)
 
-    for lig in to_dock:
+    for lig in sorted(list(to_dock))[:maxnum]:
         if len(lig.strip()) == 0: continue
         for grid in grids[:maxnum]:
             dock_pair(lig, grid, 'glide12')

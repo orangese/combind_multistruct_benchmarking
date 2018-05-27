@@ -8,7 +8,7 @@ class Statistics:
     def __init__(self, all_data, proteins, num_ligands, num_poses, features, smooth, normalize_fp):
         self.all_data = all_data
         self.proteins = {p:{} for p in proteins} # maps proteins to ligpairs
-        self.ligands = {p:prot.lm.pdb for p, prot in all_data.proteins.items()}
+        self.ligands = {p:prot.lm.get_docked(pdb_only=True) for p, prot in all_data.proteins.items()}
         self.features = features
         self.smooth = smooth
         self.normalize_fp = normalize_fp
@@ -42,8 +42,12 @@ class Statistics:
         for p,lps in self.proteins.items():
             for (l1,l2),lp in sorted(lps.items()):
                 print l1, l2
-                new_ev = Evidence({p:{(l1,l2):lp}}, {f_name:self.features[f_name]}, self.smooth, self.normalize_fp)
-                stats_hist(new_ev, f_name, raw, smoothed, conditional)
+                try:
+                    new_ev = Evidence({p:{(l1,l2):lp}}, {f_name:self.features[f_name]}, self.smooth, self.normalize_fp)
+                    stats_hist(new_ev, f_name, raw, smoothed, conditional)
+                except:
+                    print 'error'
+                    continue
 
 class Evidence:
     def __init__(self, all_data, features, smooth, normalize_fp):
