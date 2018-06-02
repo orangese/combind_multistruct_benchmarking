@@ -26,13 +26,13 @@ def parse_mcss_size(mcss_path, ligs1, ligs2, struct):
 
     return mcss_sizes
 
-def parse_mcss(mcss_path, num_poses, all_pairs, min_size=10):
+def parse_mcss(mcss_path, num_poses, all_pairs):
     mcss_scores = {}
     if not os.path.exists(mcss_path): return {}
     for l1,l2,st in all_pairs:
         fpath = '{}/{}-{}-to-{}.csv'.format(mcss_path, l1, l2, st)
         if not os.path.exists(fpath): continue
-        size = None
+        #size = None
         try:
             with open(fpath) as f:
                 for i, line in enumerate(f):
@@ -40,12 +40,12 @@ def parse_mcss(mcss_path, num_poses, all_pairs, min_size=10):
                     if i == 0:
                         if line[-1] == 'None': break
                         s1, s2, s3 = [float(i) for i in line]
-                        if int(s3) < min_size: break
-                        size = s3/(s1+s2-s3)
+                        if int(s3) < min(int(s1)/2, int(s2)/2): break
+                        #size = s3/(s1+s2-s3)
                         mcss_scores[(l1, l2)] = {}
                     p1,p2,rmsd = int(line[0]), int(line[1]), float(line[2])
-                    if rmsd*size > 100:
-                        print l1, l2, p1, p2, rmsd, size
+                    if rmsd > 100:
+                        print l1, l2, p1, p2, rmsd#, size
                     else:
                         mcss_scores[(l1, l2)][(p1, p2)] = rmsd#*size
                 else:

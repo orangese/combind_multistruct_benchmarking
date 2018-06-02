@@ -15,6 +15,43 @@ sys.path.append('../4_analyze')
 from containers import Dataset
 #from score_query import ScoreQuery
 
+def stats_hist(green_dist,blue_dist):
+
+    plt.rcParams['figure.figsize'] = (10,7.5)
+    plt.rcParams['figure.dpi'] = 400 
+    plt.rcParams['font.size'] = 20
+
+    xmin, xmax = -0.5, 1.5 
+    binwidth = 0.05
+    bins = np.arange(xmin, xmax + binwidth, binwidth)
+    
+    g_x = sorted(green_dist.prob.keys())#np.arange(xmin - std,xmax + std,std*0.01)#0.02)
+    g_px = [green_dist.prob[x] for x in g_x]
+
+    b_x = sorted(blue_dist.prob.keys())
+    b_px = [blue_dist.prob[x] for x in b_x]
+
+    plt.plot(b_x, b_px, linewidth=2, color='b')
+    plt.plot(g_x, g_px, linewidth=2, color='g')
+
+    plt.fill_between(b_x, 0, b_px, facecolor='b',alpha=0.2)
+    plt.fill_between(g_x, 0, g_px, facecolor='g',alpha=0.2)
+
+    plt.xlim(xmin, xmax)
+
+    ax = plt.subplot(111)  
+    ax.spines["top"].set_visible(False)  
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.get_xaxis().tick_bottom()  
+    ax.get_yaxis().set_visible(False)#.tick_left()
+
+    plt.xticks([0,1])
+    plt.tick_params(axis='x', direction='inout', length=13, width=3, pad=15)
+    ax.axhline(linewidth=4, color='k')#, color="g")
+
+    plt.show()
+
 def heatmap(A, row_vals, col_vals, red=10.25):
     fig, ax = plt.subplots()
     

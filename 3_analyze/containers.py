@@ -169,7 +169,6 @@ class LigandManager:
         if not pdb_only: return docked
         return [l for l in docked if l[:6] != 'CHEMBL']
 
-
     def get_chembl(self, stereo=True, max_ki=float('inf')):
         if len(self.chembl_info) == 0:
             self.chembl_info = load_chembl_proc(self.root, load_mcss=True)
