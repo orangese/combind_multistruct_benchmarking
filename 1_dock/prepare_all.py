@@ -14,40 +14,30 @@ from fp import fp
 from mcss import mcss
 
 from chembl_sort import get_ligands, proc_ligands
+from chembl_props import write_props
 from pick_helpers import pick_helpers, load_helpers
 from score import score
 
-os.chdir('../../data')
+sys.path.append('../3_analyze')
+from containers import LigandManager
+
+data_dir = '/scratch/PI/rondror/jbelk/method/data'
+glide_dir = 'docking/glide12'
+os.chdir(data_dir)
 
 todo = list(sys.argv[1])
 if len(todo) == 0:
-    todo = list('12345') 
+    todo = list('123456') 
 
 datasets = sys.argv[2:]
 if datasets == []:
     datasets = [d for d in sorted(os.listdir('.')) if d[0] != '.' and d[-3:] != 'old']
 
-print todo
-
-#grids = {'D2R':'6CM4','AR':'2PNU','A2AR':'2YDO','B1AR':'2VT4','B2AR':'2RH1','CHK1':'2BRN', 'PLK1':'2OWB',
-#         'VITD':'2HB7','BRAF':'3IDP','JAK2':'3KRR','CDK2':'1H1S','ERA':'1A52','GCR':'3K23','TRPV1':'3J5Q','SIGMA1':'5HK1'}
-
-grids = {
-    'D2R':'6CM4',
-    'AR':'2PNU',
-    'B1AR':'2VT4',
-    'TRPV1':'3J5Q',
-    'SIGMA1':'5HK1',
-    '5HT2B':'4IB4',
-    'DTRANSP':'4M48', 
-    'M3':'4U15'
-}
-
 for i, d in enumerate(datasets):
-
     print i, d
-
     os.chdir(d)
+
+    lm = LigandManager(d, data_dir, glide_dir, None)
  
     # 1. prepare proteins   
     if '1' in todo: 
@@ -58,43 +48,36 @@ for i, d in enumerate(datasets):
         align_structs()
         sort_files()
         make_grids()
-        dock(os.listdir('docking/grids'))
+        dock(lm)
      
     # 2. prepare ligands
     if '2' in todo:
         get_ligands()    
         proc_ligands()
-        init_mcss()
+        init_mcss(lm)
 
-    if False: # force redo of chembl info (do this if new chembl ligands have been added)
+    # force redo of chembl info (do this if new chembl ligands have been added)
+    if 'c' in todo:
         os.system('rm -f chembl/helpers/*')
         os.system('rm -f chembl/duplicates.txt')
         os.system('rm -f chembl/molw.txt')
+        write_props(lm)
 
-    # 3. decide what ligands to use
+    # 3. decide what ligands to use and prepare them
     if '3' in todo:
-        pick_helpers()
-        h = load_helpers()
-        init_mcss(h)
+        pick_helpers(lm)
+        init_mcss(lm, load_helpers())
+        dock(lm, load_helpers())
+        #fp(lm)
+        #mcss(lm, load_helpers())    
 
-    if len(os.listdir('docking/grids')) == 0: 
-        os.chdir('..')
-        continue
-
-    # 4. dock/fp/mcss those ligands
-    h = load_helpers()
-    to_prep = [sorted(os.listdir('docking/grids'))[0]]
-    if d in grids and grids[d] not in to_prep:
-        to_prep += grids[d]
-
+    # 4. compute statistics
     if '4' in todo:
-        dock(to_prep, h)
-        fp(to_prep)
-        mcss(to_prep, h)    
+        get_stats(lm)
 
     # 5. run method on all ligands
     if '5' in todo:
-        score(d, to_prep[0], h)
+        score(load_helpers())
 
     os.chdir('..')
 

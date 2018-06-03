@@ -6,6 +6,7 @@ from parse_files import parse_glide_output, parse_fp_file, parse_mcss, parse_mcs
 sys.path.append('../1_dock')
 from parse_chembl import load_chembl_raw, load_chembl_proc
 from pick_helpers import load_helpers
+from chembl_props import read_duplicates
 
 import numpy as np
 
@@ -129,7 +130,7 @@ class Protein:
         self.docking = {}
 
     def load(self, l_list, st, load_fp, load_crystal, load_mcss):
-        if st == None: st = self.lm.default_st
+        if st == None: st = self.lm.st
 
         if st not in self.docking:
             self.docking[st] = Docking(self.dock_dir, self.ifp_dir, self.mcss_dir, st)
@@ -144,40 +145,72 @@ class Protein:
 class LigandManager:
     def __init__(self, prot, data_dir, gdir, mdir):
         self.root = '{}/{}'.format(data_dir, prot)
+        self.prot = prot
         self.gdir = gdir
         self.mdir = mdir
 
-        self.all_st = {'D2R':'6CM4','AR':'2PNU','B1AR':'2VT4',
-            'TRPV1':'3J5Q','SIGMA1':'5HK1','5HT2B':'4IB4','DTRANSP':'4M48',
-            'M3':'4U15'}
+        #grids = {'D2R':'6CM4','AR':'2PNU','A2AR':'2YDO','B1AR':'2VT4','B2AR':'2RH1','CHK1':'2BRN', 'PLK1':'2OWB',
+        #         'VITD':'2HB7','BRAF':'3IDP','JAK2':'3KRR','CDK2':'1H1S','ERA':'1A52','GCR':'3K23','TRPV1':'3J5Q}
 
-        self.all_ligs = set([l for l in os.listdir('{}/ligands/prepared_ligands'.format(self.root))])
-        self.pdb = sorted([l for l in self.all_ligs if l[:6] != 'CHEMBL'])
+        self.all_st = {}
+
+        self.chembl_info = load_chembl_proc(self.root)
+        self.u_ligs, self.dup_ligs = read_duplicates(self.root)
+
+        self.all_ligs = self.prepped()
+        self.pdb = self.unique(sorted([l for l in self.all_ligs if l[:6] != 'CHEMBL']))
         self.grids = sorted(os.listdir('{}/docking/grids'.format(self.root)))
 
-        self.default_st = self.all_st.get(prot, self.pdb[0].split('_')[0])
+        self.first_st = self.grids[0]
+        self.st = self.all_st.get(prot, self.first_st)
 
-        self.chembl_info = {}
         self.mcss_sizes = {}
         self.helpers = {}
 
-    def get_docked(self, struct=None, pdb_only=False):
-        if struct == None: struct = self.default_st
-        docked = [l.split('-to-')[0] for l in os.listdir('{}/{}'.format(self.root, self.gdir))
-            if os.path.exists('{}/{}/{}/{}_pv.maegz'.format(self.root, self.gdir, l, l))
-            and l.split('-to-')[1] == struct]
-        if not pdb_only: return docked
-        return [l for l in docked if l[:6] != 'CHEMBL']
+    def prepped(self):
+        ligdir = '{}/ligands/prepared_ligands'.format(self.root)
+        if not os.path.exists(ligdir): return set([])
+        return set([l for l in os.listdir(ligdir) if os.path.exists('{}/{}/{}.mae'.format(ligdir,l,l))])
 
-    def get_chembl(self, stereo=True, max_ki=float('inf')):
-        if len(self.chembl_info) == 0:
-            self.chembl_info = load_chembl_proc(self.root, load_mcss=True)
-        tr = [l for l in self.all_ligs if l[:6] == 'CHEMBL' and (not stereo or self.chembl_info[l].valid_stereo)]
-        tr = [l for l in tr if self.chembl_info[l].ki <= max_ki]
-        return sorted(tr, key=lambda x: self.chembl_info[x].ki)
+    def chembl(self, filters=[], sort_key=lambda x:0, unique=False):
+        default = [
+            lambda x,ci: ci[x].ki <= 1000,
+            lambda x,ci: ci[x].mw <= 1000
+        ]
+        c = sorted([l for l in self.all_ligs if l in self.chembl_info 
+                    and False not in [f(l,self.chembl_info) for f in default+filters]], key=sort_key)
+        if unique: 
+            return self.unique(c)
+        return c
+
+    def unique(self, l_list):
+        # removes duplicates from l_list
+        # if identical ligands are found, the one that
+        # appears first in l_list will be kept
+        if len(self.u_ligs) == 0: 
+            'duplicates not loaded'
+            return l_list
+        unique_ligs = []
+        exclude = set([])
+        for l in l_list:
+            if l in exclude: continue
+            unique_ligs.append(l)
+            if l in self.u_ligs: continue
+            for l2, dups in self.dup_ligs.items():
+                if l in dups:
+                    exclude.update(dups)
+                    break
+            else:
+                print 'uh oh, ligand not found in unique or duplicates...', l
+        return unique_ligs
+
+    def docked(self, l_list, st=None):
+        if st == None: st = self.st
+        gpath = '{}/{}/{}-to-{}/{}-to-{}_pv.maegz'
+        return [l for l in l_list if os.path.exists(gpath.format(self.root, self.gdir, l,st,l,st))]
 
     def get_similar(self, query, fname, num=10, mcss_sort=False, struct=None):
-        if struct is None: struct = self.default_st
+        if struct is None: struct = self.st
         if fname not in self.helpers:
             self.helpers[fname] = load_helpers(self.root)[fname]
             for q in self.helpers[fname]:

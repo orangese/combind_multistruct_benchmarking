@@ -9,7 +9,7 @@ FUZZY_SCRIPT = "/scratch/PI/rondror/jbelk/method/combind/2_ifp/fuzzyifp.py"
 glide_dir = 'docking/glide12'
 output_dir = 'ifp/ifp2'
 
-queue = 'owners'
+queue = 'rondror'
 
 def grouper(n, iterable, fillvalue=None):
     #"grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
@@ -46,9 +46,7 @@ def structure_fp():
         os.system('sbatch --time=00:10:00 -n 1 -p {} {}.sh'.format(queue, pdb))
     os.chdir('../..')
 
-def fp(grids):
-    if not os.path.exists(glide_dir): return
-
+def fp(lm):
     os.system('mkdir -p ifp')
     os.system('mkdir -p {}'.format(output_dir))
 
@@ -60,15 +58,10 @@ def fp(grids):
             #print 'removing fp', fp
 
     unfinished = []    
-    for dock in sorted(os.listdir(glide_dir)):
-        input_file = '{}/{}/{}_pv.maegz'.format(glide_dir, dock, dock)
-        output_file = '{}/{}.fp'.format(output_dir, dock)
-        if not os.path.exists(input_file): continue
+    for lig in lm.docked(lm.pdb+lm.chembl()):
+        output_file = '{}/{}-to-{}.fp'.format(output_dir, lig, lm.st)
         if os.path.exists(output_file): continue
-        l, s = dock.split('-to-')
-        if s not in grids: continue
-        #print dock
-        unfinished.append(dock)
+        unfinished.append('{}-to-{}'.format(lig, lm.st))
         
     structure_fp()
     get_fp(unfinished)

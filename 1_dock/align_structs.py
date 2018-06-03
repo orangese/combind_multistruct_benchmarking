@@ -86,7 +86,7 @@ def align_structs(verbose=False):
         asl = '-asl "(not chain.name L) '#and not res.sec strand'
         
         if os.path.exists('../../../structures/raw_files/{}_lig.mae'.format(struct)):
-            asl += ' and (fillres within 20.0 chain. L)"'
+            asl += ' and (fillres within 12.0 chain. L)"'# and (not res.sec loop)"'
         else:
             asl += '"'
         

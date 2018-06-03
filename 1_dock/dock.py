@@ -1,8 +1,6 @@
 import os
 import sys
 
-from parse_chembl import load_chembl_proc
-
 XGLIDE_IN = '''GRIDFILE   ../../grids/{}/{}.zip
 LIGANDFILE   ../../../{}/{}/{}.mae
 DOCKING_METHOD   confgen
@@ -45,7 +43,7 @@ settings = { # peptides, pr, exp, enh, lig_source
     'glide12':(False, 'SP', 'False', 2, 'ligands/prepared_ligands')
 }
 
-queue = 'owners'
+queue = 'rondror'
 
 def glide_exists(ligand, grid, out_dir):
     pv_exists = os.path.exists('docking/{}/{}-to-{}/{}-to-{}_pv.maegz'.format(out_dir, ligand, grid, ligand, grid))
@@ -74,7 +72,7 @@ def dock_pair(ligand, grid, out_dir, restrain=None):
     print ligand, grid, out_dir
     os.system('mkdir -p docking/{}'.format(out_dir))
     os.chdir('docking/{}'.format(out_dir))
-    time = '01:30:00'
+    time = '00:30:00'
     if '{}-to-{}'.format(ligand, grid) in os.listdir('.'):
         time = '02:30:00'
         os.system('rm -rf {}-to-{}'.format(ligand, grid))
@@ -105,21 +103,21 @@ def dock_pair(ligand, grid, out_dir, restrain=None):
     os.system('sbatch -p {} -t {} -o dock.out {}-{}.sh'.format(queue, time, ligand, grid))
     os.chdir('../../..')
 
-def dock(grids, chembl=None, maxnum=20):
-    l_dir = 'ligands/prepared_ligands'
-    l_path = '{}/{}/{}.mae'
-    if not os.path.exists(l_dir): return
-    all_ligs = sorted([l for l in os.listdir(l_dir) if os.path.exists(l_path.format(l_dir,l,l))])
-    to_dock = set([l for l in all_ligs if l[:6] != 'CHEMBL'])
-   
-    if chembl is not None:
+def dock(lm, chembl=None, maxnum=20):
+
+    if chembl is None:
+        ligs = lm.pdb[:maxnum]
+        grids = lm.grids[:maxnum]
+    else:
+        ligs = set([])
+        grids = [lm.st]
         for f, f_data in chembl.items():
             for q, c_list in f_data.items():
-                to_dock.update(c_list)
+                ligs.add(q)
+                ligs.update(c_list)
 
-    for lig in sorted(list(to_dock))[:maxnum]:
-        if len(lig.strip()) == 0: continue
-        for grid in grids[:maxnum]:
+    for lig in ligs:
+        for grid in grids:
             dock_pair(lig, grid, 'glide12')
             
 

@@ -40,7 +40,7 @@ def make_grids():
                         
         print 'making grid', out_f
         os.chdir('docking/grids/{}'.format(out_f))
-        os.system('sbatch -p owners -t 00:30:00 -o grid.out grid_in.sh')
+        os.system('sbatch -p rondror -t 00:30:00 -o grid.out grid_in.sh')
         os.chdir('../../..')
 
 

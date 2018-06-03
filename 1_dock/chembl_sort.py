@@ -6,6 +6,8 @@ import itertools
 
 from parse_chembl import load_chembl_raw, load_chembl_proc, desalt
 
+queue = 'rondror'
+
 def grouper(n, iterable, fillvalue=None):
     args = [iter(iterable)] * n 
     return itertools.izip_longest(*args, fillvalue=fillvalue)
@@ -55,11 +57,16 @@ def proc_ligands():
     for l in all_u:
         prepped = 'ligands/prepared_ligands/{}/{}_out.mae'.format(l,l)
         if os.path.exists(prepped):
-            st = StructureReader(prepped).next() # first epik state
-            st.title = l
-            st_wr = StructureWriter('ligands/prepared_ligands/{}/{}.mae'.format(l,l))
-            st_wr.append(st)
-            st_wr.close()
+            try:
+                st = StructureReader(prepped).next() # first epik state
+                st.title = l
+                st_wr = StructureWriter('ligands/prepared_ligands/{}/{}.mae'.format(l,l))
+                st_wr.append(st)
+                st_wr.close()
+            except:
+                print 'lig proc error',l
+                os.system('rm {}'.format(prepped))
+                unfinished.append(l)
         else:
             unfinished.append(l)
 
@@ -86,7 +93,7 @@ def proc_ligands():
                     f2.write(epik_command.format(name, name))
 
         os.chdir('ligands/prepared_ligands')
-        os.system('sbatch -p owners -t 1:00:00 batch-{}.sh'.format(i))
+        os.system('sbatch -p {} -t 1:00:00 batch-{}.sh'.format(queue,i))
         os.chdir('../..')
 
 

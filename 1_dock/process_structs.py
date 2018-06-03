@@ -9,6 +9,8 @@ from schrodinger.structure import StructureReader, StructureWriter
 
 command = '$SCHRODINGER/utilities/prepwizard -WAIT -watdist 0 {}_in.mae {}_out.mae'
 
+queue = 'rondror'
+
 def load_complex(pdb_id):
     prot_in = 'structures/raw_files/{}_prot.mae'.format(pdb_id)
     lig_in = 'structures/raw_files/{}_lig.mae'.format(pdb_id)
@@ -64,5 +66,5 @@ def process_structs():
         with open('process_in.sh', 'w') as f:
             f.write('#!/bin/bash\nmodule load schrodinger\n')
             f.write(command.format(o_dir, o_dir))
-        os.system('sbatch -p owners -t 00:30:00 -o slurm.out process_in.sh')
+        os.system('sbatch -p {} -t 00:30:00 -o slurm.out process_in.sh'.format(queue))
         os.chdir('../../..')
