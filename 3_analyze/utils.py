@@ -4,16 +4,48 @@ import sys
 import numpy as np
 
 import matplotlib
-#matplotlib.use('Agg')
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 import matplotlib.cm as cm
 from matplotlib import gridspec
-
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-sys.path.append('../4_analyze')
-from containers import Dataset
-#from score_query import ScoreQuery
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+def plot_docking(rmsds_list, title_list, plt_title=''):
+    plt.figure(figsize=(6,6))
+    plt.plot([2,2],[0,1],'--k')
+    
+    prop_ligands = np.cumsum([-1.0/len(rmsds_list[0])] + 
+                             [1.0/len(rmsds_list[0]) for i in rmsds_list[0]] + 
+                             [1.0/len(rmsds_list[0])])
+
+    count_none = len([i for i in rmsds_list[0] if i is None])
+    if count_none != 0:  
+        print plt_title, count_none, 'did not dock'
+        frac_docked = 1 - float(count_none)/float(len(rmsds_list[0]))
+        plt.plot([0,8],[frac_docked, frac_docked], '--k')
+    for i, r in enumerate(rmsds_list):
+        r = [j if j is not None else 100 for j in r]
+        x = sorted([0] + r + [max(r)])
+        plt.step(x, prop_ligands, label=title_list[i], linewidth=2)
+
+    plt.gca().set_xlim([0,6])
+    plt.gca().set_ylim([0,1])
+    plt.xlabel('Error [RMSD, $\AA$]', size=20)
+    plt.ylabel('Cumulative Proportion of Ligands', size=20)
+    plt.title(plt_title, size=24)
+    plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., fontsize=20)#, ncol=3)
+    #plt.legend()
+
+    plt.tick_params(axis='both', which='major', labelsize=20)
+    plt.gca().title.set_position([.5, 1.00])
+    x0, x1 = plt.xlim()
+    y0, y1 = plt.ylim()
+    plt.gca().set_aspect(abs(x1-x0)/abs(y1-y0))
+    
+    plt.show()
 
 def stats_hist(green_dist,blue_dist):
 

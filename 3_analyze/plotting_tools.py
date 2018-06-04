@@ -1,6 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
-import matplotlib.cm as CM
+import matplotlib.cm as cm
 
 def plot_docking(rmsds_list, title_list, plt_title=''):
     plt.figure(figsize=(6,6))
@@ -304,7 +304,7 @@ def plot_n_rmsds(scores, lab=''):
 def heatmap(A, row_vals, col_vals, red=10.25, row_label='ligands', col_label='structures'):
     fig, ax = plt.subplots()
 
-    cmap = CM.jet
+    cmap = cm.jet
     cmap.set_under('black')
 
     heatmap = ax.pcolor(A, cmap=cmap, vmin=0, vmax=red)

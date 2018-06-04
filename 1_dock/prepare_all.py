@@ -21,9 +21,7 @@ from score import score
 sys.path.append('../3_analyze')
 from containers import LigandManager
 
-data_dir = '/scratch/PI/rondror/jbelk/method/data'
-glide_dir = 'docking/glide12'
-os.chdir(data_dir)
+os.chdir('../../data')
 
 todo = list(sys.argv[1])
 if len(todo) == 0:
@@ -37,8 +35,8 @@ for i, d in enumerate(datasets):
     print i, d
     os.chdir(d)
 
-    lm = LigandManager(d, data_dir, glide_dir, None)
- 
+    lm = LigandManager(d)
+    
     # 1. prepare proteins   
     if '1' in todo: 
         pdb_st = None
@@ -48,7 +46,7 @@ for i, d in enumerate(datasets):
         align_structs()
         sort_files()
         make_grids()
-        dock(lm)
+        #dock(lm)
      
     # 2. prepare ligands
     if '2' in todo:
@@ -59,17 +57,17 @@ for i, d in enumerate(datasets):
     # force redo of chembl info (do this if new chembl ligands have been added)
     if 'c' in todo:
         os.system('rm -f chembl/helpers/*')
-        os.system('rm -f chembl/duplicates.txt')
-        os.system('rm -f chembl/molw.txt')
-        write_props(lm)
+        #os.system('rm -f chembl/duplicates.txt')
+        #os.system('rm -f chembl/molw.txt')
+        #write_props(lm)
 
     # 3. decide what ligands to use and prepare them
     if '3' in todo:
         pick_helpers(lm)
         init_mcss(lm, load_helpers())
         dock(lm, load_helpers())
-        #fp(lm)
-        #mcss(lm, load_helpers())    
+        fp(lm)
+        mcss(lm, load_helpers())    
 
     # 4. compute statistics
     if '4' in todo:

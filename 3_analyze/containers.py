@@ -1,14 +1,18 @@
 import os
 import sys
+import numpy as np
 
 from parse_files import parse_glide_output, parse_fp_file, parse_mcss, parse_mcss_size
 
 sys.path.append('../1_dock')
-from parse_chembl import load_chembl_raw, load_chembl_proc
+from parse_chembl import load_chembl_proc
 from pick_helpers import load_helpers
 from chembl_props import read_duplicates
 
-import numpy as np
+data_dir = '/scratch/PI/rondror/jbelk/method/data'
+glide_dir = 'docking/glide12'
+ifp_dir = 'ifp/ifp2'
+mcss_dir = 'mcss/mcss7'
 
 class Pose:
     def __init__(self, rmsd, physics_score, fp, rank):
@@ -70,10 +74,10 @@ class Ligand:
         return self.poses[np.argmin([self.poses[i].rmsd for i in range(min(n, len(self.poses)))])]
 
 class Docking:
-    def __init__(self, dock_dir, ifp_dir, mcss_dir, struct):
-        self.dock_dir = dock_dir
-        self.ifp_dir = ifp_dir
-        self.mcss_dir = mcss_dir
+    def __init__(self, prot, struct):
+        self.dock_dir = '{}/{}/{}'.format(data_dir, prot, glide_dir)
+        self.ifp_dir = '{}/{}/{}'.format(data_dir, prot, ifp_dir)
+        self.mcss_dir = '{}/{}/{}'.format(data_dir, prot, mcss_dir)
 
         self.struct = struct
         self.ligands = {}
@@ -117,14 +121,9 @@ class Docking:
         return rmsds
 
 class Protein:
-    def __init__(self, uniprot, data_dir, glide_dir, ifp_dir, mcss_dir):
-        self.uniprot = uniprot
-
-        self.dock_dir = '{}/{}/{}'.format(data_dir, uniprot, glide_dir)
-        self.ifp_dir = '{}/{}/{}'.format(data_dir, uniprot, ifp_dir)
-        self.mcss_dir = '{}/{}/{}'.format(data_dir, uniprot, mcss_dir)
-
-        self.lm = LigandManager(uniprot, data_dir, glide_dir, mcss_dir)
+    def __init__(self, prot):
+        self.prot = prot
+        self.lm = LigandManager(prot)
 
         self.true = {}
         self.docking = {}
@@ -133,7 +132,7 @@ class Protein:
         if st == None: st = self.lm.st
 
         if st not in self.docking:
-            self.docking[st] = Docking(self.dock_dir, self.ifp_dir, self.mcss_dir, st)
+            self.docking[st] = Docking(self.prot, st)
         self.docking[st].load(l_list, load_fp, load_mcss)
         
         if load_crystal:
@@ -143,11 +142,8 @@ class Protein:
                 self.true[l].load_poses(None, ifp_dir, l)
 
 class LigandManager:
-    def __init__(self, prot, data_dir, gdir, mdir):
+    def __init__(self, prot):
         self.root = '{}/{}'.format(data_dir, prot)
-        self.prot = prot
-        self.gdir = gdir
-        self.mdir = mdir
 
         #grids = {'D2R':'6CM4','AR':'2PNU','A2AR':'2YDO','B1AR':'2VT4','B2AR':'2RH1','CHK1':'2BRN', 'PLK1':'2OWB',
         #         'VITD':'2HB7','BRAF':'3IDP','JAK2':'3KRR','CDK2':'1H1S','ERA':'1A52','GCR':'3K23','TRPV1':'3J5Q}
@@ -159,7 +155,7 @@ class LigandManager:
 
         self.all_ligs = self.prepped()
         self.pdb = self.unique(sorted([l for l in self.all_ligs if l[:6] != 'CHEMBL']))
-        self.grids = sorted(os.listdir('{}/docking/grids'.format(self.root)))
+        self.grids = sorted([l for l in os.listdir('{}/docking/grids'.format(self.root)) if l[0] != '.'])
 
         self.first_st = self.grids[0]
         self.st = self.all_st.get(prot, self.first_st)
@@ -207,15 +203,14 @@ class LigandManager:
     def docked(self, l_list, st=None):
         if st == None: st = self.st
         gpath = '{}/{}/{}-to-{}/{}-to-{}_pv.maegz'
-        return [l for l in l_list if os.path.exists(gpath.format(self.root, self.gdir, l,st,l,st))]
+        return [l for l in l_list if os.path.exists(gpath.format(self.root, glide_dir, l,st,l,st))]
 
     def get_similar(self, query, fname, num=10, mcss_sort=False, struct=None):
         if struct is None: struct = self.st
         if fname not in self.helpers:
             self.helpers[fname] = load_helpers(self.root)[fname]
             for q in self.helpers[fname]:
-                self.helpers[fname][q] = [l for l in self.helpers[fname][q] 
-                    if l in set(self.get_docked(struct))]
+                self.helpers[fname][q] = self.docked(self.helpers[fname][q], struct)
 
         # mcss has two steps:
         # 1. we use the canvasMCS tool to find the MCSS between two ligands (output: smarts)
@@ -230,7 +225,7 @@ class LigandManager:
             if fname not in self.mcss_sizes:
                 self.mcss_sizes[fname] = {}
             if query not in self.mcss_sizes[fname]:
-                mcss_path = '{}/{}'.format(self.root, self.mdir) 
+                mcss_path = '{}/{}'.format(self.root, mcss_dir)
                 all_pairs = parse_mcss_size(mcss_path, set([query]), set(self.helpers[fname][query]), struct)
                 self.mcss_sizes[fname][query] = {}
                 for (l1,l2),sz in all_pairs.items():
@@ -240,17 +235,13 @@ class LigandManager:
                         self.mcss_sizes[fname][query][l1] = sz[2]
 
                 ligs = self.helpers[fname][query]
-
                 self.helpers[fname][query].sort(key=lambda x:-self.mcss_sizes[fname][query].get(x,0))
 
         return self.helpers[fname][query][:num]
 
 class Dataset:
-    def __init__(self, prots, data_dir, glide_dir, ifp_dir, mcss_dir):
-        self.data_dir = data_dir
-        self.proteins = {}
-        for u in prots:
-            self.proteins[u] = Protein(u, data_dir, glide_dir, ifp_dir, mcss_dir)
+    def __init__(self, prots):
+        self.proteins = { p : Protein(p) for p in prots }
             
     def load(self, ligs={}, structs={}, load_fp=True, load_crystal=False, load_mcss=True):
         for p, l_list in ligs.items():

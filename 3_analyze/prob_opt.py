@@ -3,10 +3,10 @@ import random
 from pairs import LigPair
 
 class PredictStructs:
-    def __init__(self, docking_st, evidence, features, max_poses, T, reference='ALL', normalize_fp=True):
+    def __init__(self, docking_st, evidence, k_list, max_poses, T, reference='ALL', normalize_fp=True):
         self.docking_st = docking_st
         self.ev = evidence
-        self.features = features
+        self.k_list = k_list
         self.max_poses = max_poses
         self.T = float(T)
         self.reference = reference
@@ -158,9 +158,9 @@ class PredictStructs:
         for i, ligname1 in enumerate(lig_order):
             for j, ligname2 in enumerate(lig_order):
                 if j <= i: continue
-                k_val, p_x_native, p_x = self._likelihoods_for_pair_and_single_feature(k, pose_cluster,
+                x_k, p_x_native, p_x = self._likelihoods_for_pair_and_single_feature(k, pose_cluster,
                                                                                    ligname1, ligname2)
-                x[i, j] = k_val
+                x[i, j] = x_k
                 log_likelihood_ratio[i, j] = np.log(p_x_native) - np.log(p_x)
         return x, log_likelihood_ratio
 
@@ -180,7 +180,7 @@ class PredictStructs:
 
                 poses_cluster[ligname1] and pose_clusters[ligname2]
         
-        as the the sum of the log likelihoods of each of the features.
+        as the the sum of the log likelihoods of each of the k_list.
 
         This function supports 3 options for the "denominator" or "reference"
         distribution that is specified by self.reference.
@@ -191,7 +191,7 @@ class PredictStructs:
         
         if pair_key not in self.log_likelihood_ratio_cache:
             log_likelihood = 0
-            for k in self.features:
+            for k in self.k_list:
                 _, p_x_native, p_x = self._likelihoods_for_pair_and_single_feature(k, pose_cluster,
                                                                                    ligname1, ligname2)
                 log_likelihood += np.log(p_x_native) - np.log(p_x)
@@ -204,39 +204,30 @@ class PredictStructs:
         Returns the feature value 'x' and its likelihoods P(x|l) and P(x)
         for feature 'fname' and poses pose_cluster[ligname1] and pose_cluster[ligname2].
         """
-        k_val = self._get_feature(k, ligname1, ligname2,
+        x_k = self._get_feature(k, ligname1, ligname2,
                                   pose_cluster[ligname1], pose_cluster[ligname2])
         
-        if k_val is None: return 0, 1, 1
+        if x_k is None: return 0, 1, 1
         if self.normalize_fp:
-            assert k_val <= 1 and k_val >= 0, "{} {}".format(k, k_val)
+            assert x_k <= 1 and x_k >= 0, "{} {}".format(k, x_k)
 
-        p_x_native  = self.ev.evaluate(k, k_val, 1)
+        p_x_native  = self.ev.evaluate(k, x_k, 1)
         
         # Choose between 3 potential options for reference distribution
         if self.reference == 'DECOY':
-            p_x= self.ev.evaluate(k, k_val, 0)
+            p_x= self.ev.evaluate(k, x_k, 0)
         elif self.reference == 'ALL':
-            p_x = self.ev.evaluate(k, k_val, -1)   
+            p_x = self.ev.evaluate(k, x_k, -1)   
         elif self.reference == 'LTP':
             prior = (  self._get_prior(ligname1, pose_cluster[ligname1])
                      * self._get_prior(ligname2, pose_cluster[ligname2]))
-            p_x = (  self.ev.evaluate(k, k_val, 1) * prior
-                   + self.ev.evaluate(k, k_val, 0) * (1 - prior))
+            p_x = (  self.ev.evaluate(k, x_k, 1) * prior
+                   + self.ev.evaluate(k, x_k, 0) * (1 - prior))
         elif self.reference == 'OLD':
-            p_x_native = np.exp(k_val) if k != 'mcss' else 1.0
+            p_x_native = np.exp(x_k) if k != 'mcss' else 1.0
             p_x = 1.0
 
-        return k_val, p_x_native, p_x
-
-    def score_query(self, query, optimal_cluster):
-         print 'fixme'
-#        eval_cluster = {l:p for l,p in optimal_cluster.items()}
-#        scores = []
-#        for p in range(self.ligset.n(query)):
-#            eval_cluster[query] = p
-#            scores.append(self.joint_posterior(eval_cluster, sample_l=query)[0])
-#        return scores
+        return x_k, p_x_native, p_x
 
     def _get_feature(self, fname, l1, l2, p1, p2):
         if l1 > l2:
@@ -244,9 +235,9 @@ class PredictStructs:
             p1, p2 = p2, p1
 
         if (l1, l2) not in self.lig_pairs:
-
             self.lig_pairs[(l1, l2)] = LigPair(self.docking_st.ligands[l1], self.docking_st.ligands[l2],
-                                               self.features, self.docking_st.mcss, self.max_poses, self.normalize_fp)
+                                               self.k_list, self.docking_st.mcss, self.max_poses, self.normalize_fp)
+
         return self.lig_pairs[(l1, l2)].get_feature(fname, p1, p2)
 
 

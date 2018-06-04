@@ -1,12 +1,23 @@
 import numpy as np
 
+k_defs = {
+    'mcss':[],
+    'hbond':[2,3],
+    'sb':[4],
+    #'pipi1':[5],
+    'pipi':[6],
+    'picat':[7,8],
+    #'c1':[10],
+    'contact':[11]
+}
+
 class LigPair:
     def __init__(self, l1, l2, features, mcss, max_poses, normalize_fp):
         self.l1 = l1
         self.l2 = l2
         self.max_poses = max_poses
         self.mcss = mcss
-        self.features = features
+        self.k_list = features
         self.normalize_fp = normalize_fp
 
         self.pose_pairs = {}
@@ -18,25 +29,25 @@ class LigPair:
             self.init_pose_pairs()
             self._init_feat_map()
 
-    def get_feature(self, f_name, r1, r2):
+    def get_feature(self, k, r1, r2):
         """
         Compute the feature value for poses r1 and r2 for feature 'f_name'.
         Normalize by the maximum feature value for any pose pair
         if self.normalize_fp.
         """
         pp = self.get_pose_pair(r1, r2)
-        pp_x = pp.get_feature(f_name,self.features[f_name])
-        if pp_x is None: return None # ignore feature
+        x_k = pp.get_feature(k)
+        if x_k is None: return None # ignore feature
         
         # Normalization factor is 1 if unnormalized, otherwise
         # it is the maximum feature value for the pair
         mi, ma = 0.0, 1.0
         if self.normalize_fp:
-            mi,ma = self.feat_map[f_name]
+            mi,ma = self.feat_map[k]
             if mi == ma: return None
 
-        if f_name == 'mcss': return 1 - pp_x/ma
-        return pp_x/ma
+        if k == 'mcss': return 1 - x_k/ma
+        return x_k/ma
 
     def get_pose_pair(self, r1, r2):
         if (r1, r2) not in self.pose_pairs:
@@ -60,10 +71,10 @@ class LigPair:
                 self.get_pose_pair(r1, r2)
 
     def _init_feat_map(self):
-        self.feat_map = {f:(float('inf'),-float('inf')) for f in self.features}
+        self.feat_map = {k:(float('inf'),-float('inf')) for k in self.k_list}
         for key,pp in self.pose_pairs.items():
             for f,(minval,maxval) in self.feat_map.items():
-                pp_x = pp.get_feature(f,self.features[f])
+                pp_x = pp.get_feature(f)
                 self.feat_map[f] = (min(minval,pp_x),max(maxval,pp_x))
 
 
@@ -71,25 +82,22 @@ class PosePair:
     def __init__(self, p1, p2, mcss_score):
         self.p1 = p1
         self.p2 = p2
-    
-        self.x = {'mcss':None}
-        if mcss_score is not None:
-            self.x['mcss'] = round(mcss_score,2)
+        self.x = {'mcss':mcss_score}
 
     def correct(self):
         if self.p1.rmsd <= 2 and self.p2.rmsd <= 2:
             return 1
         return 0
 
-    def get_feature(self, feat_name, feat_def):
-        if feat_name in self.x:
-            return self.x[feat_name]
-        self.x[feat_name] = self.interaction_similarity(feat_def)
-        return self.x[feat_name]
+    def get_feature(self, k):
+        if k not in self.x:
+            self.x[k] = self.interaction_similarity(k)
+        return self.x[k]
 
-    def interaction_similarity(self, i_list):
+    def interaction_similarity(self, k):
+        assert k in k_defs, k
         sc = 0 
         for i,r in self.p1.fp:
-            if i in i_list and (i,r) in self.p2.fp:
+            if i in k_defs[k] and (i,r) in self.p2.fp:
                 sc += (self.p1.fp[(i,r)]*self.p2.fp[(i,r)])**0.5
-        return round(sc,2)
+        return sc

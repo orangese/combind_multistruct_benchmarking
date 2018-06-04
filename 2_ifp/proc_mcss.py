@@ -59,7 +59,7 @@ def proc_mcss(lig1, lig2, struct, glide_dir, out_dir):
     st2 = StructureReader('../../ligands/prepared_ligands/{}/{}.mae'.format(lig2,lig2)).next()
     mcss1, mcss2, valid_mcss_pairs = find_mcss_matches(st1, smarts1, st2, smarts2)
    
-    if len(valid_mcss_pairs) == 0:
+    if m == 0 or len(valid_mcss_pairs) == 0:
         print 'no mcss found', lig1, smarts1, lig2, smarts2
         with open('{}-{}-to-{}.csv'.format(lig1,lig2,struct), 'w') as f:
             f.write('{},{},0\n'.format(s1, s2))
@@ -78,7 +78,7 @@ def proc_mcss(lig1, lig2, struct, glide_dir, out_dir):
 
                 mcss1, mcss2, valid_mcss_pairs = find_mcss_matches(p1, smarts1, p2, smarts2)
                 if len(valid_mcss_pairs) == 0:
-                    print 'no mcss found for poses', lig1, lig2, st
+                    print 'no mcss found for poses', lig1, lig2, struct
                     return
 
                 rmsd = 10000

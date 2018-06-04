@@ -26,11 +26,11 @@ class Distribution:
         return self.prob[round(x,self.resolution)]
 
 class AllStatistics:
-    def __init__(self, prots, features):
-        self.proteins = {p:ProteinStatistics(l,features) for p,l in prots.items()}
-        self.features = features
+    def __init__(self, prots, k_list):
+        self.proteins = {p:ProteinStatistics(l,k_list) for p,l in prots.items()}
+        self.k_list = k_list
         self.ind = [-1,0,1]
-        self.dist = {i: {k: None for k in features} for i in self.ind}
+        self.dist = {i: {k: None for k in k_list} for i in self.ind}
 
     def create(self, dataset, samples, smooth, num_poses):
         for p, pstats in self.proteins.items():
@@ -48,21 +48,21 @@ class AllStatistics:
         combine(self.dist, self.proteins)
 
 class ProteinStatistics:
-    def __init__(self, ligs, features):
+    def __init__(self, ligs, k_list):
         self.ligs = sorted(ligs)
         self.pairs = {}
         for i1,l1 in enumerate(self.ligs):
             for l2 in self.ligs[i1+1:]:
-                self.pairs[(l1,l2)] = LigPairStatistics(l1,l2,features)
+                self.pairs[(l1,l2)] = LigPairStatistics(l1,l2,k_list)
 
-        self.features = features
+        self.k_list = k_list
         self.ind = [-1,0,1]
-        self.dist = {i: {k: None for k in features} for i in self.ind}
+        self.dist = {i: {k: None for k in k_list} for i in self.ind}
 
     def create(self, docking, samples, smooth, num_poses):
         for (l1,l2), pstats in self.pairs.items():
             lp = LigPair(docking.ligands[l1], docking.ligands[l2],
-                         self.features, docking.mcss, num_poses, True)
+                         self.k_list, docking.mcss, num_poses, True)
             lp.init_pose_pairs()
             pstats.create(lp, samples, smooth)
         combine(self.dist, self.pairs)
@@ -77,16 +77,16 @@ class ProteinStatistics:
         combine(self.dist, self.pairs)
 
 class LigPairStatistics:
-    def __init__(self, l1, l2, features):
+    def __init__(self, l1, l2, k_list):
         self.l1 = l1
         self.l2 = l2
-        self.features = features
+        self.k_list = k_list
         self.ind = [-1,0,1]
-        self.dist = {i: {k: None for k in features} for i in self.ind}
+        self.dist = {i: {k: None for k in k_list} for i in self.ind}
 
     def create(self, lig_pair, samples=10**4, smooth=0.02):
         domain = np.linspace(-1,2,3*samples+1)
-        for k in self.features:
+        for k in self.k_list:
             x_k = {i: [] for i in self.ind}
             for (r1,r2),pp in lig_pair.pose_pairs.items():
                 pp_x = lig_pair.get_feature(k, r1, r2)
@@ -103,7 +103,7 @@ class LigPairStatistics:
                 self.dist[i][k] = Distribution(domain, p_domain)
 
     def write(self, out_path):
-        for k in self.features:
+        for k in self.k_list:
             out_f = '{}/{}-{}-{}.txt'.format(out_path, self.l1, self.l2, k)    
             with open(out_f, 'w') as f:
                 for i in self.ind:
@@ -112,7 +112,7 @@ class LigPairStatistics:
                         f.write('{},{},{}\n'.format(i,x,d.prob[x]))
 
     def read(self, out_path):
-        for k in self.features:
+        for k in self.k_list:
             out_f = '{}/{}-{}-{}.txt'.format(out_path, self.l1, self.l2, k)    
             temp_map = {i:{} for i in self.ind}
             with open(out_f, 'w') as f:
