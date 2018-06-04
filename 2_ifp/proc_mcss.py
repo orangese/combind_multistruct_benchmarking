@@ -22,9 +22,14 @@ def neutral(st,aggressive=True):
     return st
 
 def load_mcss(lig1, lig2):
-    with open('{}/{}-{}.txt'.format(mcss_dir, lig1, lig2)) as f:
-        l1,s1,m1,smarts1 = f.readline().strip().split(',')
-        l2,s2,m2,smarts2 = f.readline().strip().split(',')
+    try:
+        with open('{}/{}-{}.txt'.format(mcss_dir, lig1, lig2)) as f:
+            l1,s1,m1,smarts1 = f.readline().strip().split(',')
+            l2,s2,m2,smarts2 = f.readline().strip().split(',')
+    except:
+        print 'mcss file error'
+        os.system('rm -rf {}/{}-{}.txt'.format(mcss_dir, lig1, lig2))
+        exit()
     assert lig1 == l1
     assert lig2 == l2
     assert m1 == m2

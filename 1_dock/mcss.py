@@ -16,8 +16,6 @@ def grouper(n, iterable, fillvalue=None):
     return itertools.izip_longest(*args, fillvalue=fillvalue) #NOTE: izip_longest is zip_longest in python2
 
 def mcss(lm, h=None):
-    if not os.path.exists(lm.gdir): return
-
     os.system('mkdir -p mcss')
     os.system('mkdir -p mcss/{}'.format(out_dir))
     os.system('rm -f mcss/{}/*.sh'.format(out_dir))
@@ -57,7 +55,7 @@ def mcss(lm, h=None):
     if len(unfinished_pairs) > 0:
         print len(unfinished_pairs), 'mcss rmsd left'
     
-    group_size = 12
+    group_size = 1
     os.chdir('mcss/{}'.format(out_dir))
     os.system('rm -f *.sh')
     for i, pairs in enumerate(grouper(group_size, unfinished_pairs)):
@@ -68,7 +66,7 @@ def mcss(lm, h=None):
                 l1,l2 = p
                 f.write('$SCHRODINGER/run {} {} {} {} {} {}\n'.format(script, l1, l2, lm.st, lm.gdir, out_dir))
             f.write('wait\n')
-        os.system('sbatch --tasks=6 --cpus-per-task=1 -p {} -t 1:30:00 {}_in.sh'.format(queue,i))
+        os.system('sbatch --tasks=1 --cpus-per-task=1 -p {} -t 2:00:00 {}_in.sh'.format(queue,i))
 
     os.chdir('../..')
 
