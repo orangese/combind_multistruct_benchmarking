@@ -59,11 +59,10 @@ def read_duplicates(dir_path=None):
                 duplicates[l_list[0]] = set(l_list)
     return unique, duplicates
 
-def read_mcss(dir_path=None):
+def read_mcss(dir_path=None, containing_lig=None):
     mcss = {}
 
     l_dir = 'ligands/prepared_ligands'
-    l_path = '{}/{}/{}.mae'
     mcsspath = 'ligands/mcss/mcss7'
     if dir_path is not None:
         l_dir = '{}/{}'.format(dir_path, l_dir)
@@ -73,24 +72,25 @@ def read_mcss(dir_path=None):
         print os.listdir('.')
         return {} 
 
-    all_ligs = sorted([l for l in os.listdir(l_dir) if os.path.exists(l_path.format(l_dir, l, l))])
-    pdb_ligs = [l for l in all_ligs if l[:6] != 'CHEMBL']
-    for q in pdb_ligs:
-        qpairs = [f for f in os.listdir(mcsspath) if f.split('-')[0] == q and f[-3:] == 'txt']
-        for pfile in qpairs:
-            try:
-                with open('{}/{}'.format(mcsspath,pfile)) as f:
-                    l1,s1,m1,smarts1 = f.readline().strip().split(',')
-                    l2,s2,m2,smarts2 = f.readline().strip().split(',')
-                    assert l1 == q, '{} {} {} error'.format(l1,q,pfile)
-                    assert m1 == m2, 'msize error {}'.format(pfile)
-                    if m1 == 0: continue
-                    if l1 not in mcss: mcss[l1] = {}
-                    mcss[l1][l2] = (int(s1),int(s2),int(m1))
-            except Exception as e:
-                print e
-                print pfile, l1,l2
-                os.system('rm -f {}/{}'.format(mcsspath,pfile))
+    q = containing_lig
+    qpairs = [f for f in os.listdir(mcsspath) if q in f and f[-3:] == 'txt']
+    for pfile in qpairs:
+        try:
+            with open('{}/{}'.format(mcsspath,pfile)) as f:
+                l1,s1,m1,smarts1 = f.readline().strip().split(',')
+                l2,s2,m2,smarts2 = f.readline().strip().split(',')
+                assert q in (l1,l2), '{} {} {} error'.format(l1,q,pfile)
+                assert m1 == m2, 'msize error {}'.format(pfile)
+                if m1 == 0: continue
+                if q == l2:
+                    l1,l2 = l2,l1
+                    s1,s2 = s2,s1
+                    smarts1,smarts2 = smarts2,smarts1
+                mcss[l2] = (int(s1),int(s2),int(m1))
+        except Exception as e:
+            print e
+            print pfile, l1,l2
+            #os.system('rm -f {}/{}'.format(mcsspath,pfile))
 
     return mcss
 
