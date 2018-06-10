@@ -1,26 +1,34 @@
 import os
 import sys
+import itertools
 
-output_dir = 'scores/test'
-script = '/scratch/PI/rondror/jbelk/method/combind/4_score/score_query.py'
+group_size=10
+def grouper(n, iterable, fillvalue=None):
+    args = [iter(iterable)] * n 
+    return itertools.izip_longest(*args, fillvalue=fillvalue)
+
+output_dir = 'scores/scores10'
+cmd = '$SCHRODINGER/run /scratch/PI/rondror/jbelk/method/combind/3_analyze/scores.py {} {} {}'
 
 settings = {
     'data_dir' : '/scratch/PI/rondror/jbelk/method/data',
     'glide_dir' : 'docking/glide12',
-    'ifp_dir' : 'ifp/ifp2',
+    'ifp_dir' : 'ifp/ifp3',
     'mcss_dir' : 'mcss/mcss7',
-    'features' : {'mcss':[],'hbond':[2,3],'sb':[4]},#,'pipi':[6]},#,'contact':[11]},
+    'stats_dir': 'stats/stats2',
+    'k_list' : ['mcss','hbond','sb1'],#,'contact'],#,'pipi','contact']
     'num_stats_ligs' : 10,
-    'num_stats_poses' : 25,
-    'smooth' : 0.02,
     'normalize' : True,
-    'num_pred_chembl' : 12,
+    'num_pred_chembl' : 10,
     'num_poses' : 100,
     't' : 10,
     'mcss_sort': False, # set to True when using best_mcss.txt
-    'chembl_file': 'best_affinity.txt'
+    'chembl_file': 'best_affinity.txt',
+    'score_mode': 'ALL'
     #'use_chembl':False
 }
+
+#stats_exclude = [ set(['B1AR','B2AR']), set(['AR','ERA']) ]
 
 def write_settings_file(out_path, settings):
     #if os.path.exists(out_path): return
@@ -29,20 +37,28 @@ def write_settings_file(out_path, settings):
             if type(var) is str: var = '"{}"'.format(var)
             f.write('{}={}\n'.format(varname, var))
 
-def write_job_file(query, struct):
-    #if os.path.exists(out_path): return
-    with open('{}-to-{}.in'.format(query,struct),'w') as f:
-        f.write('#!/bin/bash\n')
-        f.write('$SCHRODINGER/run {} {} {}\n'.format(script, query, struct))
-
-def score(prot, struct, helpers):
-    settings['stats_prots'] = ['B1AR','SIGMA1','5HT2B','CHK1']
+def score(lm, helpers):
+    all_p = [d for d in sorted(os.listdir(settings['data_dir'])) if d[0] != '.' and d[-3:] != 'old']
+    settings['stats_prots'] = [p for p in all_p if p != lm.prot]
     os.system('mkdir -p {}'.format(output_dir))
-    os.chdir('{}'.format(output_dir))
+    os.chdir(output_dir)
+    #os.system('rm -f *')
     write_settings_file('settings.py', settings)
-    for q in helpers[settings['chembl_file']]:
-        write_job_file(q, struct)
-        print q, struct, prot
-        os.system('sbatch -p rondror -t 1:00:00 -o {}-to-{}.out {}-to-{}.in'.format(q,struct,q,struct))
+
+    unfinished = sorted([l for l in helpers[settings['chembl_file']] 
+        if not os.path.exists('{}-to-{}.sc'.format(l,lm.st))])
+
+    if len(unfinished) > 0:
+        print len(unfinished), 'scores left'
+
+    for i,group in enumerate(grouper(group_size, unfinished)):
+        with open('{}.sh'.format(i),'w') as f:
+            f.write('#!/bin/bash\n')
+            f.write(cmd.format(lm.st, lm.prot, ' '.join([q for q in group if q is not None])))
+        os.system('sbatch -t 1:00:00 -p rondror {}.sh'.format(i))
+        #break
     os.chdir('../..')
+
+
+
 

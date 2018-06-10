@@ -22,6 +22,8 @@ NENHANCED_SAMPLING   2
 
 queue = 'rondror'
 out_dir = 'docking/glide12'
+#out_dir = 'docking/glide_stereo'
+#LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}_out.mae
 
 dock_cmd = '$SCHRODINGER/glide -WAIT {}-to-{}.in\n' 
 rmsd_cmd = '$SCHRODINGER/run rmsd.py -use_neutral_scaffold -pv second -c rmsd.csv ../../../structures/ligands/{}.mae {}-to-{}_pv.maegz\n'

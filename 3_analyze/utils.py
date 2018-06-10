@@ -49,6 +49,8 @@ def plot_docking(rmsds_list, title_list, plt_title=''):
 
 def stats_hist(green_dist,blue_dist):
 
+    if green_dist is None or blue_dist is None: return
+
     plt.rcParams['figure.figsize'] = (10,7.5)
     plt.rcParams['figure.dpi'] = 400 
     plt.rcParams['font.size'] = 20

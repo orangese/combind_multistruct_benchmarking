@@ -3,7 +3,9 @@ import numpy as np
 k_defs = {
     'mcss':[],
     'hbond':[2,3],
-    'sb':[4],
+    'sb1':[0],
+    'sb2':[1],
+    'sb3':[4],
     #'pipi1':[5],
     'pipi':[6],
     'picat':[7,8],

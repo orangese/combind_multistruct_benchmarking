@@ -65,7 +65,7 @@ class FuzzyIFP:
         interactions = {
             #'hal' : HalBond_Container(lig_st, sub_st_map, [1]),
             'hbond': HBond_Container(lig, [2,3]),
-            'saltbridge': SB_Container(lig, [4,1]),
+            'saltbridge': SB_Container(lig, [0,1,4]),
             'pipi': PiPi_Container(lig, [5,6]),
             'picat': PiCat_Container(lig, [7,8]),
             #'metal': Metal_Container(lig_st, sub_st_map, [9]),

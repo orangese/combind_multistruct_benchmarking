@@ -40,7 +40,7 @@ def parse_mcss(mcss_path, num_poses, all_pairs):
                     if i == 0:
                         if line[-1] == 'None': break
                         s1, s2, s3 = [float(i) for i in line]
-                        if int(s3) < min(int(s1)/2, int(s2)/2): break
+                        if int(s3) < max(min(int(s1)/2, int(s2)/2), 10): break
                         #size = s3/(s1+s2-s3)
                         mcss_scores[(l1, l2)] = {}
                     p1,p2,rmsd = int(line[0]), int(line[1]), float(line[2])

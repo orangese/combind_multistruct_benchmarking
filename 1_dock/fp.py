@@ -7,7 +7,7 @@ import itertools
 FUZZY_SCRIPT = "/scratch/PI/rondror/jbelk/method/combind/2_ifp/fuzzyifp.py"
 
 glide_dir = 'docking/glide12'
-output_dir = 'ifp/ifp2'
+output_dir = 'ifp/ifp3'
 
 queue = 'rondror'
 
@@ -30,7 +30,7 @@ def get_fp(fp_list):
                 output_file = '{}.fp'.format(p)
                 f.write('$SCHRODINGER/run {} -mode pv -input_file {} -output_file {}\n'.format(FUZZY_SCRIPT, input_file, output_file)) 
             f.write('wait\n')
-        os.system('sbatch --tasks={} --cpus-per-task=1 --time=02:00:00 -p {} {}fp.sh'.format(group_size, queue, i))
+        os.system('sbatch --cpus-per-task=1 --time=02:00:00 -p {} {}fp.sh'.format(queue, i))
     os.chdir('../..')
 
 def structure_fp():

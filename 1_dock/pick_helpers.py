@@ -26,7 +26,7 @@ def pick_helpers(lm, maxnum=20):
             # apply filters
             chembl_ligs = lm.chembl(conditions[1:])
             with open(fpath,'w') as fi:
-                for q in lm.pdb:
+                for q in lm.docked(lm.pdb)[:maxnum]:
                     # sort and remove duplicates
                     unique = lm.unique([q]+sorted(chembl_ligs,key=conditions[0]))
                     fi.write('{}:{}\n'.format(q, ','.join(unique[1:num_chembl+1])))

@@ -55,7 +55,7 @@ def mcss(lm, h=None):
     if len(unfinished_pairs) > 0:
         print len(unfinished_pairs), 'mcss rmsd left'
     
-    group_size = 1
+    group_size = 10
     os.chdir('mcss/{}'.format(out_dir))
     os.system('rm -f *.sh')
     for i, pairs in enumerate(grouper(group_size, unfinished_pairs)):

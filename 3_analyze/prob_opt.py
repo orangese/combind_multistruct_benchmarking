@@ -3,9 +3,9 @@ import random
 from pairs import LigPair
 
 class PredictStructs:
-    def __init__(self, docking_st, evidence, k_list, max_poses, T, reference='ALL', normalize_fp=True):
+    def __init__(self, docking_st, stats, k_list, max_poses, T, reference='ALL', normalize_fp=True):
         self.docking_st = docking_st
-        self.ev = evidence
+        self.stats = stats
         self.k_list = k_list
         self.max_poses = max_poses
         self.T = float(T)
@@ -13,7 +13,7 @@ class PredictStructs:
         self.normalize_fp = normalize_fp
         assert self.reference in ['DECOY', 'ALL', 'LTP', 'OLD']
         assert self.T >= 0
-        assert self.normalize_fp == evidence.normalize_fp
+        assert self.normalize_fp == True#evidence.normalize_fp
 
         self.ligand_partition_function_cache = {}
         self.log_likelihood_ratio_cache = {}
@@ -211,18 +211,18 @@ class PredictStructs:
         if self.normalize_fp:
             assert x_k <= 1 and x_k >= 0, "{} {}".format(k, x_k)
 
-        p_x_native  = self.ev.evaluate(k, x_k, 1)
+        p_x_native  = self.stats.evaluate(k, x_k, 1)
         
         # Choose between 3 potential options for reference distribution
         if self.reference == 'DECOY':
-            p_x= self.ev.evaluate(k, x_k, 0)
+            p_x= self.stats.evaluate(k, x_k, 0)
         elif self.reference == 'ALL':
-            p_x = self.ev.evaluate(k, x_k, -1)   
+            p_x = self.stats.evaluate(k, x_k, -1)   
         elif self.reference == 'LTP':
             prior = (  self._get_prior(ligname1, pose_cluster[ligname1])
                      * self._get_prior(ligname2, pose_cluster[ligname2]))
-            p_x = (  self.ev.evaluate(k, x_k, 1) * prior
-                   + self.ev.evaluate(k, x_k, 0) * (1 - prior))
+            p_x = (  self.stats.evaluate(k, x_k, 1) * prior
+                   + self.stats.evaluate(k, x_k, 0) * (1 - prior))
         elif self.reference == 'OLD':
             p_x_native = np.exp(x_k) if k != 'mcss' else 1.0
             p_x = 1.0
