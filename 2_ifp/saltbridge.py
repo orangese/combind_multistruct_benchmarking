@@ -21,23 +21,6 @@ class SB:
         self.lig_atom = atom2
         self.r = measure_distance(atom1, atom2) # atom1.dist_to(atom2)
 
-    #def get_distance(self): # special treatment for carboxylate
-    #    r1 = self.lig_atom.dist_to(self.res_atom)
-    #    if is_carboxylate(self.res_atom)[0]:
-    #        r2 = self.lig_atom.dist_to(is_carboxylate(self.res_atom)[1])
-    #        return 2*r1*r2/(r1+r2) # effective distance
-    #    elif is_carboxylate(self.lig_atom)[0]:
-    #        r2 = self.res_atom.dist_to(is_carboxylate(self.lig_atom)[1])
-    #        return 2*r1*r2/(r1+r2)
-    #    return r1
-
-    #def score(self):
-        # scales with 1/r (as in electric potential energy) and is capped at 2
-        #if self.r <= 3: return 2
-        #return 5 - self.r
-        #return min(2, 4.0/self.r)
-        #return self.score1()
-
     def score1(self):
         if self.r <= 3: return 1
         elif self.r <= 4.5: return (4.5 - self.r)/1.5
@@ -63,24 +46,13 @@ class SB:
 class SB_Container:
     def __init__(self, lig, ind):
         self.lig = lig
-        #self.lig_chrg = [a for a in lig_st.atom if a.formal_charge != 0]
-
-        #self.sub_st_map = sub_st_map
         self.ind = ind
         self.all_sb = {}
 
     def add_residue(self, resnum, res):
-        #res_chrg = [a for a in res_st.atom if a.formal_charge != 0]
-        #if len(res_chrg) == 0: return
-        #key1 = (self.ind[0],resnum,'')
-        #key2 = (self.ind[1],resnum,'')
-        #key3 = (self.ind[2],resnum,'')
         self.all_sb[resnum] = []
-        #self.all_sb[key2] = []
         for res_atom in res.chrg:
             for lig_atom in self.lig.chrg:
-                #if valid_sb(res_atom, lig_atom):
-                #    self.all_sb[key1].append(SB(res_atom, lig_atom))
                 if valid_sb2(res_atom, lig_atom):
                     self.all_sb[resnum].append(SB(res_atom, lig_atom))
 

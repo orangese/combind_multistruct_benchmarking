@@ -1,16 +1,16 @@
 import os
 import sys
+from grouper import grouper
 
 from schrodinger.structure import SmilesStructure, StructureReader, StructureWriter
-import itertools
 
 from parse_chembl import load_chembl_raw, load_chembl_proc, desalt
 
-queue = 'rondror'
+sys.path.append('../2_ifp')
+from mcss_main import st_reduce
 
-def grouper(n, iterable, fillvalue=None):
-    args = [iter(iterable)] * n 
-    return itertools.izip_longest(*args, fillvalue=fillvalue)
+queue = 'rondror'
+group_size = 10
 
 def get_ligands():
     os.system('mkdir -p ligands/raw_files')
@@ -37,18 +37,23 @@ def get_ligands():
                 st_writer.append(ligs[lig_name].st)
                 st_writer.close()
 
+def neutral_scaffold(epik):
+    out = None
+    for st in epik:
+        if out is None: out = st_reduce(st)
+        else: assert out.isEquivalent(st_reduce(st),False)
+    return out
+
 def proc_ligands():
     add_h = '$SCHRODINGER/utilities/prepwizard -WAIT -noepik -noprotassign -noimpref {}_in.mae {}_in_epik.mae\n' 
     epik_command = '$SCHRODINGER/epik -WAIT -ph 7.0 -pht 2.0 -imae {}_in_epik.mae -omae {}_out.mae\n'
-
-    group_size = 15
 
     os.system('mkdir -p ligands/prepared_ligands')
     os.system('rm -f ligands/prepared_ligands/*.sh')
     os.system('rm -f ligands/prepared_ligands/*.out')
 
     all_u = [l.split('.')[0] for l in os.listdir('ligands/raw_files')]
-    all_u = [l for l in all_u if not os.path.exists('ligands/prepared_ligands/{}/{}.mae'.format(l,l))]
+    all_u = [l for l in all_u if not os.path.exists('ligands/prepared_ligands/{}/{}_neutral.mae'.format(l,l))]
 
     if len(all_u) > 0:
         print len(all_u), 'unfinished ligands'
@@ -56,17 +61,19 @@ def proc_ligands():
     unfinished = []
     for l in all_u:
         prepped = 'ligands/prepared_ligands/{}/{}_out.mae'.format(l,l)
-        if os.path.exists(prepped):
-            try:
-                st = StructureReader(prepped).next() # first epik state
-                st.title = l
-                st_wr = StructureWriter('ligands/prepared_ligands/{}/{}.mae'.format(l,l))
-                st_wr.append(st)
-                st_wr.close()
-            except:
-                print 'lig proc error',l
-                os.system('rm {}'.format(prepped))
-                unfinished.append(l)
+        scaff = 'ligands/prepared_ligands/{}/{}_neutral.mae'.format(l,l)
+        if os.path.exists(prepped): 
+            if not os.path.exists(scaff):
+                try:
+                    st = neutral_scaffold(StructureReader(prepped))
+                    st.title = l
+                    stwr = StructureWriter(scaff)
+                    stwr.append(st)
+                    stwr.close()
+                except Exception as e:
+                    print l
+                    print e
+                    break
         else:
             unfinished.append(l)
 
@@ -79,12 +86,12 @@ def proc_ligands():
             for name in ligs:
                 if name is None: continue
 
-                os.system('rm -rf ligands/prepared_ligands/{}'.format(name))
-                os.system('mkdir ligands/prepared_ligands/{}'.format(name))
-                os.system('cp ligands/raw_files/{}.mae ligands/prepared_ligands/{}/{}_in.mae'.format(name, name, name))
+                #os.system('rm -rf ligands/prepared_ligands/{}'.format(name))
+                #os.system('mkdir ligands/prepared_ligands/{}'.format(name))
+                #os.system('cp ligands/raw_files/{}.mae ligands/prepared_ligands/{}/{}_in.mae'.format(name, name, name))
 
                 f.write('cd {}\n'.format(name))
-                f.write('sh process_in.sh > slurm.out\n')
+                f.write('sh process_in.sh > process.out\n')
                 f.write('cd ..\n')
 
                 with open('ligands/prepared_ligands/{}/process_in.sh'.format(name), 'w') as f2:

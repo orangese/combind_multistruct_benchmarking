@@ -40,7 +40,7 @@ class CHEMBL:
 
         return self.valid_stereo
 
-def load_chembl_proc(dir_path=None, load_mcss=False):
+def load_chembl_proc(dir_path=None):
     ligs = {}
     chembl_path = 'chembl/chembl_info.txt'
     if dir_path is not None:
@@ -57,19 +57,9 @@ def load_chembl_proc(dir_path=None, load_mcss=False):
                 ligs[chembl_id].valid_stereo = True if stereo == 'True' else False
     
     mw = read_molw(dir_path)
-    dups = read_duplicates(dir_path)#{l2:l1 for l1, l2 in read_duplicates(dir_path)}
-    if load_mcss:
-        mcss = read_mcss(dir_path)
     for chembl, lig in ligs.items():
         if chembl in mw:
             lig.mw = mw[chembl]
-        #if chembl in dups:
-        #    lig.dup = dups[chembl]
-        #    #print chembl, dups[chembl]
-        if load_mcss:
-            for q in mcss:
-                if chembl in mcss[q]:
-                    lig.mcss[q] = mcss[q][chembl]
 
     return ligs
 

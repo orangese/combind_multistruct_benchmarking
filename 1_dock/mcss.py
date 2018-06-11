@@ -1,28 +1,19 @@
 import os
 import sys
-
-import itertools
-
-out_dir = 'mcss7'
-mcss_dir = 'ligands/mcss/{}'.format(out_dir)
-
-script = '/scratch/PI/rondror/jbelk/method/combind/2_ifp/proc_mcss.py'
+from grouper import grouper
 
 queue = 'rondror'
-
-def grouper(n, iterable, fillvalue=None):
-    #"grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
-    args = [iter(iterable)] * n
-    return itertools.izip_longest(*args, fillvalue=fillvalue) #NOTE: izip_longest is zip_longest in python2
+group_size = 10
+cmd = '$SCHRODINGER/run {}/2_ifp/mcss_main.py {} {} {} {} {}\n'
 
 def mcss(lm, h=None):
     os.system('mkdir -p mcss')
-    os.system('mkdir -p mcss/{}'.format(out_dir))
-    os.system('rm -f mcss/{}/*.sh'.format(out_dir))
+    os.system('mkdir -p mcss/{}'.format(lm.sp['mcss']))
+    os.system('rm -f mcss/{}/*.sh'.format(lm.sp['mcss']))
 
-    for fname in os.listdir('mcss/{}'.format(out_dir)):
+    for fname in os.listdir('mcss/{}'.format(lm.sp['mcss'])):
         if fname[-3:] == 'out':
-            with open('mcss/{}/{}'.format(out_dir, fname)) as f:
+            with open('mcss/{}/{}'.format(lm.sp['mcss'], fname)) as f:
                 for line in f:
                     line = line.strip().split(' ')
                     if line[0] == 'error?':
@@ -30,14 +21,14 @@ def mcss(lm, h=None):
                         #print f.read()
                         #os.system('rm mcss/{}/{}/{}*'.format(out_dir, st, line[1]))
 
-    all_mcss = sorted([m.split('.')[0] for m in os.listdir(mcss_dir) if m.split('.')[-1] == 'txt'])
-    all_mcss = [tuple(m.split('-')) for m in all_mcss]
+    all_mcss = sorted([m.split('.')[0] for m in os.listdir('ligands/mcss/{}'.format(lm.sp['mcss'])) if m[-3:] == 'txt'])
+    all_mcss = [tuple(m.split('-')) for m in all_mcss if m[0] != '.']
     docked = set(lm.docked(lm.pdb+lm.chembl()))
 
     unfinished_pairs = []
     for l1, l2 in all_mcss:
         if l1 not in docked or l2 not in docked: continue
-        if os.path.exists('mcss/{}/{}-{}-to-{}.csv'.format(out_dir, l1, l2, lm.st)): continue
+        if os.path.exists('mcss/{}/{}-{}-to-{}.csv'.format(lm.sp['mcss'], l1, l2, lm.st)): continue
         
         if h is not None:
             for f, f_data in h.items():
@@ -55,8 +46,7 @@ def mcss(lm, h=None):
     if len(unfinished_pairs) > 0:
         print len(unfinished_pairs), 'mcss rmsd left'
     
-    group_size = 10
-    os.chdir('mcss/{}'.format(out_dir))
+    os.chdir('mcss/{}'.format(lm.sp['mcss']))
     os.system('rm -f *.sh')
     for i, pairs in enumerate(grouper(group_size, unfinished_pairs)):
         with open('{}_in.sh'.format(i), 'w') as f:
@@ -64,7 +54,7 @@ def mcss(lm, h=None):
             for p in pairs:
                 if p is None: continue
                 l1,l2 = p
-                f.write('$SCHRODINGER/run {} {} {} {} {} {}\n'.format(script, l1, l2, lm.st, lm.gdir, out_dir))
+                f.write(cmd.format(lm.sp['code'], l1, l2, lm.st, lm.sp['docking'], lm.sp['mcss']))
             f.write('wait\n')
         os.system('sbatch --tasks=1 --cpus-per-task=1 -p {} -t 2:00:00 {}_in.sh'.format(queue,i))
 

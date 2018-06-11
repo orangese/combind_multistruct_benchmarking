@@ -24,20 +24,28 @@ from containers import LigandManager
 
 os.chdir('../../data')
 
+shared_paths = {
+    'code'    : '/scratch/PI/rondror/jbelk/method/combind',
+    'data'    : '/scratch/PI/rondror/jbelk/method/data',
+    'docking' : 'glide12epik',
+    'mcss'    : 'mcss7neutral',
+    'stats'   : 'stats3',
+    'ifp'     : 'ifp4'
+}
+
 todo = list(sys.argv[1])
 if len(todo) == 0:
-    todo = list('123456') 
+    todo = list('12345') 
 
 datasets = sys.argv[2:]
 if datasets == []:
     datasets = [d for d in sorted(os.listdir('.')) if d[0] != '.' and d[-3:] != 'old']
 
-#datasets = reversed(datasets)
 for i, d in enumerate(datasets):
     print i, d
     os.chdir(d)
 
-    lm = LigandManager(d)
+    lm = LigandManager(shared_paths, d)
     
     # 1. prepare proteins   
     if '1' in todo: 
@@ -65,10 +73,10 @@ for i, d in enumerate(datasets):
 
     # 3. decide what ligands to use and prepare them
     if '3' in todo:
-        #pick_helpers(lm)
-        #init_mcss(lm, load_helpers())
+        pick_helpers(lm)
+        init_mcss(lm, load_helpers())
         dock(lm, load_helpers())
-        #fp(lm)
+        fp(lm)
         #mcss(lm, load_helpers())    
 
     # 4. compute statistics

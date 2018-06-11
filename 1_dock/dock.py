@@ -1,15 +1,9 @@
 import os
 import sys
-
-import itertools
-
-group_size=10
-def grouper(n, iterable, fillvalue=None):
-    args = [iter(iterable)] * n 
-    return itertools.izip_longest(*args, fillvalue=fillvalue)
+from grouper import grouper
 
 XGLIDE_IN = '''GRIDFILE   ../../grids/{}/{}.zip
-LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
+LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}_out.mae
 DOCKING_METHOD   confgen
 CANONICALIZE   True
 EXPANDED_SAMPLING   False
@@ -21,9 +15,7 @@ NENHANCED_SAMPLING   2
 '''
 
 queue = 'rondror'
-out_dir = 'docking/glide12'
-#out_dir = 'docking/glide_stereo'
-#LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}_out.mae
+group_size = 5
 
 dock_cmd = '$SCHRODINGER/glide -WAIT {}-to-{}.in\n' 
 rmsd_cmd = '$SCHRODINGER/run rmsd.py -use_neutral_scaffold -pv second -c rmsd.csv ../../../structures/ligands/{}.mae {}-to-{}_pv.maegz\n'
@@ -33,7 +25,7 @@ def get_state(ligand, grid):
     rmsd = '{}-to-{}/rmsd.csv'.format(ligand, grid)
     log = '{}-to-{}/{}-to-{}.log'.format(ligand, grid, ligand, grid)
     ref_lig = '../../structures/ligands/{}.mae'.format(ligand)
-    inp_lig = '../../ligands/prepared_ligands/{}/{}.mae'.format(ligand, ligand)
+    inp_lig = '../../ligands/prepared_ligands/{}/{}_out.mae'.format(ligand, ligand)
     inp_grid = '../grids/{}/{}.zip'.format(grid, grid)
 
     # 0: do nothing
@@ -81,8 +73,8 @@ def proc_all(all_pairs, dock=False, rmsd=False):
 
 def dock(lm, chembl=None, maxnum=20):
 
-    os.system('mkdir -p {}'.format(out_dir))
-    os.chdir(out_dir)
+    os.system('mkdir -p docking/{}'.format(lm.sp['docking']))
+    os.chdir('docking/{}'.format(lm.sp['docking']))
 
     if chembl is None:
         ligs = lm.pdb[:maxnum]
@@ -104,7 +96,7 @@ def dock(lm, chembl=None, maxnum=20):
             if s == 1: to_rmsd.append((lig, grid))
             
     if len(to_dock) > 0:
-        print 'docking {} pairs'.format(len(to_dock))
+        print 'docking {} ligands'.format(len(to_dock))
         write_inp_files(to_dock)
         proc_all(to_dock, dock=True)
     if len(to_rmsd) > 0:

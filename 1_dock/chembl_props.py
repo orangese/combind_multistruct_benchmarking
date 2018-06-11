@@ -59,16 +59,14 @@ def read_duplicates(dir_path=None):
                 duplicates[l_list[0]] = set(l_list)
     return unique, duplicates
 
-def read_mcss(dir_path=None, containing_lig=None):
+def read_mcss(shared_paths, dir_path=None, containing_lig=None):
     mcss = {}
 
-    l_dir = 'ligands/prepared_ligands'
-    mcsspath = 'ligands/mcss/mcss7'
+    mcsspath = 'ligands/mcss/{}'.format(shared_paths['mcss'])
     if dir_path is not None:
-        l_dir = '{}/{}'.format(dir_path, l_dir)
         mcsspath = '{}/{}'.format(dir_path, mcsspath)
 
-    if not os.path.exists(l_dir) or not os.path.exists(mcsspath): 
+    if not os.path.exists(mcsspath): 
         print os.listdir('.')
         return {} 
 

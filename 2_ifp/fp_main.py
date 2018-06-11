@@ -1,16 +1,14 @@
 import os
 import sys
+
 from schrodinger.structure import StructureReader
 from schrodinger.structutils.measure import get_shortest_distance
-
-from schrodinger.structutils.rmsd import renumber_conformer
 
 from hbond import HBond_Container
 from saltbridge import SB_Container
 from pipi import PiPi_Container
 from picat import PiCat_Container
 from hydrophobic import Hydrophobic_Container
-#from vdw import VDW_Container
 
 nonpolar = {'H': 1.2, 'C':1.7, 'F':1.47, 'Cl':1.75, 'I':1.98, 'Br':1.85}
 def valid_donor(atom):
@@ -39,19 +37,15 @@ class AtomGroup:
         self.nonpolar1 = set([a for a in st.atom if is_nonpolar(a)])
         self.nonpolar2 = set([a for a in st.atom if is_nonpolar2(a)])
 
-class FuzzyIFP:
+class FP:
     def __init__(self, args):
         self.params = {
             'mode': '',
             'input_file': '',
             'output_file': '',
-            'verbose':''}
-        self.set_user_params(args)
-        #print self.params
-        #target = open(self.params['verbose'],'a')
-        #target.write('\nFingerprinting: ' + self.params['input_file'] + '\n')
-        #target.close()
+        }
 
+        self.set_user_params(args)
         self.protein = {}
 
         if self.params['mode'] == 'pv':
@@ -63,14 +57,11 @@ class FuzzyIFP:
     def fingerprint(self, lig_st, prot_st, pnum=None):
         lig = AtomGroup(lig_st, 'lig')
         interactions = {
-            #'hal' : HalBond_Container(lig_st, sub_st_map, [1]),
             'hbond': HBond_Container(lig, [2,3]),
             'saltbridge': SB_Container(lig, [0,1,4]),
             'pipi': PiPi_Container(lig, [5,6]),
             'picat': PiCat_Container(lig, [7,8]),
-            #'metal': Metal_Container(lig_st, sub_st_map, [9]),
             'hydrophobic': Hydrophobic_Container(lig, [10,11])
-            #'vdw': VDW_Container(lig_st)
         }
 
         fp = {}
@@ -89,8 +80,6 @@ class FuzzyIFP:
             i_scores = interactions[i_type].score()
             for sc_key, sc in i_scores.items(): 
                 fp[sc_key] = sc     
-        
-        #self.verbose_output(interactions, pnum)
 
         return fp
 
@@ -117,26 +106,10 @@ class FuzzyIFP:
         
         return [self.fingerprint(lig_st, prot_st)]
 
-    def verbose_output(self, interactions, p_num=None):
-        #target = open(self.params['verbose'],'a')
-
-        #if p_num is not None: target.write('\nPose Number '+str(p_num) + '\n')
-
-        #for i_type in interactions:
-        #    target.write(str(interactions[i_type])+'\n')
-
-        #for res in sorted(active_site.residues.keys(), key=lambda r:int(r)):
-        #    if len(active_site.int_per_res[res]) > 0:
-        #        target.write('\nResidue ' + str(res) + '\n')
-        #        for i in active_site.int_per_res[res]:
-        #            target.write(str(i) + '\n')
-        #target.close()
-        pass
-
     def set_user_params(self, args):
         for index in range(len(args)):
             item = args[index]
-            if item[0] == '-': # so it's a parameter key value
+            if item[0] == '-':
                 key = item.replace('-','')
                 assert key in self.params, "Key name {} is invalid".format(key)
                 try: value = float(args[index+1])
@@ -151,11 +124,7 @@ class FuzzyIFP:
                     i,r,ss = sc_key
                     sc = ifp[sc_key]
                     if sc >= 0.05: f.write('{}-{}-{}={}\n'.format(i,r,ss, sc))
- 
-    #def __str__(self):
-    #    return '\n'.join(';'.join(','.join(map(str, [key,val])) for key, val in fp.items()) for fp in self.fp)
 
-#if __name__ == '__main__':
-#    import sys
-#    print FuzzyIFP(sys.argv[:])
-FuzzyIFP(sys.argv[:])
+if __name__ == '__main__':
+    FP(sys.argv[:])
+

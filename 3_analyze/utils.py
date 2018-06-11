@@ -146,7 +146,7 @@ def load_score_file(f_path, lig_objs):
     return sq
 
 export_script = '/scratch/PI/rondror/jbelk/prospective/code/3_analyze/export_cluster.py'
-def export(data, cluster, cluster_name, receptor, struct=None, ligs=None, verbose=False, glide_dir='docking/glide12'):
+def export(data, cluster, cluster_name, receptor, struct=None, ligs=None, verbose=False, glide_dir='docking/glide12epik'):
     glide_dir = '{}/{}/{}'.format(data, receptor, glide_dir)
     out_dir = '{}/outputs'.format('/'.join(data.split('/')[:-1]))
     #os.system('mkdir -p {}'.format(out_dir))

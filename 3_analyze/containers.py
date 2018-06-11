@@ -11,12 +11,6 @@ from parse_chembl import load_chembl_proc
 from pick_helpers import load_helpers
 from chembl_props import read_duplicates
 
-data_dir = '/scratch/PI/rondror/jbelk/method/data'
-glide_dir = 'docking/glide12'
-ifp_dir = 'ifp/ifp3'
-mcss_dir = 'mcss/mcss7'
-stats_dir = 'stats/stats2'
-
 class Pose:
     def __init__(self, rmsd, physics_score, fp, rank):
         self.rmsd = rmsd
@@ -77,10 +71,10 @@ class Ligand:
         return self.poses[np.argmin([self.poses[i].rmsd for i in range(min(n, len(self.poses)))])]
 
 class Docking:
-    def __init__(self, prot, struct):
-        self.dock_dir = '{}/{}/{}'.format(data_dir, prot, glide_dir)
-        self.ifp_dir = '{}/{}/{}'.format(data_dir, prot, ifp_dir)
-        self.mcss_dir = '{}/{}/{}'.format(data_dir, prot, mcss_dir)
+    def __init__(self, sp, prot, struct):
+        self.dock_dir = '{}/{}/docking/{}'.format(sp['data'], prot, sp['docking'])
+        self.ifp_dir = '{}/{}/ifp/{}'.format(sp['data'], prot, sp['ifp'])
+        self.mcss_dir = '{}/{}/mcss/{}'.format(sp['data'], prot, sp['mcss'])
 
         self.struct = struct
         self.ligands = {}
@@ -126,9 +120,9 @@ class Docking:
         return rmsds
 
 class Protein:
-    def __init__(self, prot, struct):
+    def __init__(self, shared_paths, prot, struct):
         self.prot = prot
-        self.lm = LigandManager(prot, struct)
+        self.lm = LigandManager(shared_paths, prot, struct)
 
         # if a struct is provided (above), lm.st will use it
         # otherwise lm.st will provide a default
@@ -149,10 +143,11 @@ class Protein:
                 self.true[l].load_poses(None, ifp_dir, l)
 
 class LigandManager:
-    def __init__(self, prot, struct=None):
-        self.root = '{}/{}'.format(data_dir, prot)
+    def __init__(self, shared_paths, prot, struct=None):
+        self.root = '{}/{}'.format(shared_paths['data'], prot)
         self.prot = prot
-        self.gdir = glide_dir
+        self.sp = shared_paths
+        #self.gdir = glide_dir
 
         #grids = {'D2R':'6CM4','AR':'2PNU','A2AR':'2YDO','B1AR':'2VT4','B2AR':'2RH1','CHK1':'2BRN', 'PLK1':'2OWB',
         #         'VITD':'2HB7','BRAF':'3IDP','JAK2':'3KRR','CDK2':'1H1S','ERA':'1A52','GCR':'3K23','TRPV1':'3J5Q}
@@ -177,7 +172,7 @@ class LigandManager:
     def prepped(self):
         ligdir = '{}/ligands/prepared_ligands'.format(self.root)
         if not os.path.exists(ligdir): return set([])
-        return set([l for l in os.listdir(ligdir) if os.path.exists('{}/{}/{}.mae'.format(ligdir,l,l))])
+        return set([l for l in os.listdir(ligdir) if os.path.exists('{}/{}/{}_out.mae'.format(ligdir,l,l))])
 
     def chembl(self, filters=[], sort_key=lambda x:0, unique=False):
         default = [
@@ -213,8 +208,8 @@ class LigandManager:
 
     def docked(self, l_list, st=None):
         if st == None: st = self.st
-        gpath = '{}/{}/{}-to-{}/{}-to-{}_pv.maegz'
-        return [l for l in l_list if os.path.exists(gpath.format(self.root, glide_dir, l,st,l,st))]
+        gpath = '{}/docking/{}/{}-to-{}/{}-to-{}_pv.maegz'
+        return [l for l in l_list if os.path.exists(gpath.format(self.root, self.sp['docking'], l,st,l,st))]
 
     def get_similar(self, query, fname, num=10, mcss_sort=False, struct=None):
         if struct is None: struct = self.st
@@ -251,8 +246,9 @@ class LigandManager:
         return self.helpers[fname][query][:num]
 
 class Dataset:
-    def __init__(self, prots, structs={}):
-        self.proteins = { p : Protein( p, structs.get(p,None) ) for p in prots }
+    def __init__(self, shared_paths, prots, structs={}):
+        self.sp = shared_paths
+        self.proteins = { p : Protein( shared_paths, p, structs.get(p,None) ) for p in prots }
             
     def load(self, ligs={}, structs={}, load_fp=True, load_crystal=False, load_mcss=True):
         for p, l_list in ligs.items():

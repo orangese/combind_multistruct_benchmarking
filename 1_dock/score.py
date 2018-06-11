@@ -1,21 +1,12 @@
 import os
 import sys
-import itertools
+from grouper import grouper
 
 group_size=10
-def grouper(n, iterable, fillvalue=None):
-    args = [iter(iterable)] * n 
-    return itertools.izip_longest(*args, fillvalue=fillvalue)
-
 output_dir = 'scores/scores10'
 cmd = '$SCHRODINGER/run /scratch/PI/rondror/jbelk/method/combind/3_analyze/scores.py {} {} {}'
 
 settings = {
-    'data_dir' : '/scratch/PI/rondror/jbelk/method/data',
-    'glide_dir' : 'docking/glide12',
-    'ifp_dir' : 'ifp/ifp3',
-    'mcss_dir' : 'mcss/mcss7',
-    'stats_dir': 'stats/stats2',
     'k_list' : ['mcss','hbond','sb1'],#,'contact'],#,'pipi','contact']
     'num_stats_ligs' : 10,
     'normalize' : True,
@@ -28,8 +19,6 @@ settings = {
     #'use_chembl':False
 }
 
-#stats_exclude = [ set(['B1AR','B2AR']), set(['AR','ERA']) ]
-
 def write_settings_file(out_path, settings):
     #if os.path.exists(out_path): return
     with open(out_path,'w') as f:
@@ -38,8 +27,9 @@ def write_settings_file(out_path, settings):
             f.write('{}={}\n'.format(varname, var))
 
 def score(lm, helpers):
-    all_p = [d for d in sorted(os.listdir(settings['data_dir'])) if d[0] != '.' and d[-3:] != 'old']
+    all_p = [d for d in sorted(os.listdir(lm.sp['data'])) if d[0] != '.' and d[-3:] != 'old']
     settings['stats_prots'] = [p for p in all_p if p != lm.prot]
+    settings['shared_paths'] = lm.sp
     os.system('mkdir -p {}'.format(output_dir))
     os.chdir(output_dir)
     #os.system('rm -f *')
