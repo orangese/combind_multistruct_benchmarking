@@ -6,7 +6,6 @@ from sort_downloads import sort_downloads
 from align_structs import align_structs
 from process_structs import process_structs
 from sort_files import sort_files
-#from init_mcss import init_mcss
 
 from grids import make_grids
 from dock import dock
@@ -43,6 +42,7 @@ if datasets == []:
 
 for i, d in enumerate(datasets):
     print i, d
+    
     os.chdir(d)
     
     lm = LigandManager(shared_paths, d)
@@ -62,7 +62,6 @@ for i, d in enumerate(datasets):
     if '2' in todo:
         get_ligands()    
         proc_ligands()
-        #mcss(lm)
 
     # force redo of chembl info (do this if new chembl ligands have been added)
     if 'c' in todo: #pass
@@ -74,7 +73,6 @@ for i, d in enumerate(datasets):
     # 3. decide what ligands to use and prepare them
     if '3' in todo:
         pick_helpers(lm)
-        #init_mcss(lm, load_helpers())
         dock(lm, load_helpers())
         fp(lm)
         mcss(lm, load_helpers())    

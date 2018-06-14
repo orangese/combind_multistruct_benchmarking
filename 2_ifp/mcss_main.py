@@ -61,10 +61,7 @@ def find_mcss_matches(st1, smarts1, st2, smarts2):
 
 ref_path = '../../../ligands/prepared_ligands/{}/{}.mae'
 pv_path = '../../../docking/{}/{}-to-{}/{}-to-{}_pv.maegz'
-type_path = '../../../../../combind/2_ifp/custom_types/{}.typ'
 outf = '{}-{}-to-{}-{}.csv'
-
-command_csv = '$SCHRODINGER/utilities/canvasMCS -imae {}_in.mae -ocsv {}.csv -stop 10 -atomtype C {}\n'
 
 class MCSS:
     def __init__(self, l1, l2, st=None, gdir=None, type_file=None):
@@ -79,16 +76,6 @@ class MCSS:
         ref1 = StructureReader(ref_path.format(self.l1, self.l1)).next()
         ref2 = StructureReader(ref_path.format(self.l2, self.l2)).next()
         return ref1, ref2
-
-    def initialize(self):
-        ref1, ref2 = self.load_ref()
-        stwr = StructureWriter('{}_in.mae'.format(self.name))
-        stwr.append(ref1)
-        stwr.append(ref2)
-        stwr.close()
-        os.system(command_csv.format(self.name, self.name, type_path.format(self.type_file)))
-        os.system('rm {}_in.mae'.format(self.name))
-        self.proc_ref()
 
     def proc_ref(self):
         s3, sm1, sm2 = load_mcss(self.l1, self.l2)
@@ -150,13 +137,12 @@ if __name__ == '__main__':
     mode = sys.argv[1]
     lig1 = sys.argv[2]
     lig2 = sys.argv[3]
-    if mode == 'INIT':
-        mcss = MCSS(lig1, lig2, st=None, gdir=None, type_file=sys.argv[4])
-        mcss.initialize()
-    elif mode == 'RMSD':
-        mcss = MCSS(lig1, lig2, st=sys.argv[4], gdir=sys.argv[5], type_file=None)
+    
+    if mode == 'RMSD':
+        mcss = MCSS(lig1, lig2, st=sys.argv[4], gdir=sys.argv[5])
         mcss.proc_pv()
-
-
+    elif mode == 'REF': # for debugging
+        mcss = MCSS(lig1, lig2)
+        mcss.proc_ref()
 
 
