@@ -101,9 +101,13 @@ class FP:
     def fingerprint_pair(self):
         pdb = self.params['output_file'].split('_')[0]
 
-        prot_st = StructureReader('../../structures/proteins/{}_prot.mae'.format(pdb)).next()
+        try:
+            prot_st = StructureReader('../../structures/proteins/{}_prot.mae'.format(pdb)).next()
+        except:
+            prot_st = StructureReader('../../structures/proteins/{}_prot.mae'.format(os.listdir('../../docking/grids')[0])).next()
+
         lig_st = StructureReader('../../structures/ligands/{}_lig.mae'.format(pdb)).next()
-        
+         
         return [self.fingerprint(lig_st, prot_st)]
 
     def set_user_params(self, args):

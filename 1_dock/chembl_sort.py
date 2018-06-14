@@ -6,8 +6,8 @@ from schrodinger.structure import SmilesStructure, StructureReader, StructureWri
 
 from parse_chembl import load_chembl_raw, load_chembl_proc, desalt
 
-sys.path.append('../2_ifp')
-from mcss_main import st_reduce
+#sys.path.append('../2_ifp')
+#from mcss_main import st_reduce
 
 queue = 'rondror'
 group_size = 10
@@ -37,12 +37,12 @@ def get_ligands():
                 st_writer.append(ligs[lig_name].st)
                 st_writer.close()
 
-def neutral_scaffold(epik):
-    out = None
-    for st in epik:
-        if out is None: out = st_reduce(st)
-        else: assert out.isEquivalent(st_reduce(st),False)
-    return out
+#def neutral_scaffold(epik):
+#    out = None
+#    for st in epik:
+#        if out is None: out = st_reduce(st)
+#        else: assert out.isEquivalent(st_reduce(st),False)
+#    return out
 
 def proc_ligands():
     add_h = '$SCHRODINGER/utilities/prepwizard -WAIT -noepik -noprotassign -noimpref {}_in.mae {}_in_epik.mae\n' 
@@ -53,7 +53,7 @@ def proc_ligands():
     os.system('rm -f ligands/prepared_ligands/*.out')
 
     all_u = [l.split('.')[0] for l in os.listdir('ligands/raw_files')]
-    all_u = [l for l in all_u if not os.path.exists('ligands/prepared_ligands/{}/{}_neutral.mae'.format(l,l))]
+    all_u = [l for l in all_u if not os.path.exists('ligands/prepared_ligands/{}/{}.mae'.format(l,l))]
 
     if len(all_u) > 0:
         print len(all_u), 'unfinished ligands'
@@ -61,13 +61,15 @@ def proc_ligands():
     unfinished = []
     for l in all_u:
         prepped = 'ligands/prepared_ligands/{}/{}_out.mae'.format(l,l)
-        scaff = 'ligands/prepared_ligands/{}/{}_neutral.mae'.format(l,l)
+        #scaff = 'ligands/prepared_ligands/{}/{}_neutral.mae'.format(l,l)
+        final = 'ligands/prepared_ligands/{}/{}.mae'.format(l,l)
         if os.path.exists(prepped): 
             if not os.path.exists(scaff):
                 try:
-                    st = neutral_scaffold(StructureReader(prepped))
+                    #st = neutral_scaffold(StructureReader(prepped))
+                    st = StructureReader(prepped).next() # first protonation state
                     st.title = l
-                    stwr = StructureWriter(scaff)
+                    stwr = StructureWriter(final)
                     stwr.append(st)
                     stwr.close()
                 except Exception as e:
@@ -79,7 +81,7 @@ def proc_ligands():
 
     if len(unfinished) > 0:
         print len(unfinished), 'unprocessed ligands'
-
+    
     for i, ligs in enumerate(grouper(group_size, unfinished)):
         with open('ligands/prepared_ligands/batch-{}.sh'.format(i),'w') as f:
             f.write('#!/bin/bash\nmodule load schrodinger\n')

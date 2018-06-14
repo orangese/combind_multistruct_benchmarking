@@ -3,7 +3,7 @@ import sys
 from grouper import grouper
 
 XGLIDE_IN = '''GRIDFILE   ../../grids/{}/{}.zip
-LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}_out.mae
+LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
 DOCKING_METHOD   confgen
 CANONICALIZE   True
 EXPANDED_SAMPLING   False
@@ -25,7 +25,7 @@ def get_state(ligand, grid):
     rmsd = '{}-to-{}/rmsd.csv'.format(ligand, grid)
     log = '{}-to-{}/{}-to-{}.log'.format(ligand, grid, ligand, grid)
     ref_lig = '../../structures/ligands/{}.mae'.format(ligand)
-    inp_lig = '../../ligands/prepared_ligands/{}/{}_out.mae'.format(ligand, ligand)
+    inp_lig = '../../ligands/prepared_ligands/{}/{}.mae'.format(ligand, ligand)
     inp_grid = '../grids/{}/{}.zip'.format(grid, grid)
 
     # 0: do nothing

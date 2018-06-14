@@ -6,7 +6,7 @@ from sort_downloads import sort_downloads
 from align_structs import align_structs
 from process_structs import process_structs
 from sort_files import sort_files
-from init_mcss import init_mcss
+#from init_mcss import init_mcss
 
 from grids import make_grids
 from dock import dock
@@ -27,10 +27,10 @@ os.chdir('../../data')
 shared_paths = {
     'code'    : '/scratch/PI/rondror/jbelk/method/combind',
     'data'    : '/scratch/PI/rondror/jbelk/method/data',
-    'docking' : 'glide12epik',
-    'mcss'    : 'mcss7neutral',
+    'docking' : 'glide12',
+    'mcss'    : 'custom_mcss',
     'stats'   : 'stats3',
-    'ifp'     : 'ifp4'
+    'ifp'     : 'ifp3'
 }
 
 todo = list(sys.argv[1])
@@ -44,9 +44,9 @@ if datasets == []:
 for i, d in enumerate(datasets):
     print i, d
     os.chdir(d)
-
-    lm = LigandManager(shared_paths, d)
     
+    lm = LigandManager(shared_paths, d)
+ 
     # 1. prepare proteins   
     if '1' in todo: 
         pdb_st = None
@@ -62,7 +62,7 @@ for i, d in enumerate(datasets):
     if '2' in todo:
         get_ligands()    
         proc_ligands()
-        init_mcss(lm)
+        #mcss(lm)
 
     # force redo of chembl info (do this if new chembl ligands have been added)
     if 'c' in todo: #pass
@@ -74,10 +74,10 @@ for i, d in enumerate(datasets):
     # 3. decide what ligands to use and prepare them
     if '3' in todo:
         pick_helpers(lm)
-        init_mcss(lm, load_helpers())
+        #init_mcss(lm, load_helpers())
         dock(lm, load_helpers())
         fp(lm)
-        #mcss(lm, load_helpers())    
+        mcss(lm, load_helpers())    
 
     # 4. compute statistics
     if '4' in todo:

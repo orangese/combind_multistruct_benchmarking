@@ -1,86 +1,134 @@
 import os
 import sys
 
-from schrodinger.structure import StructureReader, StructureWriter
-from schrodinger.structutils.rmsd import *#renumber_conformer, calculate_in_place_rmsd
-from schrodinger.structutils.analyze import evaluate_smarts
-
-def st_reduce(st):
-    heavy = st.extract([a.index for a in st.atom if a.element != 'H'])
-    for b in heavy.bond:
-        b.order = 1 
-    for a in heavy.atom:
-        a.formal_charge = 0 
-    return heavy
-
-def load_mcss(lig1, lig2, mcss_dir):
+def load_mcss(lig1, lig2):
+    tr = {lig1:[],lig2:[]}
+    m = None
     try:
-        with open('{}/{}-{}.txt'.format(mcss_dir, lig1, lig2)) as f:
-            l1,s1,m1,smarts1 = f.readline().strip().split(',')
-            l2,s2,m2,smarts2 = f.readline().strip().split(',')
-    except:
+        with open('{}-{}.csv'.format(lig1, lig2)) as f:
+            for line in f:
+                line = line.strip().split(',')
+                if line[0] == 'SMILES': continue
+                assert line[1] in tr
+                lig,msize,smarts = line[1], int(line[5]), line[-1]
+                tr[lig].append(smarts)
+                if m is None: m = msize
+                assert msize == m
+    except Exception as e:
+        print e
         print 'mcss file error'
-        os.system('rm -rf {}/{}-{}.txt'.format(mcss_dir, lig1, lig2))
-        exit()
-    assert lig1 == l1
-    assert lig2 == l2
-    assert m1 == m2
-    return smarts1, smarts2, int(s1), int(s2), int(m1)
+    return m,tr[lig1],tr[lig2]
+
+def delete_extraneous_bonds(st1, st2):
+    
+    if len(st1.bond) + 1 == len(st2.bond): # st2 has the extra bond
+        st1, st2 = st2, st1
+
+    all_b = {}
+    for i,b in enumerate(st1.bond):
+        all_b[(i,b.order)] = b 
+
+    for (i,o),b in all_b.items():
+        a1,a2 = b.atom1, b.atom2
+        st1.deleteBond(a1,a2)
+        if st1.isEquivalent(st2,False):
+            return (st1,st2)
+        st1.addBond(a1,a2,o)
+    
+    return None
+
+def match(st1, st2):
+    if abs(len(st1.bond) - len(st2.bond)) == 1:
+        return delete_extraneous_bonds(st1, st2)
+    if st1.isEquivalent(st2): return (st1,st2)
+    return None
 
 def find_mcss_matches(st1, smarts1, st2, smarts2):
-    try: mcss1 = evaluate_smarts(st1, smarts1, unique_sets=True)
-    except: mcss1 = evaluate_smarts(st1, smarts2, unique_sets=True)
-    try: mcss2 = evaluate_smarts(st2, smarts2, unique_sets=True)
-    except: mcss2 = evaluate_smarts(st2, smarts1, unique_sets=True)
-    mcss1_st = [st1.extract(x) for x in mcss1]
-    mcss2_st = [st2.extract(x) for x in mcss2]
     valid_pairs = []
-    for i,m1 in enumerate(mcss1_st):
-        for j,m2 in enumerate(mcss2_st):
-            if m1.isEquivalent(m2, False):
-                valid_pairs.append((i,j))
-    return mcss1, mcss2, valid_pairs
+    for sm1 in smarts1:
+        for sm2 in smarts2:
 
-scaff_path = '../../ligands/prepared_ligands/{}/{}_neutral.mae'
-pv_path = '../../{}/{}-to-{}/{}-to-{}_pv.maegz'
-outf = '{}-{}-to-{}.csv'
+            mcss1 = evaluate_smarts(st1, sm1, unique_sets=True)
+            mcss2 = evaluate_smarts(st2, sm2, unique_sets=True)
+
+            for m1 in mcss1:
+                for m2 in mcss2:
+                    equiv = match(st1.extract(m1), st2.extract(m2))
+                    if equiv is not None: 
+                        valid_pairs.append(equiv)
+
+    return valid_pairs
+
+ref_path = '../../../ligands/prepared_ligands/{}/{}.mae'
+pv_path = '../../../docking/{}/{}-to-{}/{}-to-{}_pv.maegz'
+type_path = '../../../../../combind/2_ifp/custom_types/{}.typ'
+outf = '{}-{}-to-{}-{}.csv'
+
+command_csv = '$SCHRODINGER/utilities/canvasMCS -imae {}_in.mae -ocsv {}.csv -stop 10 -atomtype C {}\n'
 
 class MCSS:
-    def __init__(self, l1, l2, st, gdir, mdir):
+    def __init__(self, l1, l2, st=None, gdir=None, type_file=None):
         self.l1 = l1
         self.l2 = l2
+        self.name = '{}-{}'.format(l1,l2)
         self.st = st
         self.gdir = gdir
-        self.mdir = mdir
+        self.type_file = type_file
 
-        self.sm1, self.sm2, self.s1, self.s2, self.s3 = load_mcss(l1, l2, mdir)
+    def load_ref(self):
+        ref1 = StructureReader(ref_path.format(self.l1, self.l1)).next()
+        ref2 = StructureReader(ref_path.format(self.l2, self.l2)).next()
+        return ref1, ref2
 
-        self.ref1 = StructureReader(scaff_path.format(l1,l1)).next()
-        self.ref2 = StructureReader(scaff_path.format(l2,l2)).next()
+    def initialize(self):
+        ref1, ref2 = self.load_ref()
+        stwr = StructureWriter('{}_in.mae'.format(self.name))
+        stwr.append(ref1)
+        stwr.append(ref2)
+        stwr.close()
+        os.system(command_csv.format(self.name, self.name, type_path.format(self.type_file)))
+        os.system('rm {}_in.mae'.format(self.name))
+        self.proc_ref()
 
-        self.pv1 = list(StructureReader(pv_path.format(gdir, l1, st, l1, st)))[1:]
-        self.pv2 = list(StructureReader(pv_path.format(gdir, l2, st, l2, st)))[1:]
+    def proc_ref(self):
+        s3, sm1, sm2 = load_mcss(self.l1, self.l2)
+        ref1, ref2 = self.load_ref()
+        valid_mcss_pairs = find_mcss_matches(ref1, sm1, ref2, sm2)
 
-        self.proc_mcss()
+        stwr = StructureWriter('{}-{}_mcss.mae'.format(self.l1, self.l2))
+        for m1,m2 in valid_mcss_pairs:
+            stwr.append(m1)
+            stwr.append(m2)
+        if len(valid_mcss_pairs) == 0:
+            with open('log','a') as f:
+                f.write('ERROR: reference validation')
+            for ref, sm_list in {ref1:sm1,ref2:sm2}.items():
+                for sm in sm_list: 
+                    try: stwr.append(ref.extract(evaluate_smarts(ref, sm, unique_sets=True)[0]))
+                    except:
+                        with open('log','a') as f:
+                            f.write('ERROR: evaluating smarts')
+        stwr.close()
 
-    def proc_mcss(self):
+    def proc_pv(self):
+        s3, sm1, sm2 = load_mcss(self.l1, self.l2)
 
-        with open(outf.format(self.l1,self.l2,self.st), 'w') as f:
-            f.write('{},{},{}\n'.format(self.s1, self.s2, self.s3))
-            if self.s3 == 0: return
+        pv1 = list(StructureReader(pv_path.format(self.gdir, self.l1, self.st, self.l1, self.st)))[1:]
+        pv2 = list(StructureReader(pv_path.format(self.gdir, self.l2, self.st, self.l2, self.st)))[1:]
 
-            pv1 = [st_reduce(st) for st in self.pv1]
-            pv2 = [st_reduce(st) for st in self.pv2]
+        s1 = len([a for a in pv1[0].atom if a.element != 'H'])
+        s2 = len([a for a in pv2[0].atom if a.element != 'H'])
 
-            for st in pv1: assert st.isEquivalent(self.ref1), 'equivalence error {}'.format(self.l1)
-            for st in pv2: assert st.isEquivalent(self.ref2), 'equivalence error {}'.format(self.l2)
+        with open(outf.format(self.l1,self.l2,self.st,self.gdir), 'w') as f:
+            f.write('{},{},{}\n'.format(s1, s2, s3))
+            if s3 == 0: return
 
             for i, p1 in enumerate(pv1):
                 for j, p2 in enumerate(pv2):
                     if i > 105 or j > 105: 
                         continue
 
-                    mcss1, mcss2, valid_mcss_pairs = find_mcss_matches(p1, self.sm1, p2, self.sm2)
+                    valid_mcss_pairs = find_mcss_matches(p1, sm1, p2, sm2)
                     if len(valid_mcss_pairs) == 0:
                         f.write('ERROR\n')
                         print 'no mcss found for poses', self.l1, self.l2, self.st
@@ -88,19 +136,26 @@ class MCSS:
 
                     rmsd = 10000
                     for m1, m2 in valid_mcss_pairs:
-                        nrmsd = calculate_in_place_rmsd(p1, mcss1[m1], p2, mcss2[m2], use_symmetry=True)
+                        nrmsd = calculate_in_place_rmsd(m1, [a.index for a in m1.atom], 
+                                                        m2, [a.index for a in m2.atom],  use_symmetry=True)
                         rmsd = min(rmsd, nrmsd)
 
                     f.write('{},{},{}\n'.format(i, j, rmsd))
 
 if __name__ == '__main__':
-    lig1 = sys.argv[1]
-    lig2 = sys.argv[2]
-    struct = sys.argv[3]
-    glide_dir = 'docking/' + sys.argv[4]
-    mcss_dir = '../../ligands/mcss/' + sys.argv[5]
-    MCSS(lig1, lig2, struct, glide_dir, mcss_dir)
+    from schrodinger.structure import StructureReader, StructureWriter
+    from schrodinger.structutils.rmsd import calculate_in_place_rmsd
+    from schrodinger.structutils.analyze import evaluate_smarts
 
+    mode = sys.argv[1]
+    lig1 = sys.argv[2]
+    lig2 = sys.argv[3]
+    if mode == 'INIT':
+        mcss = MCSS(lig1, lig2, st=None, gdir=None, type_file=sys.argv[4])
+        mcss.initialize()
+    elif mode == 'RMSD':
+        mcss = MCSS(lig1, lig2, st=sys.argv[4], gdir=sys.argv[5], type_file=None)
+        mcss.proc_pv()
 
 
 
