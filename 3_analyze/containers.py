@@ -2,7 +2,8 @@ import os
 import sys
 import numpy as np
 
-from parse_files import parse_glide_output, parse_fp_file, parse_mcss, parse_mcss_size
+from parse_files import parse_glide_output, parse_fp_file
+from mcss_utils import MCSS
 
 sys.path.append('../1_dock')
 sys.path.append('/'.join(os.path.dirname(os.path.realpath(sys.argv[0])).split('/')[:-1]) + '/1_dock')
@@ -72,27 +73,13 @@ class Ligand:
 
 class Docking:
     def __init__(self, sp, prot, struct):
+        self.sp = sp
         self.dock_dir = '{}/{}/docking/{}'.format(sp['data'], prot, sp['docking'])
         self.ifp_dir = '{}/{}/ifp/{}'.format(sp['data'], prot, sp['ifp'])
-        self.mcss_dir = '{}/{}/mcss/{}'.format(sp['data'], prot, sp['mcss'])
 
         self.struct = struct
         self.ligands = {}
         self.num_poses = {}
-        self.mcss = {}
-
-    def load_mcss(self, ligands):
-        all_pairs = [(l1,l2,self.struct) for l1 in ligands for l2 in ligands 
-                        if (l1,l2) not in self.mcss and (l2,l1) not in self.mcss]
-        new_pairs = parse_mcss(self.mcss_dir, self.num_poses, all_pairs)
-        for new in new_pairs:
-            self.mcss[new] = new_pairs[new]
-
-    def get_mcss_score(self, l1, p1, l2, p2):
-        if (l1,l2) in self.mcss: return self.mcss[(l1,l2)][(p1,p2)]
-        if (l2,l1) in self.mcss: return self.mcss[(l2,l1)][(p2,p1)]
-
-        return None
 
     def load(self, ligands, load_fp, load_mcss):
         for l in ligands:
@@ -104,8 +91,6 @@ class Docking:
             self.ligands[l] = Ligand(l)
             self.ligands[l].load_poses(self.dock_dir, self.ifp_dir, self.struct, load_fp)
             self.num_poses[l] = len(self.ligands[l].poses)
-        if load_mcss:
-            self.load_mcss(ligands)
 
     def glide_perf(self, n_list=[1,5,25,100], ligands=None):
         rmsds = [ [] for n in n_list ]
@@ -126,7 +111,9 @@ class Protein:
 
         # if a struct is provided (above), lm.st will use it
         # otherwise lm.st will provide a default
-        self.docking = { self.lm.st : Docking(self.prot,self.lm.st) }
+        self.docking = { self.lm.st : Docking( shared_paths, self.prot, self.lm.st) }
+        self.lm.mcss.num_poses = self.docking.num_poses
+        
         self.true = {}
 
     def load(self, l_list, st, load_fp, load_crystal, load_mcss):
@@ -134,8 +121,11 @@ class Protein:
 
         if st not in self.docking:
             self.docking[st] = Docking(self.prot, st)
-        self.docking[st].load(l_list, load_fp, load_mcss)
-        
+        self.docking[st].load(l_list, load_fp)
+
+        if load_mcss:
+            self.lm.mcss.load_mcss(l_list, l_list, rmsd=True)        
+
         if load_crystal:
             for l in l_list:
                 if l in self.true: continue
@@ -147,7 +137,6 @@ class LigandManager:
         self.root = '{}/{}'.format(shared_paths['data'], prot)
         self.prot = prot
         self.sp = shared_paths
-        #self.gdir = glide_dir
 
         #grids = {'D2R':'6CM4','AR':'2PNU','A2AR':'2YDO','B1AR':'2VT4','B2AR':'2RH1','CHK1':'2BRN', 'PLK1':'2OWB',
         #         'VITD':'2HB7','BRAF':'3IDP','JAK2':'3KRR','CDK2':'1H1S','ERA':'1A52','GCR':'3K23','TRPV1':'3J5Q}
@@ -166,7 +155,7 @@ class LigandManager:
         if struct is None:
             self.st = self.all_st.get(prot, self.first_st)
 
-        self.mcss_sizes = {}
+        self.mcss = MCSS(self.sp, self.st, self.root)
         self.helpers = {}
 
     def prepped(self):
@@ -211,37 +200,12 @@ class LigandManager:
         gpath = '{}/docking/{}/{}-to-{}/{}-to-{}_pv.maegz'
         return [l for l in l_list if os.path.exists(gpath.format(self.root, self.sp['docking'], l,st,l,st))]
 
-    def get_similar(self, query, fname, num=10, mcss_sort=False, struct=None):
+    def get_similar(self, query, fname, num=10, struct=None):
         if struct is None: struct = self.st
         if fname not in self.helpers:
             self.helpers[fname] = load_helpers(self.root)[fname]
             for q in self.helpers[fname]:
                 self.helpers[fname][q] = self.docked(self.helpers[fname][q], struct)
-
-        # mcss has two steps:
-        # 1. we use the canvasMCS tool to find the MCSS between two ligands (output: smarts)
-        # 2. we use the schrodinger python api to extract this mcss for each pose pair and compute the RMSD
-        #    - to compute the rmsd, the two MCSS's must be "equivalent" according to the python api
-        #    - some small fraction of the outputs from step 1 are not "equivalent" for unclear reasons
-        #    - fname is sorted based on the output of step 1
-        #    - here we re-sort based on the output of step 2 (identical to step 1 with failed pairs excluded)
-        if mcss_sort:
-            if len(self.chembl_info) == 0:
-                self.chembl_info = load_chembl_proc(self.root, load_mcss=True)
-            if fname not in self.mcss_sizes:
-                self.mcss_sizes[fname] = {}
-            if query not in self.mcss_sizes[fname]:
-                mcss_path = '{}/{}'.format(self.root, mcss_dir)
-                all_pairs = parse_mcss_size(mcss_path, set([query]), set(self.helpers[fname][query]), struct)
-                self.mcss_sizes[fname][query] = {}
-                for (l1,l2),sz in all_pairs.items():
-                    if query == l1: 
-                        self.mcss_sizes[fname][query][l2] = sz[2]
-                    if query == l2:
-                        self.mcss_sizes[fname][query][l1] = sz[2]
-
-                ligs = self.helpers[fname][query]
-                self.helpers[fname][query].sort(key=lambda x:-self.mcss_sizes[fname][query].get(x,0))
 
         return self.helpers[fname][query][:num]
 

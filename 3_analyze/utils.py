@@ -47,7 +47,7 @@ def plot_docking(rmsds_list, title_list, plt_title=''):
     
     plt.show()
 
-def stats_hist(green_dist,blue_dist):
+def stats_hist(green_dist,blue_dist,normalize=True):
 
     if green_dist is None or blue_dist is None: return
 
@@ -55,8 +55,13 @@ def stats_hist(green_dist,blue_dist):
     plt.rcParams['figure.dpi'] = 400 
     plt.rcParams['font.size'] = 20
 
-    xmin, xmax = -0.5, 1.5 
-    binwidth = 0.05
+    if normalize:
+        xmin, xmax = -0.5, 1.5 
+        binwidth = 0.05
+    else:
+        allx = set(green_dist.prob.keys()+blue_dist.prob.keys())
+        xmin, xmax = min(allx),max(allx)
+        binwidth = (xmax-xmin)/100
     bins = np.arange(xmin, xmax + binwidth, binwidth)
     
     g_x = sorted(green_dist.prob.keys())#np.arange(xmin - std,xmax + std,std*0.01)#0.02)
@@ -80,7 +85,7 @@ def stats_hist(green_dist,blue_dist):
     ax.get_xaxis().tick_bottom()  
     ax.get_yaxis().set_visible(False)#.tick_left()
 
-    plt.xticks([0,1])
+    if normalize: plt.xticks([0,1])
     plt.tick_params(axis='x', direction='inout', length=13, width=3, pad=15)
     ax.axhline(linewidth=4, color='k')#, color="g")
 

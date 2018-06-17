@@ -1,8 +1,6 @@
 import os
 import sys
 
-from chembl_props import read_mcss
-
 def pick_helpers(lm, maxnum=20):
 
     parent = 'chembl/helpers'
@@ -10,34 +8,32 @@ def pick_helpers(lm, maxnum=20):
 
     stereo_filter = lambda c,ci: ci[c].valid_stereo
 
-    mcss_sort = lambda c: -mcss_q.get(c,(0,0,0))[2]
     ki_sort = lambda c: lm.chembl_info[c].ki
 
-    # sorting function plus (optional) additional filters
+    # filters
     all_options = {
-        'best_affinity.txt': [ki_sort],
-        #'best_mcss.txt': [mcss_sort],
-        'best_affinity_plus_stereo.txt': [ki_sort, stereo_filter]#,
+        'best_affinity.txt': [],#ki_sort],
+        'best_mcss.txt': []#mcss_sort]
+        #'best_affinity_plus_stereo.txt': [ki_sort, stereo_filter],
         #'best_mcss_plus_stereo.txt': [mcss_sort, stereo_filter]
     }
 
-    queries = lm.docked(lm.pdb)[:maxnum]
-    #mcss = {}# q : read_mcss(containing_lig=q) for q in queries }
-
     num_chembl = 30    
-    for f, conditions in all_options.items():
+    for f, filters in all_options.items():
         fpath = '{}/{}'.format(parent, f)
         if not os.path.exists(fpath):
             print 'picking chembl ligands', f
             # apply filters
-            chembl_ligs = lm.chembl(conditions[1:])
+            chembl_ligs = lm.chembl(filters)
             with open(fpath,'w') as fi:
-                for q in queries:
-                    #print q
+                for q in lm.docked(lm.pdb)[:maxnum]:
                     # sort and remove duplicates
-                    #mcss_q = mcss.get(q,read_mcss(containing_lig=q))
-                    #mcss[q] = mcss_q
-                    unique = lm.unique([q]+sorted(chembl_ligs,key=conditions[0]))
+                    if 'mcss' in f:
+                        lm.mcss.load_mcss(set([q]), set(chembl_ligs))
+                        sorted_helpers = lm.mcss.sort_by_mcss(q, set(chembl_ligs),lambda x: x.m_sz)
+                    elif 'affinity' in f:
+                        sorted_helpers = sorted(chembl_ligs,key=ki_sort)
+                    unique = lm.unique([q]+sorted_helpers)
                     fi.write('{}:{}\n'.format(q, ','.join(unique[1:num_chembl+1])))
 
 def load_helpers(dirpath=None):

@@ -24,7 +24,6 @@ class CHEMBL:
         self.val = val
 
         self.mw = None
-        self.mcss = {}
 
     def check_stereo(self):
         from schrodinger.structure import SmilesStructure

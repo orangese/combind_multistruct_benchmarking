@@ -3,7 +3,8 @@ import random
 from pairs import LigPair
 
 class PredictStructs:
-    def __init__(self, docking_st, stats, k_list, max_poses, T, reference='ALL', normalize_fp=True):
+    def __init__(self, mcss, docking_st, stats, k_list, max_poses, T, reference='ALL', normalize_fp=True):
+        self.mcss = mcss
         self.docking_st = docking_st
         self.stats = stats
         self.k_list = k_list
@@ -236,7 +237,7 @@ class PredictStructs:
 
         if (l1, l2) not in self.lig_pairs:
             self.lig_pairs[(l1, l2)] = LigPair(self.docking_st.ligands[l1], self.docking_st.ligands[l2],
-                                               self.k_list, self.docking_st.mcss, self.max_poses, self.normalize_fp)
+                                               self.k_list, self.mcss, self.max_poses, self.normalize_fp)
 
         return self.lig_pairs[(l1, l2)].get_feature(fname, p1, p2)
 

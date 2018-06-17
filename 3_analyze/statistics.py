@@ -21,9 +21,13 @@ class Distribution:
     def __init__(self, x, p_x):
         self.prob = {x[i]:p_x[i] for i in range(len(x))}
         self.resolution = int(np.log10(1/(x[1] - x[0])))
+        self.dx = x[1] - x[0]
 
     def evaluate(self, x):
         return self.prob[round(x,self.resolution)]
+
+    def mean(self):
+        return sum([x*px*self.dx for x,px in self.prob.items()])
 
 class Statistics:
     def __init__(self, ligs, structs, k_list, normalize=True):
@@ -33,10 +37,10 @@ class Statistics:
         self.ind = [-1,0,1]
         self.dist = {i: {k: None for k in k_list} for i in self.ind}
 
-    def create(self, dataset, samples, smooth, num_poses):
+    def create(self, dataset, samples, smooth, num_poses, hack=False):
         for p, pstats in self.proteins.items():
             prot = dataset.proteins[p]
-            pstats.create(prot.docking[pstats.st], samples, smooth, num_poses, self.normalize)
+            pstats.create(prot.docking[pstats.st], samples, smooth, num_poses, self.normalize, hack)
         combine(self.dist, self.proteins)
 
     def read(self, data_dir, stats_dir):
@@ -73,12 +77,12 @@ class ProteinStatistics:
         self.ind = [-1,0,1]
         self.dist = {i: {k: None for k in k_list} for i in self.ind}
 
-    def create(self, docking, samples, smooth, num_poses, normalize):
+    def create(self, docking, samples, smooth, num_poses, normalize, hack):
         for (l1,l2), pstats in self.pairs.items():
             lp = LigPair(docking.ligands[l1], docking.ligands[l2],
                          self.k_list, docking.mcss, num_poses, normalize)
             lp.init_pose_pairs()
-            pstats.create(lp, samples, smooth, normalize)
+            pstats.create(lp, samples, smooth, normalize, hack)
         combine(self.dist, self.pairs)
 
     def read(self, data_dir, stats_dir):
@@ -96,7 +100,7 @@ class LigPairStatistics:
         self.ind = [-1,0,1]
         self.dist = {i: {k: None for k in k_list} for i in self.ind}
 
-    def create(self, lig_pair, samples=10**4, smooth=0.02, normalize=True):
+    def create(self, lig_pair, samples=10**4, smooth=0.02, normalize=True, hack=False):
         for k in self.k_list:
             x_k = {i: {} for i in self.ind}
             for (r1,r2),pp in lig_pair.pose_pairs.items():
@@ -104,8 +108,11 @@ class LigPairStatistics:
                 if pp_x is not None:
                     x_k[pp.correct()][pp_x] = x_k[pp.correct()].get(pp_x, 0) + 1#.append(pp_x)
                     x_k[-1][pp_x] = x_k[-1].get(pp_x, 0) + 1
+                    if hack:
+                        f = lambda x: sum([freq for ind,freq in x.items()])
+                        if min(f(x_k[1]),f(x_k[0])) >= 4 and f(x_k[-1]) >= 250: break
             if normalize: domain = np.linspace(-1,2,3*samples+1)    
-            else: domain = np.linspace(min(x_k[-1])-1,max(x_k[-1])+1,3*samples+1)    
+            elif len(x_k[-1]) > 0: domain = np.linspace(min(x_k[-1])-1,max(x_k[-1])+1,3*samples+1)    
             for i in self.ind:
                 if len(x_k[i]) == 0: continue
                 tot = float(sum([v for ke,v in x_k[i].items()]))#/float(len(x_k[i]))
