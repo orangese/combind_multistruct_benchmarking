@@ -1,49 +1,89 @@
 import os
 import sys
- 
-def load_mcss_csv(mpath):
-    lig1 = mpath.split('-')[0]
-    lig2 = mpath.split('-')[1]
-    tr = {lig1:[],lig2:[]}
-    m = None
-    try:
-        with open(mpath) as f:
-            for line in f:
-                line = line.strip().split(',')
-                if line[0] == 'SMILES': continue
-                assert line[1] in tr
-                lig,msize,smarts = line[1], int(line[5]), line[-1]
-                tr[lig].append(smarts)
-                if m is None: m = msize
-                assert msize == m
-    except Exception as e:
-        print e
-        print 'mcss csv file error'
-    return m,tr[lig1],tr[lig2]
 
-def delete_extraneous_bonds(st1, st2):
+class csvFile:
+    def __init__(self, mpath):
+        self.mpath = mpath
+        self.l1 = mpath.split('-')[0]
+        self.l2 = mpath.split('-')[1]
+        self.msz = -1
+        self.sm = {}
+        self.alist = {}
+        self.num_b = -1        
+        self.load()
+        
+    def load(self):
+        try:
+            with open(self.mpath) as f:
+                for line in f:
+                    csv = line.strip().split(',')
+                    qsv = line.strip().split('"')
+                    if csv[0] == 'SMILES': continue
+                    lig = csv[1]
+                    assert lig in self.mpath
+                    if lig not in self.sm: self.sm[lig] = []
+                    if lig not in self.alist: self.alist[lig] = []
+                    self.sm[lig].append(csv[-1])
+                    if len(qsv[1]) > 0: self.alist[lig].append(tuple(sorted([int(a) for a in qsv[1].split(',')])))
+                    if self.msz == -1: self.msz = int(csv[5])
+                    if self.num_b == -1: self.num_b = int(csv[6])
+                    assert int(csv[6]) == self.num_b
+                    assert int(csv[5]) == self.msz#msize == m
+        except Exception as e:
+            print e
+            print 'mcss csv file error'
+
+def csv_equality(f1, f2, smarts=False, alist=False, size=False):
+    match = True
+    if size:
+        match = match and f1.num_b == f2.num_b and f1.msz == f2.msz
+
+    if smarts:
+        match = match and sorted(f1.sm.keys()) == sorted(f2.sm.keys())
+        for lig,sm1 in f1.sm.items():
+            _sm1 = f2.sm[lig]
+            match = match and sorted(sm1) == sorted(_sm1)
     
+    if alist:
+        match = match and sorted(f1.alist.keys()) == sorted(f2.alist.keys())
+        for lig,alist1 in f1.alist.items():
+            _alist1 = f2.alist[lig]
+            match = match and sorted(alist1) == sorted(_alist1)
+
+    return match
+
+def delete_extraneous_bonds(st1, st2):    
     if len(st1.bond) + 1 == len(st2.bond): # st2 has the extra bond
         st1, st2 = st2, st1
 
-    all_b = {}
-    for i,b in enumerate(st1.bond):
-        all_b[(i,b.order)] = b 
-
+    all_b = {(i,b.order):b for i,b in enumerate(st1.bond)}
     for (i,o),b in all_b.items():
         a1,a2 = b.atom1, b.atom2
         st1.deleteBond(a1,a2)
         if st1.isEquivalent(st2,False):
             return (st1,st2)
         st1.addBond(a1,a2,o)
-    
-    return None
 
-def match(st1, st2):
+def delete_bond_pair(st1, st2):
+    all_b1 = {(i,b.order):b for i,b in enumerate(st1.bond)}
+    all_b2 = {(i,b.order):b for i,b in enumerate(st2.bond)}
+    for (i,o1),b1 in all_b1.items():
+        a1,a2 = b1.atom1,b1.atom2
+        st1.deleteBond(a1,a2)
+        for (j,o2),b2 in all_b2.items():
+            a3,a4 = b2.atom1,b2.atom2
+            st2.deleteBond(a3,a4)
+            if st1.isEquivalent(st2,False):
+                return (st1,st2)
+            st2.addBond(a3,a4,o2)
+        st1.addBond(a1,a2,o1)
+
+def match(st1, st2, num_b):
+    if st1.isEquivalent(st2,False): return (st1,st2)
     if abs(len(st1.bond) - len(st2.bond)) == 1:
         return delete_extraneous_bonds(st1, st2)
-    if st1.isEquivalent(st2,False): return (st1,st2)
-    return None
+    if len(st1.bond) == len(st2.bond) and len(st1.bond) == num_b + 1:
+        return delete_bond_pair(st1, st2)
 
 def unproc_st(st):
     st2 = st.copy()
@@ -52,11 +92,12 @@ def unproc_st(st):
     st2.retype()
     return st2
 
-def find_mcss_matches(st1, smarts1, st2, smarts2, unproc=True):
+def find_mcss_matches(st1, st2, csvf, unproc=True):
     all_pairs = []
-    for sm1 in smarts1:
-        for sm2 in smarts2:
-
+    
+    for sm1 in csvf.sm[csvf.l1]:
+        for sm2 in csvf.sm[csvf.l2]:
+            if '[11C]' in sm1 or '[11C]' in sm2: return []
             mcss1 = evaluate_smarts(st1, sm1, unique_sets=True)
             mcss2 = evaluate_smarts(st2, sm2, unique_sets=True)
 
@@ -69,13 +110,12 @@ def find_mcss_matches(st1, smarts1, st2, smarts2, unproc=True):
 
             for m1 in list1:
                 for m2 in list2:
-                    attempt_match = match(m1,m2)
+                    attempt_match = match(m1,m2,csvf.num_b)
                     if attempt_match is not None:
                         all_pairs.append((m1,m2))
-
     return all_pairs
 
-#ref_path = '../../../structures/ligands/{}.mae'
+ref_path2 = '../../../structures/ligands/{}.mae'
 ref_path = '../../../ligands/prepared_ligands/{}/{}.mae'
 pv_path = '../../../docking/{}/{}-to-{}/{}-to-{}_pv.maegz'
 outf = '{}-{}-{}.csv'
@@ -87,31 +127,55 @@ class WritePairMCSS:
         self.mpath = mpath
         self.st = st
         self.gdir = gdir
+        self.csv_f = csvFile(mpath)
 
-    def load_ref(self):
+    def load_ref(self):#,alt=False):
+        #if alt: ref_path = ref_path2
         ref1 = StructureReader(ref_path.format(self.l1, self.l1)).next()
         ref2 = StructureReader(ref_path.format(self.l2, self.l2)).next()
         return ref1, ref2
 
     def write_size_file(self):
-        s3,sm1,sm2 = load_mcss_csv(self.mpath)
-        ref1,ref2 = self.load_ref()
-        valid_mcss_pairs = find_mcss_matches(ref1, sm1, ref2, sm2)
+        #print self.mpath
+        other_mcss_files = [f for f in os.listdir('.') if f[-3:] == 'csv' and 'glide' not in f and '-' in f]
+        for o in sorted(other_mcss_files):
+            if o == self.mpath: continue
+            of = csvFile(o)
+            if csv_equality(self.csv_f,of,size=True,alist=True):
+                #print '-',o
+                more_f = [f for f in os.listdir('.') if o.split('.')[0] in f.split('.')[0]]
+                if True in [f.split('.')[-1] == 'size' for f in more_f]: 
+                    #print '-',o
+                    #print '-- size file exists'
+                    os.system('cp {}.size {}.size'.format(o.split('.')[0],self.mpath.split('.')[0]))
+                    for f in more_f:
+                        if 'glide' in f:
+                            other_rmsd_info = '-'.join(f.split('-')[-2:])
+                            #print '-- rmsd file exists'
+                            new_rmsd_f = '{}-{}'.format(self.mpath.split('.')[0],other_rmsd_info)
+                            os.system('cp {} {}'.format(f,new_rmsd_f))
+                    return
 
+        ref1,ref2 = self.load_ref()
+       
         s1 = len([a for a in ref1.atom if a.element != 'H'])
         s2 = len([a for a in ref2.atom if a.element != 'H'])
+ 
+        if self.csv_f.msz*2 < min(s1,s2):
+            num_m = -1
+        else:
+            num_m = len(find_mcss_matches(ref1, ref2, self.csv_f))
 
         with open('{}.size'.format(self.mpath.split('.')[0]),'w') as f:
-            f.write('{} matches\n'.format(len(valid_mcss_pairs)))
-            for smarts in sm1:
-                f.write('{},{},{},{}\n'.format(self.l1,s1,s3,smarts))
-            for smarts in sm2:
-                f.write('{},{},{},{}\n'.format(self.l2,s2,s3,smarts))
+            f.write('{} matches\n'.format(num_m))
+            for smarts in self.csv_f.sm[self.l1]:
+                f.write('{},{},{},{}\n'.format(self.l1,s1,self.csv_f.msz,smarts))
+            for smarts in self.csv_f.sm[self.l2]:
+                f.write('{},{},{},{}\n'.format(self.l2,s2,self.csv_f.msz,smarts))
 
     def proc_ref(self):
-        s3, sm1, sm2 = load_mcss_csv(self.mpath)
-        ref1, ref2 = self.load_ref()
-        valid_mcss_pairs = find_mcss_matches(ref1, sm1, ref2, sm2)
+        ref1, ref2 = self.load_ref()#alt=True)
+        valid_mcss_pairs = find_mcss_matches(ref1, ref2, self.csv_f)
 
         stwr = StructureWriter('{}.mae'.format(self.mpath.split('.')[0]))
         stwr.append(ref1)
@@ -131,8 +195,6 @@ class WritePairMCSS:
         stwr.close()
 
     def proc_debug(self):
-        s3, sm1, sm2 = load_mcss_csv(self.l1, self.l2, self.tf)
-        print s3, sm1, sm2
         pv1 = list(StructureReader(pv_path.format(self.gdir, self.l1, self.st, self.l1, self.st)))[1:]
         pv2 = list(StructureReader(pv_path.format(self.gdir, self.l2, self.st, self.l2, self.st)))[1:]
         print 'hi'
@@ -142,7 +204,7 @@ class WritePairMCSS:
                 if i > 3 or j > 3: 
                     continue
                 print i,j
-                all_mcss_pairs = find_mcss_matches(p1, sm1, p2, sm2)
+                all_mcss_pairs = find_mcss_matches(p1, sm1, p2, sm2, num_b)
                 print len(all_mcss_pairs)
                 stwr.append(p1)
                 stwr.append(p2)
@@ -161,9 +223,9 @@ class WritePairMCSS:
                     rmsd = min(rmsd, conf_rmsd)
         stwr.close()
 
-
     def write_rmsd_file(self):
-        s3, sm1, sm2 = load_mcss_csv(self.mpath)
+        
+        outpth = outf.format(self.mpath.split('.')[0],self.st,self.gdir)
 
         pv1 = list(StructureReader(pv_path.format(self.gdir, self.l1, self.st, self.l1, self.st)))[1:]
         pv2 = list(StructureReader(pv_path.format(self.gdir, self.l2, self.st, self.l2, self.st)))[1:]
@@ -171,9 +233,9 @@ class WritePairMCSS:
         s1 = len([a for a in pv1[0].atom if a.element != 'H'])
         s2 = len([a for a in pv2[0].atom if a.element != 'H'])
 
-        with open(outf.format(self.mpath.split('.')[0],self.st,self.gdir), 'w') as f:
-            f.write('{},{},{}\n'.format(s1, s2, s3))
-            if s3 <= 8: return # or s3*2 < min(s1,s2): return
+        with open(outpth, 'w') as f:
+            f.write('{},{},{}\n'.format(s1, s2, self.csv_f.msz))
+            if self.csv_f.msz*2 < min(s1,s2): return
 
             for i, p1 in enumerate(pv1):
                 for j, p2 in enumerate(pv2):
@@ -181,7 +243,7 @@ class WritePairMCSS:
                         continue
                     
                     rmsd = 10000
-                    for m1, m2 in find_mcss_matches(p1,sm1,p2,sm2):
+                    for m1, m2 in find_mcss_matches(p1,p2,self.csv_f):
                         try: 
                             conf_rmsd = ConformerRmsd(m1, m2)
                             conf_rmsd.use_heavy_atom_graph = True
@@ -197,8 +259,8 @@ class WritePairMCSS:
 
 if __name__ == '__main__':
     from schrodinger.structure import StructureReader, StructureWriter
-    from schrodinger.structutils.rmsd import ConformerRmsd
     from schrodinger.structutils.analyze import evaluate_smarts
+    from schrodinger.structutils.rmsd import ConformerRmsd
 
     mode = sys.argv[1]
     mpath = sys.argv[2]

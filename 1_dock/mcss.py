@@ -21,7 +21,7 @@ class SM:
         self.no_mcss = set([])
         self.no_size = set([])
         self.no_rmsd = set([])
-
+    
     def get_path(self,l1,l2,o,add_dir=False,add_st=False,ext='csv'):
         pth = '{}-{}-{}{}'.format(l1,l2,self.tf,o)
         if add_st: pth = '{}-{}-{}'.format(pth,self.st,self.gdir)
@@ -37,6 +37,7 @@ class SM:
             elif rmsd and l1 in self.docked and l2 in self.docked:
                 if not os.path.exists(self.get_path(l1,l2,o,add_dir=True,add_st=True)):
                     self.no_rmsd.add((l1,l2,o))
+
         if not os.path.exists('mcss/{}/{}-{}/{}-{}_in.mae'.format(self.mdir,l1,l2,l1,l2)):
             os.system('mkdir -p mcss/{}/{}-{}'.format(self.mdir,l1,l2))
             stwr = StructureWriter('mcss/{}/{}-{}/{}-{}_in.mae'.format(self.mdir,l1,l2,l1,l2))
@@ -46,13 +47,13 @@ class SM:
 
     def proc(self, init=False, rmsd=False, size=False):
         if init: 
-            group_size = 200
+            group_size = 400
             all_pairs = self.no_mcss
         if size:
-            group_size = 50
+            group_size = 100
             all_pairs = self.no_size
-        if rmsd: 
-            group_size = 1
+        if rmsd:
+            group_size = 10
             all_pairs = self.no_rmsd
 
         os.chdir('mcss/{}'.format(self.mdir))
@@ -72,7 +73,7 @@ class SM:
                     if rmsd: f.write(rmsd_cmd.format(self.lm.sp['code'], self.get_path(l1,l2,o),self.st,self.gdir))
                     f.write('cd ..\n')
                 f.write('wait\n')
-            os.system('sbatch -p {} --tasks=1 --cpus-per-task=1 -t 2:00:00 {}'.format(queue,script))
+            os.system('sbatch -p {} --nice --tasks=1 --cpus-per-task=1 -t 5:00:00 {}'.format(queue,script))
         os.chdir('../..')
 
 
@@ -83,9 +84,13 @@ def mcss(lm, chembl={}, max_num=20):
 
     for f, f_data in chembl.items():
         for q,c in f_data.items():
+            #print q,c
             for i,l1 in enumerate(c):
-                for l2 in c[i+1:]:
-                    sm.add(l1,l2,True)
+                if l1 == '': continue
+                #sm.add(q,l1,True)
+                for l2 in c[i+1:]: pass
+                    #if l1 < l2: sm.add(l1,l2,True)
+                    #else: sm.add(l2,l1,True)
 
     for i,l1 in enumerate(lm.pdb[:max_num]):
         for l2 in lm.pdb[i+1:max_num]:
@@ -94,16 +99,16 @@ def mcss(lm, chembl={}, max_num=20):
     for l1 in lm.pdb[:max_num]:
         for l2 in lm.chembl():
             sm.add(l1,l2)
-
+    
     if len(sm.no_mcss) > 0:
         print len(sm.no_mcss), 'mcss init pairs left'
         sm.proc(init=True)
     if len(sm.no_size) > 0:
         print len(sm.no_size), 'mcss size pairs left'
-        #sm.proc(size=True)
+        sm.proc(size=True)
     if len(sm.no_rmsd) > 0:
         print len(sm.no_rmsd), 'mcss rmsd pairs left'
-        sm.proc(rmsd=True)
+        #sm.proc(rmsd=True)
 
 
 
