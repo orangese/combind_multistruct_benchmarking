@@ -31,6 +31,7 @@ class csvFile:
                     assert int(csv[5]) == self.msz#msize == m
         except Exception as e:
             print e
+            print self.mpath
             print 'mcss csv file error'
 
 def csv_equality(f1, f2, smarts=False, alist=False, size=False):
@@ -136,22 +137,17 @@ class WritePairMCSS:
         return ref1, ref2
 
     def write_size_file(self):
-        #print self.mpath
-        other_mcss_files = [f for f in os.listdir('.') if f[-3:] == 'csv' and 'glide' not in f and '-' in f]
+        other_mcss_files = [f.split('.')[0]+'.csv' for f in os.listdir('.') if f[-4:] == 'size']
         for o in sorted(other_mcss_files):
             if o == self.mpath: continue
             of = csvFile(o)
             if csv_equality(self.csv_f,of,size=True,alist=True):
-                #print '-',o
                 more_f = [f for f in os.listdir('.') if o.split('.')[0] in f.split('.')[0]]
                 if True in [f.split('.')[-1] == 'size' for f in more_f]: 
-                    #print '-',o
-                    #print '-- size file exists'
                     os.system('cp {}.size {}.size'.format(o.split('.')[0],self.mpath.split('.')[0]))
                     for f in more_f:
                         if 'glide' in f:
                             other_rmsd_info = '-'.join(f.split('-')[-2:])
-                            #print '-- rmsd file exists'
                             new_rmsd_f = '{}-{}'.format(self.mpath.split('.')[0],other_rmsd_info)
                             os.system('cp {} {}'.format(f,new_rmsd_f))
                     return

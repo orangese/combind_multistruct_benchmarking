@@ -81,7 +81,7 @@ class Docking:
         self.ligands = {}
         self.num_poses = {}
 
-    def load(self, ligands, load_fp, load_mcss):
+    def load(self, ligands, load_fp):
         for l in ligands:
             if l in self.ligands: 
                 if not (load_fp and self.ligands[l].poses[0].fp == {}):
@@ -112,7 +112,7 @@ class Protein:
         # if a struct is provided (above), lm.st will use it
         # otherwise lm.st will provide a default
         self.docking = { self.lm.st : Docking( shared_paths, self.prot, self.lm.st) }
-        self.lm.mcss.num_poses = self.docking.num_poses
+        self.lm.mcss.num_poses = self.docking[self.lm.st].num_poses
         
         self.true = {}
 

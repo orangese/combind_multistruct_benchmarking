@@ -2,19 +2,18 @@ import os
 import sys
 from grouper import grouper
 
-group_size=10
-output_dir = 'scores/scores10'
+group_size=1
+output_dir = 'scores/scores11'
 cmd = '$SCHRODINGER/run /scratch/PI/rondror/jbelk/method/combind/3_analyze/scores.py {} {} {}'
 
 settings = {
-    'k_list' : ['mcss','hbond','sb1'],#,'contact'],#,'pipi','contact']
+    'k_list' : ['mcss','hbond','sb2','contact'],#,'pipi'
     'num_stats_ligs' : 10,
     'normalize' : True,
     'num_pred_chembl' : 10,
     'num_poses' : 100,
-    't' : 10,
-    'mcss_sort': False, # set to True when using best_mcss.txt
-    'chembl_file': 'best_affinity.txt',
+    't' : 0.1,
+    'chembl_file': 'best_mcss.txt',
     'score_mode': 'ALL'
     #'use_chembl':False
 }
@@ -28,7 +27,7 @@ def write_settings_file(out_path, settings):
 
 def score(lm, helpers):
     all_p = [d for d in sorted(os.listdir(lm.sp['data'])) if d[0] != '.' and d[-3:] != 'old']
-    settings['stats_prots'] = [p for p in all_p if p != lm.prot]
+    settings['stats_prots'] = [p for p in all_p if p != lm.prot and p != 'D2R']
     settings['shared_paths'] = lm.sp
     os.system('mkdir -p {}'.format(output_dir))
     os.chdir(output_dir)
@@ -46,7 +45,6 @@ def score(lm, helpers):
             f.write('#!/bin/bash\n')
             f.write(cmd.format(lm.st, lm.prot, ' '.join([q for q in group if q is not None])))
         os.system('sbatch -t 1:00:00 -p rondror {}.sh'.format(i))
-        #break
     os.chdir('../..')
 
 

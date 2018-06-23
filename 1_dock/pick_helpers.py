@@ -28,9 +28,11 @@ def pick_helpers(lm, maxnum=20):
             with open(fpath,'w') as fi:
                 for q in lm.docked(lm.pdb)[:maxnum]:
                     # sort and remove duplicates
+                    print q
                     if 'mcss' in f:
                         lm.mcss.load_mcss(set([q]), set(chembl_ligs))
-                        sorted_helpers = lm.mcss.sort_by_mcss(q, set(chembl_ligs),lambda x: x.m_sz)
+                        sorted_helpers = sorted(chembl_ligs,key=ki_sort)
+                        sorted_helpers = lm.mcss.sort_by_mcss(q, sorted_helpers, lambda x: x.m_sz)
                     elif 'affinity' in f:
                         sorted_helpers = sorted(chembl_ligs,key=ki_sort)
                     unique = lm.unique([q]+sorted_helpers)

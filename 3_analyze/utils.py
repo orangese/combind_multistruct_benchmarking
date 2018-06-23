@@ -47,7 +47,7 @@ def plot_docking(rmsds_list, title_list, plt_title=''):
     
     plt.show()
 
-def stats_hist(green_dist,blue_dist,normalize=True):
+def stats_hist(green_dist,blue_dist,normalize=True,logratio=True):
 
     if green_dist is None or blue_dist is None: return
 
@@ -56,7 +56,7 @@ def stats_hist(green_dist,blue_dist,normalize=True):
     plt.rcParams['font.size'] = 20
 
     if normalize:
-        xmin, xmax = -0.5, 1.5 
+        xmin, xmax = -0.3, 1.3
         binwidth = 0.05
     else:
         allx = set(green_dist.prob.keys()+blue_dist.prob.keys())
@@ -89,6 +89,21 @@ def stats_hist(green_dist,blue_dist,normalize=True):
     plt.tick_params(axis='x', direction='inout', length=13, width=3, pad=15)
     ax.axhline(linewidth=4, color='k')#, color="g")
 
+    if logratio:
+        ax2 = ax.twinx()
+        x2 = [x for x in g_x if x >= 0 and x <= 1]
+        y2 = [np.log10(green_dist.prob[x]/blue_dist.prob[x]) for x in x2]
+        xmax2 = x2[np.argmax(y2)]
+        ax2.plot(x2, y2, linewidth=2, color='k')
+        ax2.plot([xmax2,xmax2],[1.1*min(y2),1.1*max(y2)],'--k')
+        plt.gca().set_ylim([max(-2,min(y2)),1.1*max(y2)])
+        ax2.spines["top"].set_visible(False)  
+        ax2.spines["right"].set_visible(False)
+        ax2.spines["left"].set_visible(False)
+        ax2.get_yaxis().set_visible(False)#.tick_left()
+        #plt.gca().y
+
+    plt.gca().set_xlim([xmin,xmax])
     plt.show()
 
 def heatmap(A, row_vals, col_vals, red=10.25):

@@ -3,9 +3,9 @@ import random
 from pairs import LigPair
 
 class PredictStructs:
-    def __init__(self, mcss, docking_st, stats, k_list, max_poses, T, reference='ALL', normalize_fp=True):
-        self.mcss = mcss
-        self.docking_st = docking_st
+    def __init__(self, prot, stats, k_list, max_poses, T, reference='ALL', normalize_fp=True):
+        self.mcss = prot.lm.mcss
+        self.docking_st = prot.docking[prot.lm.st]
         self.stats = stats
         self.k_list = k_list
         self.max_poses = max_poses

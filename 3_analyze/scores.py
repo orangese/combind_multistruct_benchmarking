@@ -3,7 +3,7 @@ import sys
 
 import numpy as np
 
-from containers import Dataset, LigandManager, data_dir
+from containers import Dataset, LigandManager
 from utils import export, show_side_by_side, show_features
 from statistics import Statistics, readf
 from prob_opt import PredictStructs
@@ -23,11 +23,12 @@ class ScoreContainer:
         self.root = root
       
         self.sett = read_settings(self.root)
+        self.sp = self.sett['shared_paths']
  
         self.stats = self.init_stats()
-        self.predict_data = Dataset([prot], {prot:struct})
-        self.ps = PredictStructs(self.predict_data.proteins[prot].docking[struct], 
-            self.stats, self.sett['k_list'], self.sett['num_poses'], self.sett['t'], self.sett['score_mode'])
+        self.predict_data = Dataset(self.sp, [prot], {prot:struct})
+        self.ps = PredictStructs(self.predict_data.proteins[prot], self.stats, 
+            self.sett['k_list'], self.sett['num_poses'], self.sett['t'], self.sett['score_mode'])
     
         self.results = {}
         self.validate = {}
@@ -44,18 +45,18 @@ class ScoreContainer:
             stats_ligs = {}
             stats_st = {}
             for p in self.sett['stats_prots']:
-                lm = LigandManager(p)
+                lm = LigandManager(self.sp,p)
                 stats_ligs[p] = lm.docked(lm.pdb)[:self.sett['num_stats_ligs']]
                 stats_st[p] = lm.st
             stats = Statistics(stats_ligs, stats_st, self.sett['k_list'])
-            stats.read(self.sett['data_dir'], self.sett['stats_dir'])
+            stats.read(self.sp['data'], self.sp['stats'])
         return stats
 
     def compute_results(self, q):
         if q not in self.results:
             prot = self.predict_data.proteins[self.prot]
             chembl_ligs = prot.lm.get_similar(q, self.sett['chembl_file'], 
-                num=self.sett['num_pred_chembl'], mcss_sort=self.sett['mcss_sort'], struct=self.struct)
+                num=self.sett['num_pred_chembl'], struct=self.struct)
             self.predict_data.load({self.prot:[q]+chembl_ligs},{self.prot:[self.struct]}) 
             best_cluster, all_scores, all_rmsds = self.ps.max_posterior([q]+chembl_ligs, restart=15, sampling=3)
             self.results[q] = best_cluster
@@ -110,23 +111,30 @@ class ScoreContainer:
         show_side_by_side(us_top, glide_top, l_list, 
                           t1='Our Top Poses', t2='Glide Top Poses', num_i=num_i, size=size)
         
-    def show_feature(self, q, k, show_prob=True, show_x=False, size=2):
+    def show_feature(self, q, k, show_prob=True, show_x=False, size=2, best=False):
         self.load_details(q)
         l_list = [q]+sorted([l for l in self.results[q].keys() if l != q])
         
         x1, log_p1 = self.ps.likelihood_and_feature_matrix(self.results[q],k,lig_order=l_list)
         x2, log_p2 = self.ps.likelihood_and_feature_matrix({l:0 for l in l_list},k,lig_order=l_list)
         
+        title = 'glide top'
         us_top = self.ps.get_poses(self.results[q])
         glide_top = self.ps.get_poses({l:0 for l in l_list})
-        
+
+        if best:
+            min_rmsd = np.argmin([p.rmsd for p in self.predict_data.proteins[self.prot].docking[self.struct].ligands[q].poses])
+            glide_top = self.ps.get_poses(self.results[q])
+            glide_top[q] = self.predict_data.proteins[self.prot].docking[self.struct].ligands[q].poses[p]
+            title = 'min query rmsd'
+
         if show_prob and np.sum(log_p1) != 0:
             print k, 'probability matrix'
             minval = min(np.min(log_p1[np.nonzero(log_p1)]),np.min(log_p2[np.nonzero(log_p2)]))
             maxval = max(np.max(log_p1[np.nonzero(log_p1)]),np.max(log_p2[np.nonzero(log_p2)]))
 
             show_features(us_top, log_p1, glide_top, log_p2, l_list, 
-                          'us top','glide top',size=size, mi=minval,ma=maxval)
+                          'us top',title,size=size, mi=minval,ma=maxval)
 
         if show_x:
             print k, 'x_k matrix'
@@ -134,16 +142,16 @@ class ScoreContainer:
             maxval = max(np.max(x1),np.max(x2))
 
             show_features(us_top, x1, glide_top, x2, l_list, 
-                          'us top','glide top',size=size,mi=minval,ma=maxval)
+                          'us top',title,size=size,mi=minval,ma=maxval)
             
     def export_poses(self, q):
         # this will show up in /scratch/PI/rondror/jbelk/method/outputs
         us_top = self.ps.get_poses(self.results[q])
         glide_top = self.ps.get_poses({l:0 for l in self.results[q]})
-        export(self.sett['data_dir'], us_top, '{}_us'.format(q), self.prot, 
-               struct=self.struct, verbose=False, glide_dir=self.sett['glide_dir'])
-        export(self.sett['data_dir'], glide_top, '{}_glide'.format(q), self.prot, 
-               struct=self.struct, verbose=False, glide_dir=self.sett['glide_dir'])
+        export(self.sp['data'], us_top, '{}_us'.format(q), self.prot, 
+               struct=self.struct, verbose=False, glide_dir=self.sp['docking'])
+        export(self.sp['data'], glide_top, '{}_glide'.format(q), self.prot, 
+               struct=self.struct, verbose=False, glide_dir=self.sp['docking'])
 
 if __name__ == '__main__':
     script_path, s, p = sys.argv[:3]

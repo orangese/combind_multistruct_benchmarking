@@ -47,10 +47,10 @@ class SM:
 
     def proc(self, init=False, rmsd=False, size=False):
         if init: 
-            group_size = 400
+            group_size = 100
             all_pairs = self.no_mcss
         if size:
-            group_size = 100
+            group_size = 25
             all_pairs = self.no_size
         if rmsd:
             group_size = 10
@@ -70,10 +70,12 @@ class SM:
                     f.write('cd {}-{}\n'.format(l1,l2))
                     if init: f.write(init_cmd.format(l1,l2,self.get_path(l1,l2,o),o,self.lm.sp['code'], self.tf))
                     if size: f.write(size_cmd.format(self.lm.sp['code'], self.get_path(l1,l2,o)))
+                    #f.write(init_cmd.format(l1,l2,self.get_path(l1,l2,o),o,self.lm.sp['code'], self.tf))
+                    #f.write(size_cmd.format(self.lm.sp['code'], self.get_path(l1,l2,o)))
                     if rmsd: f.write(rmsd_cmd.format(self.lm.sp['code'], self.get_path(l1,l2,o),self.st,self.gdir))
                     f.write('cd ..\n')
                 f.write('wait\n')
-            os.system('sbatch -p {} --nice --tasks=1 --cpus-per-task=1 -t 5:00:00 {}'.format(queue,script))
+            os.system('sbatch -p {} --tasks=1 --cpus-per-task=1 --nice -t 8:00:00 {}'.format(queue,script))
         os.chdir('../..')
 
 
@@ -87,10 +89,10 @@ def mcss(lm, chembl={}, max_num=20):
             #print q,c
             for i,l1 in enumerate(c):
                 if l1 == '': continue
-                #sm.add(q,l1,True)
-                for l2 in c[i+1:]: pass
-                    #if l1 < l2: sm.add(l1,l2,True)
-                    #else: sm.add(l2,l1,True)
+                sm.add(q,l1,True)
+                for l2 in c[i+1:]: #pass
+                    if l1 < l2: sm.add(l1,l2,True)
+                    else: sm.add(l2,l1,True)
 
     for i,l1 in enumerate(lm.pdb[:max_num]):
         for l2 in lm.pdb[i+1:max_num]:
@@ -108,7 +110,7 @@ def mcss(lm, chembl={}, max_num=20):
         sm.proc(size=True)
     if len(sm.no_rmsd) > 0:
         print len(sm.no_rmsd), 'mcss rmsd pairs left'
-        #sm.proc(rmsd=True)
+        sm.proc(rmsd=True)
 
 
 

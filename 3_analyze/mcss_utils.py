@@ -25,12 +25,12 @@ class MCSS:
                         self.all_pairs[(l2,l1)] = PairMCSS(l2,l1,self.st,self.sp,self.root)
                         self.all_pairs[(l2,l1)].load(rmsd,self.num_poses)
 
-    def sort_by_mcss(self, q, lset, sort_prop=lambda x: x.m_sz):
+    def sort_by_mcss(self, q, llist, sort_prop=lambda x: x.m_sz):
         tr = {}
         for p in [p for lp,p in self.all_pairs.items() if q in lp]:# and p.num_matches > 0]:
-            if p.l1 == q and p.l2 in lset: tr[p.l2] = p
-            if p.l2 == q and p.l1 in lset: tr[p.l1] = p
-        return sorted(tr.keys(),key=lambda x: -sort_prop(tr[x]))
+            if p.l1 == q and p.l2 in set(llist): tr[p.l2] = p.size()
+            if p.l2 == q and p.l1 in set(llist): tr[p.l1] = p.size()
+        return sorted(llist,key=lambda x: -tr.get(x,-1))
 
     def get_rmsd(self, l1, p1, l2, p2):
         if (l1,l2) in self.all_pairs: return self.all_pairs[(l1,l2)].rmsds.get((p1,p2),None)
@@ -63,6 +63,11 @@ class PairMCSS:
         self.load_mcss_size()
         if rmsd and self.m_sz >= 16 and self.num_matches > 0: 
             self.load_rmsds(num_poses)
+
+    def size(self):
+        if self.m_sz*2 >= min(self.l_sz[self.l1],self.l_sz[self.l2]):
+            return self.m_sz
+        return -1
 
     def load_mcss_size(self):
         pth = self.get_mcss_path(add_dir=True,ext='size')

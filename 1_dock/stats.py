@@ -16,7 +16,8 @@ def stats(lm):
             l1,l2 = ligs[i],ligs[j]
             for k in features:
                 if not os.path.exists('stats/{}/{}-{}-to-{}-{}.txt'.format(lm.sp['stats'],l1,l2,lm.st,k)):
-                    not_done.append((l1,l2))
+                    print l1,l2,k
+                    #not_done.append((l1,l2))
                     break
 
     if len(not_done) > 0:
@@ -35,7 +36,7 @@ def compute(lm, all_pairs):
                 if pair is None: continue
                 l1,l2 = pair
                 f.write('python {}/3_analyze/statistics.py {} {} {}\n'.format(lm.sp['code'], lm.prot, l1, l2))
-            f.write('rm stats{}.sh\n'.format(i))
+            #f.write('rm stats{}.sh\n'.format(i))
         os.system('sbatch -p {} -t 1:00:00 stats{}.sh'.format(queue, i))
 
     os.chdir('../..')

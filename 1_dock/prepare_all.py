@@ -1,6 +1,7 @@
 import os
 import sys
 
+from shared_paths import shared_paths
 from sort_downloads import sort_downloads
 
 from align_structs import align_structs
@@ -23,15 +24,6 @@ from containers import LigandManager
 
 os.chdir('../../data')
 
-shared_paths = {
-    'code'    : '/scratch/PI/rondror/jbelk/method/combind',
-    'data'    : '/scratch/PI/rondror/jbelk/method/data',
-    'docking' : 'glide12',
-    'mcss'    : 'custom_mcss',
-    'stats'   : 'stats3',
-    'ifp'     : 'ifp3'
-}
-
 todo = list(sys.argv[1])
 if len(todo) == 0:
     todo = list('12345') 
@@ -40,9 +32,10 @@ datasets = sys.argv[2:]
 if datasets == []:
     datasets = [d for d in sorted(os.listdir('.')) if d[0] != '.' and d[-3:] != 'old']
 
+datasets=reversed(datasets)
 for i, d in enumerate(datasets):
-    print i, d
-    
+    print d, i
+    #if i < 5: continue
     os.chdir(d)
     
     lm = LigandManager(shared_paths, d)

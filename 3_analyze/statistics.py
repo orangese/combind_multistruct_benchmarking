@@ -40,7 +40,7 @@ class Statistics:
     def create(self, dataset, samples, smooth, num_poses, hack=False):
         for p, pstats in self.proteins.items():
             prot = dataset.proteins[p]
-            pstats.create(prot.docking[pstats.st], samples, smooth, num_poses, self.normalize, hack)
+            pstats.create(prot.docking[pstats.st], prot.lm.mcss, samples, smooth, num_poses, self.normalize, hack)
         combine(self.dist, self.proteins)
 
     def read(self, data_dir, stats_dir):
@@ -77,10 +77,10 @@ class ProteinStatistics:
         self.ind = [-1,0,1]
         self.dist = {i: {k: None for k in k_list} for i in self.ind}
 
-    def create(self, docking, samples, smooth, num_poses, normalize, hack):
+    def create(self, docking, mcss, samples, smooth, num_poses, normalize, hack):
         for (l1,l2), pstats in self.pairs.items():
             lp = LigPair(docking.ligands[l1], docking.ligands[l2],
-                         self.k_list, docking.mcss, num_poses, normalize)
+                         self.k_list, mcss, num_poses, normalize)
             lp.init_pose_pairs()
             pstats.create(lp, samples, smooth, normalize, hack)
         combine(self.dist, self.pairs)
@@ -116,14 +116,18 @@ class LigPairStatistics:
             for i in self.ind:
                 if len(x_k[i]) == 0: continue
                 tot = float(sum([v for ke,v in x_k[i].items()]))#/float(len(x_k[i]))
+
                 var = smooth
+                #mean = sum([ke*v/tot for ke,v in x_k[i].items()])
+                #var = smooth*sum([((ke-mean)**2) * v/tot for ke,v in x_k[i].items()])
+
                 gauss = lambda x,u: (1/np.sqrt(2*np.pi*var))*np.exp(-(x-u)**2 / (2*var))
                 p_domain = [sum([gauss(j,v)*freq/tot for v,freq in x_k[i].items()]) for j in domain]
                 self.dist[i][k] = Distribution(domain, p_domain)
 
     def read(self, data_dir, stats_dir):
         for k in self.k_list:
-            out_f = '{}/{}/{}/{}-{}-to-{}-{}.txt'.format(data_dir, 
+            out_f = '{}/{}/stats/{}/{}-{}-to-{}-{}.txt'.format(data_dir, 
                 self.prot, stats_dir, self.l1, self.l2, self.st, k)    
             temp = readf(out_f, k, self.ind)
             for i in self.ind:
@@ -156,17 +160,18 @@ if __name__ == '__main__':
     for i in ['1_dock','2_fp','3_analyze','4_score']:
         sys.path.append(code_path+'/'+i)
 
-    from containers import Dataset, data_dir, stats_dir
-    data = Dataset([prot])
+    from shared_paths import shared_paths
+    from containers import Dataset
+    data = Dataset(shared_paths,[prot])
     data.load({prot:[l1,l2]}, load_fp=True, load_mcss=True)
     lm = data.proteins[prot].lm
 
     k_list = ['sb1','sb2','sb3','mcss','hbond','pipi','contact']
     alls = Statistics({prot:[l1,l2]}, {prot:lm.st}, k_list)
-    alls.create(data,10**2,0.02,100)
+    alls.create(data,10**2,0.005,100)
 
     for k in k_list:
-        out_f = '{}/{}/{}/{}-{}-to-{}-{}.txt'.format(data_dir, prot, stats_dir, l1, l2, lm.st, k)    
+        out_f = '{}/{}/stats/{}/{}-{}-to-{}-{}.txt'.format(shared_paths['data'],prot,shared_paths['stats'],l1,l2,lm.st,k)    
         alls.write(out_f, k)
 
 
