@@ -9,7 +9,7 @@ from schrodinger.structure import StructureReader, StructureWriter
 
 command = '$SCHRODINGER/utilities/prepwizard -WAIT -watdist 0 {}_in.mae {}_out.mae'
 
-queue = 'rondror'
+queue = 'owners'
 
 def load_complex(pdb_id):
     prot_in = 'structures/raw_files/{}_prot.mae'.format(pdb_id)

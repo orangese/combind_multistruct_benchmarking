@@ -170,6 +170,9 @@ class WritePairMCSS:
                 f.write('{},{},{},{}\n'.format(self.l2,s2,self.csv_f.msz,smarts))
 
     def proc_ref(self):
+        """
+        Check that MCSS is valid.
+        """
         ref1, ref2 = self.load_ref()#alt=True)
         valid_mcss_pairs = find_mcss_matches(ref1, ref2, self.csv_f)
 
@@ -220,6 +223,9 @@ class WritePairMCSS:
         stwr.close()
 
     def write_rmsd_file(self):
+        """
+        Computes the RMSD between MCSSs for all pairs of poses.
+        """
         
         outpth = outf.format(self.mpath.split('.')[0],self.st,self.gdir)
 
@@ -272,4 +278,3 @@ if __name__ == '__main__':
     elif mode == 'DEBUG':
         mcss = WritePairMCSS(mpath, st='1E3G', gdir='glide12')
         mcss.proc_debug()
-

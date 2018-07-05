@@ -14,7 +14,7 @@ PRECISION   SP
 NENHANCED_SAMPLING   2
 '''
 
-queue = 'rondror'
+queue = 'owners'
 group_size = 5
 
 dock_cmd = '$SCHRODINGER/glide -WAIT {}-to-{}.in\n' 
@@ -78,7 +78,7 @@ def dock(lm, chembl=None, maxnum=20):
 
     if chembl is None:
         ligs = lm.pdb[:maxnum]
-        grids = lm.grids[:maxnum]
+        grids = [lm.st]
     else:
         ligs = set([])
         grids = [lm.st]

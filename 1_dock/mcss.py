@@ -4,7 +4,7 @@ from grouper import grouper
 
 from schrodinger.structure import StructureReader, StructureWriter
 
-queue = 'rondror'
+queue = 'owners'
 
 rmsd_cmd = '$SCHRODINGER/run {}/2_ifp/mcss_main.py RMSD {} {} {}\n'
 size_cmd = '$SCHRODINGER/run {}/2_ifp/mcss_main.py SIZE {}\n'
@@ -111,8 +111,3 @@ def mcss(lm, chembl={}, max_num=20):
     if len(sm.no_rmsd) > 0:
         print len(sm.no_rmsd), 'mcss rmsd pairs left'
         sm.proc(rmsd=True)
-
-
-
-
-

@@ -6,17 +6,20 @@ from schrodinger.structure import StructureReader, StructureWriter
 
 from parse_chembl import load_chembl_raw, load_chembl_proc
 
-queue = 'rondror'
+queue = 'owners'
 group_size = 10
 
 def get_ligands():
     os.system('mkdir -p ligands/raw_files')
 
+    # Copy pdb ligands into ligands/raw_files
     for f_name in os.listdir('structures/ligands'):
         if f_name.split('_')[1] != 'lig.mae': continue
         if os.path.exists('ligands/raw_files/{}'.format(f_name)): continue
         os.system('cp structures/ligands/{} ligands/raw_files/{}'.format(f_name, f_name))
 
+    # Read files downloaded from chembl at chembl/*.xls
+    # ligs is a dict mapping ligand names to CHEMBL class instance
     ligs = load_chembl_raw()
     if len(ligs) == 0: return
     written_ligs = load_chembl_proc()
@@ -53,7 +56,7 @@ def proc_ligands():
         prepped = 'ligands/prepared_ligands/{}/{}_out.mae'.format(l,l)
         final = 'ligands/prepared_ligands/{}/{}.mae'.format(l,l)
         if os.path.exists(prepped): 
-            if not os.path.exists(scaff):
+            if not os.path.exists(final):
                 try:
                     st = StructureReader(prepped).next() # first protonation state
                     st.title = l
@@ -92,6 +95,3 @@ def proc_ligands():
         os.chdir('ligands/prepared_ligands')
         os.system('sbatch -p {} -t 1:00:00 batch-{}.sh'.format(queue,i))
         os.chdir('../..')
-
-
-

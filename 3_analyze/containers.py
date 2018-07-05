@@ -13,12 +13,22 @@ from pick_helpers import load_helpers
 from chembl_props import read_duplicates
 
 class Pose:
+    """
+    Represents a single pose of a ligand.
+    """
     def __init__(self, rmsd, physics_score, fp, rank):
+        """
+        rmsd (float): RMSD to crystallographic pose
+        physics_score (float): score from physics-based docking alg
+        fp ({(int, string): float}): dict mapping interactiontype, resname pairs to interaction score
+        rank (int): ranking by physics score, and thereby index in pose file
+        """
         self.rmsd = rmsd
         self.gscore = physics_score
         self.fp_raw = fp
-        self.fp = fp
         self.rank = rank
+
+        self.fp = None
 
     def weight_fp(self, w):
         self.fp = {}
@@ -27,7 +37,11 @@ class Pose:
                 self.fp[(i,r)] = sc*w[i]
 
 class Ligand:
+    """
+    Stores all poses of a given ligand.
+    """
     def __init__(self, lig_id):
+
         self.lig_id = lig_id
         self.poses = []
 
@@ -72,6 +86,9 @@ class Ligand:
         return self.poses[np.argmin([self.poses[i].rmsd for i in range(min(n, len(self.poses)))])]
 
 class Docking:
+    """
+    Stores docking results for a set of ligands.
+    """
     def __init__(self, sp, prot, struct):
         self.sp = sp
         self.dock_dir = '{}/{}/docking/{}'.format(sp['data'], prot, sp['docking'])
@@ -105,6 +122,9 @@ class Docking:
         return rmsds
 
 class Protein:
+    """
+    Stores ligands and docking results for a given protein.
+    """
     def __init__(self, shared_paths, prot, struct):
         self.prot = prot
         self.lm = LigandManager(shared_paths, prot, struct)
@@ -133,28 +153,41 @@ class Protein:
                 self.true[l].load_poses(None, ifp_dir, l)
 
 class LigandManager:
+    """
+    Manages docking results, fps, and MCSSs for all ligands associated
+    with a given target.
+    """
     def __init__(self, shared_paths, prot, struct=None):
+        """
+        shared_paths ({string: string}): dict at least containing the key
+                                         'data' providing the path to where
+                                         data is stored.
+        prot (string): the name of the desired target.
+        """
+        # Get path to data
         self.root = '{}/{}'.format(shared_paths['data'], prot)
         self.prot = prot
         self.sp = shared_paths
 
-        #grids = {'D2R':'6CM4','AR':'2PNU','A2AR':'2YDO','B1AR':'2VT4','B2AR':'2RH1','CHK1':'2BRN', 'PLK1':'2OWB',
-        #         'VITD':'2HB7','BRAF':'3IDP','JAK2':'3KRR','CDK2':'1H1S','ERA':'1A52','GCR':'3K23','TRPV1':'3J5Q}
+        self.all_st = {} # What is this for? Vestigial?
 
-        self.all_st = {}
-
+        # Get ligand info
         self.chembl_info = load_chembl_proc(self.root)
         self.u_ligs, self.dup_ligs = read_duplicates(self.root)
-
         self.all_ligs = self.prepped()
         self.pdb = self.unique(sorted([l for l in self.all_ligs if l[:6] != 'CHEMBL']))
-        self.grids = sorted([l for l in os.listdir('{}/docking/grids'.format(self.root)) if l[0] != '.'])
 
+        # As written, this will always get the first structure.
+        if not (os.path.exists('{}/docking/grids'.format(self.root))
+                and os.listdir('{}/docking/grids'.format(self.root))): return
+
+        self.grids = sorted([l for l in os.listdir('{}/docking/grids'.format(self.root)) if l[0] != '.'])
         self.first_st = self.grids[0]
         self.st = struct
         if struct is None:
             self.st = self.all_st.get(prot, self.first_st)
 
+        # Load MCSS
         self.mcss = MCSS(self.sp, self.st, self.root)
         self.helpers = {}
 
@@ -210,6 +243,9 @@ class LigandManager:
         return self.helpers[fname][query][:num]
 
 class Dataset:
+    """
+    A set of proteins.
+    """
     def __init__(self, shared_paths, prots, structs={}):
         self.sp = shared_paths
         self.proteins = { p : Protein( shared_paths, p, structs.get(p,None) ) for p in prots }

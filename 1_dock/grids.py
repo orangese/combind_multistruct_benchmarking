@@ -14,7 +14,8 @@ def make_grids():
         
         if os.path.exists('docking/grids/{}/{}.zip'.format(pdb, pdb)): 
             continue
-        if not os.path.exists('structures/proteins/{}_prot.mae'.format(pdb)):
+        if not (os.path.exists('structures/proteins/{}_prot.mae'.format(pdb))
+                and os.path.exists('structures/ligands/{}_lig.mae'.format(pdb))):
             continue
         os.system('rm -rf docking/grids/{}'.format(pdb))        
 
@@ -40,7 +41,7 @@ def make_grids():
                         
         print 'making grid', out_f
         os.chdir('docking/grids/{}'.format(out_f))
-        os.system('sbatch -p rondror -t 00:30:00 -o grid.out grid_in.sh')
+        os.system('sbatch -p owners -t 00:30:00 -o grid.out grid_in.sh')
         os.chdir('../../..')
 
 

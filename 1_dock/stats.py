@@ -40,4 +40,3 @@ def compute(lm, all_pairs):
         os.system('sbatch -p {} -t 1:00:00 stats{}.sh'.format(queue, i))
 
     os.chdir('../..')
-
