@@ -171,8 +171,6 @@ if __name__ == '__main__':
     alls.create(data,10**2,0.005,100)
 
     for k in k_list:
-        out_f = '{}/{}/stats/{}/{}-{}-to-{}-{}.txt'.format(shared_paths['data'],prot,shared_paths['stats'],l1,l2,lm.st,k)    
+        out_f = '{}/{}/stats/{}/{}-{}-to-{}-{}.txt'.format(shared_paths['data'],prot,
+                                                           shared_paths['stats'],l1,l2,lm.st,k)    
         alls.write(out_f, k)
-
-
-

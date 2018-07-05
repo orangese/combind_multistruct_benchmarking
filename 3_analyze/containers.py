@@ -28,7 +28,7 @@ class Pose:
         self.fp_raw = fp
         self.rank = rank
 
-        self.fp = None
+        self.fp = fp
 
     def weight_fp(self, w):
         self.fp = {}
@@ -128,6 +128,7 @@ class Protein:
     def __init__(self, shared_paths, prot, struct):
         self.prot = prot
         self.lm = LigandManager(shared_paths, prot, struct)
+        self.sp = shared_paths
 
         # if a struct is provided (above), lm.st will use it
         # otherwise lm.st will provide a default
@@ -140,7 +141,7 @@ class Protein:
         if st == None: st = self.lm.st
 
         if st not in self.docking:
-            self.docking[st] = Docking(self.prot, st)
+            self.docking[st] = Docking(self.sp, self.prot, st)
         self.docking[st].load(l_list, load_fp)
 
         if load_mcss:
@@ -170,6 +171,7 @@ class LigandManager:
         self.sp = shared_paths
 
         self.all_st = {} # What is this for? Vestigial?
+        self.st = None
 
         # Get ligand info
         self.chembl_info = load_chembl_proc(self.root)
@@ -264,5 +266,3 @@ class Dataset:
             for l_name, l in p.true.items():
                 for pose in l.poses:
                     pose.weight_fp(w)
-
-

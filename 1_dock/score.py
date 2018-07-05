@@ -4,7 +4,7 @@ from grouper import grouper
 
 group_size=1
 output_dir = 'scores/scores11'
-cmd = '$SCHRODINGER/run /scratch/PI/rondror/jbelk/method/combind/3_analyze/scores.py {} {} {}'
+cmd = '$SCHRODINGER/run /scratch/PI/rondror/jpaggi/combind/combind/3_analyze/scores.py {} {} {}'
 
 settings = {
     'k_list' : ['mcss','hbond','sb2','contact'],#,'pipi'
@@ -46,7 +46,3 @@ def score(lm, helpers):
             f.write(cmd.format(lm.st, lm.prot, ' '.join([q for q in group if q is not None])))
         os.system('sbatch -t 1:00:00 -p rondror {}.sh'.format(i))
     os.chdir('../..')
-
-
-
-
