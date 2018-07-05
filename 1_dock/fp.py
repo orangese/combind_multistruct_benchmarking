@@ -44,6 +44,6 @@ def fp(lm):
         unfinished.append('{}-to-{}'.format(lig, lm.st))
        
     os.chdir('ifp/{}'.format(lm.sp['ifp'])) 
-    structure_fp(lm)
+    structure_fp(lm) # Should move this so it is called by itself.
     get_fp(lm, unfinished)
     os.chdir('../..')
