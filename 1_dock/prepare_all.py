@@ -62,7 +62,7 @@ for i, d in enumerate(datasets):
          os.system('rm -f chembl/molw.txt')
          write_props(lm)
 
-    # # 3. decide what ligands to use and prepare thems
+    # # 3. decide what ligands to use and prepare them
     if '3' in todo:
         pick_helpers(lm)              # Picks chembl ligands for use in scoring for each pdb ligand
         dock(lm, load_helpers())      # Dock chembl ligands to be used for scoring all pdb ligands
@@ -71,10 +71,10 @@ for i, d in enumerate(datasets):
 
     # 4. compute statistics
     if '4' in todo:
-        stats(lm)
+        stats(lm)                     # Computes statistics and writes to stats/stats11
 
     # 5. run method on all ligands
     if '5' in todo:
-        score(lm, load_helpers())
+        score(lm, load_helpers())     # Computes optimal cluster
 
     os.chdir('..')

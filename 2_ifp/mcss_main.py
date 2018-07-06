@@ -2,6 +2,9 @@ import os
 import sys
 
 class csvFile:
+    """
+    Reads MCSS CSV file
+    """
     def __init__(self, mpath):
         self.mpath = mpath
         self.l1 = mpath.split('-')[0]
@@ -18,7 +21,7 @@ class csvFile:
                 for line in f:
                     csv = line.strip().split(',')
                     qsv = line.strip().split('"')
-                    if csv[0] == 'SMILES': continue
+                    if csv[0] == 'SMILES': continue # HEADER
                     lig = csv[1]
                     assert lig in self.mpath
                     if lig not in self.sm: self.sm[lig] = []
