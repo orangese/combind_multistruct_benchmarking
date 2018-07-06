@@ -126,6 +126,11 @@ outf = '{}-{}-{}.csv'
 
 class WritePairMCSS:
     def __init__(self, mpath, st=None, gdir=None):
+        """
+        mpath (string): e.g. CHEMBL1082827_lig-CHEMBL357995_lig-mcss14.csv
+        st (string): pdb id of structure that is used in docking
+        gdir (string): name of glide run to be used e.g. glide12
+        """
         self.l1 = mpath.split('-')[0]
         self.l2 = mpath.split('-')[1]
         self.mpath = mpath
@@ -172,29 +177,27 @@ class WritePairMCSS:
             for smarts in self.csv_f.sm[self.l2]:
                 f.write('{},{},{},{}\n'.format(self.l2,s2,self.csv_f.msz,smarts))
 
-    def proc_ref(self):
-        """
-        Check that MCSS is valid.
-        """
-        ref1, ref2 = self.load_ref()#alt=True)
-        valid_mcss_pairs = find_mcss_matches(ref1, ref2, self.csv_f)
+    # I don't think this is used ?
+    # def proc_ref(self):
+    #     ref1, ref2 = self.load_ref()#alt=True)
+    #     valid_mcss_pairs = find_mcss_matches(ref1, ref2, self.csv_f)
 
-        stwr = StructureWriter('{}.mae'.format(self.mpath.split('.')[0]))
-        stwr.append(ref1)
-        stwr.append(ref2)
-        for m1,m2 in valid_mcss_pairs:
-            stwr.append(m1)
-            stwr.append(m2)
-        if len(valid_mcss_pairs) == 0:
-            with open('log','a') as f:
-                f.write('ERROR: reference validation')
-            for ref, sm_list in {ref1:sm1,ref2:sm2}.items():
-                for sm in sm_list: 
-                    try: stwr.append(ref.extract(evaluate_smarts(ref, sm, unique_sets=True)[0]))
-                    except:
-                        with open('log','a') as f:
-                            f.write('ERROR: evaluating smarts')
-        stwr.close()
+    #     stwr = StructureWriter('{}.mae'.format(self.mpath.split('.')[0]))
+    #     stwr.append(ref1)
+    #     stwr.append(ref2)
+    #     for m1,m2 in valid_mcss_pairs:
+    #         stwr.append(m1)
+    #         stwr.append(m2)
+    #     if len(valid_mcss_pairs) == 0:
+    #         with open('log','a') as f:
+    #             f.write('ERROR: reference validation')
+    #         for ref, sm_list in {ref1:sm1,ref2:sm2}.items():
+    #             for sm in sm_list: 
+    #                 try: stwr.append(ref.extract(evaluate_smarts(ref, sm, unique_sets=True)[0]))
+    #                 except:
+    #                     with open('log','a') as f:
+    #                         f.write('ERROR: evaluating smarts')
+    #     stwr.close()
 
     def proc_debug(self):
         pv1 = list(StructureReader(pv_path.format(self.gdir, self.l1, self.st, self.l1, self.st)))[1:]
@@ -229,7 +232,6 @@ class WritePairMCSS:
         """
         Computes the RMSD between MCSSs for all pairs of poses.
         """
-        
         outpth = outf.format(self.mpath.split('.')[0],self.st,self.gdir)
 
         pv1 = list(StructureReader(pv_path.format(self.gdir, self.l1, self.st, self.l1, self.st)))[1:]
@@ -244,7 +246,7 @@ class WritePairMCSS:
 
             for i, p1 in enumerate(pv1):
                 for j, p2 in enumerate(pv2):
-                    if i > 105 or j > 105: 
+                    if i > 105 or j > 105: # MAGIC NUMBER
                         continue
                     
                     rmsd = 10000

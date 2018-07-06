@@ -4,7 +4,7 @@ import sys
 from schrodinger.structure import StructureReader, StructureWriter
 
 out_dir = 'structures/aligned_files'
-queue = 'rondror'
+queue = 'owners'
 renumber_script = '/scratch/PI/rondror/jpaggi/combind/combind/1_dock/renumber.py'
 
 def align_successful(out_dir, struct, verbose=False):

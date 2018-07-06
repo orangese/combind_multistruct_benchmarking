@@ -49,6 +49,9 @@ class Statistics:
         combine(self.dist, self.proteins)
  
     def write(self, out_f, k):
+        """
+        Write PDF to file.
+        """
         with open(out_f, 'w') as f:
             for i in self.ind:
                 d = self.dist[i][k]

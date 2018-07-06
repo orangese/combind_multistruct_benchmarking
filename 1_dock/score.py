@@ -7,13 +7,13 @@ output_dir = 'scores/scores11'
 cmd = '$SCHRODINGER/run /scratch/PI/rondror/jpaggi/combind/combind/3_analyze/scores.py {} {} {}'
 
 settings = {
-    'k_list' : ['mcss','hbond','sb2','contact'],#,'pipi'
+    'k_list' : ['hbond','sb2','contact','pipi'],
     'num_stats_ligs' : 10,
     'normalize' : True,
     'num_pred_chembl' : 10,
     'num_poses' : 100,
     't' : 0.1,
-    'chembl_file': 'best_mcss.txt',
+    'chembl_file': 'best_affinity.txt',
     'score_mode': 'ALL'
     #'use_chembl':False
 }
@@ -44,5 +44,5 @@ def score(lm, helpers):
         with open('{}.sh'.format(i),'w') as f:
             f.write('#!/bin/bash\n')
             f.write(cmd.format(lm.st, lm.prot, ' '.join([q for q in group if q is not None])))
-        os.system('sbatch -t 1:00:00 -p rondror {}.sh'.format(i))
+        os.system('sbatch -t 1:00:00 -p owners {}.sh'.format(i))
     os.chdir('../..')

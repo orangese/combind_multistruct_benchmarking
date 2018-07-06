@@ -13,7 +13,7 @@ def pick_helpers(lm, maxnum=20):
     # filters
     all_options = {
         'best_affinity.txt': [],#ki_sort],
-        'best_mcss.txt': []#mcss_sort]
+        #'best_mcss.txt': []#mcss_sort]
         #'best_affinity_plus_stereo.txt': [ki_sort, stereo_filter],
         #'best_mcss_plus_stereo.txt': [mcss_sort, stereo_filter]
     }
