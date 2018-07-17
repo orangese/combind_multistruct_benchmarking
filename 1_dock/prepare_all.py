@@ -22,7 +22,7 @@ from score import score
 sys.path.append('../3_analyze')
 from containers import LigandManager
 
-os.chdir('../../data')
+os.chdir(shared_paths['data'])
 
 todo = list(sys.argv[1])
 if len(todo) == 0:
@@ -38,12 +38,12 @@ for i, d in enumerate(datasets):
     os.chdir(d)
     
     lm = LigandManager(shared_paths, d)
+
+    if '0' in todo:
+        sort_downloads()
  
     # 1. prepare proteins and associated grids 
-    if '1' in todo: 
-        pdb_st = None
-        if os.path.exists('structures/downloads'):    
-            pdb_st = sort_downloads()
+    if '1' in todo:
         process_structs()             # Runs prepwizard
         align_structs()               # Align and give consistent numbering
         sort_files()                  # Creates ligand, protein, and complex directories
