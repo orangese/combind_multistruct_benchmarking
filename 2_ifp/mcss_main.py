@@ -101,7 +101,6 @@ def find_mcss_matches(st1, st2, csvf, unproc=True):
     
     for sm1 in csvf.sm[csvf.l1]:
         for sm2 in csvf.sm[csvf.l2]:
-            if '[11C]' in sm1 or '[11C]' in sm2: return []
             mcss1 = evaluate_smarts(st1, sm1, unique_sets=True)
             mcss2 = evaluate_smarts(st2, sm2, unique_sets=True)
 
