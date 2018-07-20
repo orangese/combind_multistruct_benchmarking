@@ -4,7 +4,7 @@ from grouper import grouper
 
 group_size=1
 output_dir = 'scores/scores11'
-cmd = '$SCHRODINGER/run /scratch/PI/rondror/jpaggi/combind/combind/3_analyze/scores.py {} {} {}'
+cmd = '$SCHRODINGER/run /scratch/PI/rondror/combind/combind/3_analyze/scores.py {} {} {}'
 
 settings = {
     'k_list' : ['hbond','sb2','contact','pipi'],

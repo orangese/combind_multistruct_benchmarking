@@ -5,7 +5,7 @@ from schrodinger.structure import StructureReader, StructureWriter
 
 out_dir = 'structures/aligned_files'
 queue = 'owners'
-renumber_script = '/scratch/PI/rondror/jpaggi/combind/combind/1_dock/renumber.py'
+renumber_script = '/scratch/PI/rondror/combind/combind/1_dock/renumber.py'
 
 def align_successful(out_dir, struct, verbose=False):
     if struct in ['5IRX','5IS0','3J5Q']: 
