@@ -56,6 +56,7 @@ for i, d in enumerate(datasets):
        proc_ligands()                 # Runs prepwizard & epik on all ligs
 
     # force redo of chembl info (do this if new chembl ligands have been added)
+    # Do this after all MCSS size files have been written!
     if 'c' in todo: #pass
          os.system('rm -f chembl/helpers/*')
          os.system('rm -f chembl/duplicates.txt')

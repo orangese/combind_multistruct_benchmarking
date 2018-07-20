@@ -84,10 +84,10 @@ def align_structs(verbose=False):
         os.chdir('{}/{}'.format(out_dir, struct))
         print 'align', struct
         schro = '$SCHRODINGER/utilities/structalign'
-        asl = '-asl "(not chain.name L) '#and not res.sec strand'
+        asl = '-asl "(not chain.name L and not atom.element H) '#and not res.sec strand'
         
         if os.path.exists('../../../structures/raw_files/{}_lig.mae'.format(struct)):
-            asl += ' and (fillres within 12.0 chain. L)"'# and (not res.sec loop)"'
+            asl += ' and (fillres within 15.0 chain. L)"'# and (not res.sec loop)"'
         else:
             asl += '"'
         

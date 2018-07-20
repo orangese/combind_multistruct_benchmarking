@@ -7,7 +7,7 @@ from schrodinger.structure import StructureReader, StructureWriter
 #command2 = '$SCHRODINGER/utilities/prepwizard -WAIT -nopropka -watdist 0 {}_in.mae {}_out.mae'
 #command3 = '$SCHRODINGER/utilities/prepwizard -WAIT {}_in.mae {}_out.mae'
 
-command = '$SCHRODINGER/utilities/prepwizard -WAIT -watdist 0 {}_in.mae {}_out.mae'
+command = '$SCHRODINGER/utilities/prepwizard -WAIT -rehtreat -watdist 0 {}_in.mae {}_out.mae'
 
 queue = 'owners'
 
@@ -28,7 +28,7 @@ def load_complex(pdb_id):
         c.name = 'L'
 
     alpha = 'ABCDEFGHIJKMNOPQRST'
-    alpha_count = 0 
+    alpha_count = 0
     for c in prot_st.chain:
         if c.name.strip() == '': continue
 

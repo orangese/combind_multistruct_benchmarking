@@ -204,7 +204,7 @@ class PDB:
                                 )
     @classmethod
     def loads(cls, S):
-        for s in S.split('\t'):
+        for s in S.strip().split('\t'):
             k, v = s.split('=')
             if k == 'pdb': pdb = v
             if k == 'date': date = v
@@ -318,7 +318,7 @@ def mark_duplicates(pdbs):
     for pdb_id, pdb in pdbs.items():
         unique = False
         for chain_id, ligand in pdb.ligands():
-            if len(ligands[ligand]) == 1:
+            if len(ligands[ligand]) == 1 or ligands[ligand][0] == pdb_id:
                 unique = True
             else:
                 pdb.add_comment(chain_id, "Ligand {} is redundant with PDB {}".format(ligand, ligands[ligand][0]))
@@ -375,7 +375,6 @@ def write_log(pdbs):
 def read_log():
     pdbs = {}
     with open('structures/final_pdb_processing.txt') as fp:
-        # ambiguous
         for line in fp:
             pdb = PDB.loads(line)
             pdbs[pdb] = pdb
