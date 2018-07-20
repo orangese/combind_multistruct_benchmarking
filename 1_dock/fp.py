@@ -2,7 +2,7 @@ import os
 import sys
 from grouper import grouper
 
-queue = 'rondror'
+queue = 'owners'
 group_size = 10
 
 pv_cmd = '$SCHRODINGER/run {}/2_ifp/fp_main.py -mode pv -input_file {} -output_file {}\n'
@@ -44,9 +44,6 @@ def fp(lm):
         unfinished.append('{}-to-{}'.format(lig, lm.st))
        
     os.chdir('ifp/{}'.format(lm.sp['ifp'])) 
-    structure_fp(lm)
+    structure_fp(lm) # Should move this so it is called by itself.
     get_fp(lm, unfinished)
     os.chdir('../..')
-
-
-

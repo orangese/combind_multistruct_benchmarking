@@ -4,7 +4,7 @@ from grouper import grouper
 
 from schrodinger.structure import StructureReader, StructureWriter
 
-queue = 'rondror'
+queue = 'owners'
 
 rmsd_cmd = '$SCHRODINGER/run {}/2_ifp/mcss_main.py RMSD {} {} {}\n'
 size_cmd = '$SCHRODINGER/run {}/2_ifp/mcss_main.py SIZE {}\n'
@@ -13,6 +13,9 @@ init_cmd = '$SCHRODINGER/utilities/canvasMCS -imae {}-{}_in.mae -ocsv {} -stop 1
 opt = ['']#,'-nobreakaring']
 
 class SM:
+    """
+    Coordinates computation of MCSS features.
+    """
     def __init__(self, lm):
         self.mdir, self.gdir, self.st = lm.sp['mcss'], lm.sp['docking'], lm.st
         self.tf = lm.sp['mcss_type']
@@ -22,7 +25,7 @@ class SM:
         self.no_size = set([])
         self.no_rmsd = set([])
     
-    def get_path(self,l1,l2,o,add_dir=False,add_st=False,ext='csv'):
+    def get_path(self, l1, l2, o,add_dir=False,add_st=False,ext='csv'):
         pth = '{}-{}-{}{}'.format(l1,l2,self.tf,o)
         if add_st: pth = '{}-{}-{}'.format(pth,self.st,self.gdir)
         if add_dir: pth = 'mcss/{}/{}-{}/{}'.format(self.mdir,l1,l2,pth)
@@ -46,6 +49,8 @@ class SM:
             stwr.close()
 
     def proc(self, init=False, rmsd=False, size=False):
+        # TODO: Change to single specifier, so there isn't potential to set multiple.
+        assert sum([init, rmsd, size]) <= 1 # hotfix
         if init: 
             group_size = 100
             all_pairs = self.no_mcss
@@ -62,7 +67,7 @@ class SM:
             if size: script = 'size{}.sh'.format(i)
             if rmsd: script = 'rmsd{}.sh'.format(i)
             with open(script, 'w') as f:
-                f.write('#!/bin/bash\nmodule load schrodinger\n')
+                f.write('#!/bin/bash\nml load chemistry\nml load schrodinger\n')
                 if init: f.write('export SCHRODINGER_CANVAS_MAX_MEM=1e+12\n')
                 for p in pairs:
                     if p is None: continue
@@ -70,38 +75,47 @@ class SM:
                     f.write('cd {}-{}\n'.format(l1,l2))
                     if init: f.write(init_cmd.format(l1,l2,self.get_path(l1,l2,o),o,self.lm.sp['code'], self.tf))
                     if size: f.write(size_cmd.format(self.lm.sp['code'], self.get_path(l1,l2,o)))
-                    #f.write(init_cmd.format(l1,l2,self.get_path(l1,l2,o),o,self.lm.sp['code'], self.tf))
-                    #f.write(size_cmd.format(self.lm.sp['code'], self.get_path(l1,l2,o)))
                     if rmsd: f.write(rmsd_cmd.format(self.lm.sp['code'], self.get_path(l1,l2,o),self.st,self.gdir))
                     f.write('cd ..\n')
                 f.write('wait\n')
-            os.system('sbatch -p {} --tasks=1 --cpus-per-task=1 --nice -t 8:00:00 {}'.format(queue,script))
+            os.system('sbatch -p {} --tasks=1 --ntasks-per-socket 2 -t 8:00:00 {}'.format(queue,script))
         os.chdir('../..')
 
 
 def mcss(lm, chembl={}, max_num=20):
+    """
+    chembl {pick_helpers_file: {query_pdb: [chembl, ...]}}
+    max_num maximum number of pdb ligands to consider
+    """
     os.system('mkdir -p mcss/{}'.format(lm.sp['mcss']))
-    
     sm = SM(lm)
 
-    for f, f_data in chembl.items():
-        for q,c in f_data.items():
-            #print q,c
-            for i,l1 in enumerate(c):
-                if l1 == '': continue
-                sm.add(q,l1,True)
-                for l2 in c[i+1:]: #pass
-                    if l1 < l2: sm.add(l1,l2,True)
-                    else: sm.add(l2,l1,True)
+    # Chembl - Chembl pairs that are specified by chembl
+    for fname, queries in chembl.items():
+        for query, chembl_ligands in queries.items():
+            for i, l1 in enumerate(chembl_ligands):
+                assert l1 != '' # switch to continue if this happens
+                sm.add(query, l1, True)
+                for l2 in chembl_ligands[i+1:]:
+                    assert l2 != ''
+                    if l1 < l2:
+                        sm.add(l1, l2, True)
+                    else:
+                        sm.add(l2, l1, True)
 
+    # All pdb - pdb pairs
     for i,l1 in enumerate(lm.pdb[:max_num]):
         for l2 in lm.pdb[i+1:max_num]:
             sm.add(l1,l2,True)
 
+    #  All pdb - chembl pairs
+    #  Most of these are only used for deciding which chembl ligands to use
+    #  so don't compute rmsd for all of them.
     for l1 in lm.pdb[:max_num]:
         for l2 in lm.chembl():
             sm.add(l1,l2)
     
+    # Run processing
     if len(sm.no_mcss) > 0:
         print len(sm.no_mcss), 'mcss init pairs left'
         sm.proc(init=True)
@@ -111,8 +125,3 @@ def mcss(lm, chembl={}, max_num=20):
     if len(sm.no_rmsd) > 0:
         print len(sm.no_rmsd), 'mcss rmsd pairs left'
         sm.proc(rmsd=True)
-
-
-
-
-

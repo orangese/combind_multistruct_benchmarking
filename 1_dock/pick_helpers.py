@@ -53,6 +53,3 @@ def load_helpers(dirpath=None):
                 helpers[fname][q] = chembl.split(',')
 
     return helpers
-
-
-

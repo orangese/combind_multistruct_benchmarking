@@ -22,7 +22,7 @@ from score import score
 sys.path.append('../3_analyze')
 from containers import LigandManager
 
-os.chdir('../../data')
+os.chdir(shared_paths['data'])
 
 todo = list(sys.argv[1])
 if len(todo) == 0:
@@ -35,58 +35,47 @@ if datasets == []:
 datasets=reversed(datasets)
 for i, d in enumerate(datasets):
     print d, i
-    #if i < 5: continue
     os.chdir(d)
     
     lm = LigandManager(shared_paths, d)
+
+    if '0' in todo:
+        sort_downloads()
  
-    # 1. prepare proteins   
-    if '1' in todo: 
-        pdb_st = None
-        if os.path.exists('structures/downloads'):    
-            pdb_st = sort_downloads()
-        process_structs()
-        align_structs()
-        sort_files()
-        make_grids()
-        dock(lm)
+    # 1. prepare proteins and associated grids 
+    if '1' in todo:
+        process_structs()             # Runs prepwizard
+        align_structs()               # Align and give consistent numbering
+        sort_files()                  # Creates ligand, protein, and complex directories
+        make_grids()                  # Creates grid for all proteins
+        dock(lm)                      # Dock PDB ligands to lm.st
      
     # 2. prepare ligands
     if '2' in todo:
-        get_ligands()    
-        proc_ligands()
+       get_ligands()                  # Writes MAE files for all ligs to ligands/raw_files
+       proc_ligands()                 # Runs prepwizard & epik on all ligs
 
     # force redo of chembl info (do this if new chembl ligands have been added)
+    # Do this after all MCSS size files have been written!
     if 'c' in todo: #pass
-        os.system('rm -f chembl/helpers/*')
-        #os.system('rm -f chembl/duplicates.txt')
-        #os.system('rm -f chembl/molw.txt')
-        #write_props(lm)
+         os.system('rm -f chembl/helpers/*')
+         os.system('rm -f chembl/duplicates.txt')
+         os.system('rm -f chembl/molw.txt')
+         write_props(lm)
 
-    # 3. decide what ligands to use and prepare them
+    # # 3. decide what ligands to use and prepare them
     if '3' in todo:
-        pick_helpers(lm)
-        dock(lm, load_helpers())
-        fp(lm)
-        mcss(lm, load_helpers())    
+        pick_helpers(lm)              # Picks chembl ligands for use in scoring for each pdb ligand
+        dock(lm, load_helpers())      # Dock chembl ligands to be used for scoring all pdb ligands
+        fp(lm)                        # Writeout fingerprints for docked poses and pdb structures
+        mcss(lm, load_helpers())      # Performs all 3 phases of MCSS computation
 
     # 4. compute statistics
     if '4' in todo:
-        stats(lm)
+        stats(lm)                     # Computes statistics and writes to stats/stats11
 
     # 5. run method on all ligands
     if '5' in todo:
-        score(lm, load_helpers())
+        score(lm, load_helpers())     # Computes optimal cluster
 
     os.chdir('..')
-
-
-
-
-
-
-
-
-
-
-

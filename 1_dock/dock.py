@@ -14,7 +14,7 @@ PRECISION   SP
 NENHANCED_SAMPLING   2
 '''
 
-queue = 'rondror'
+queue = 'owners'
 group_size = 5
 
 dock_cmd = '$SCHRODINGER/glide -WAIT {}-to-{}.in\n' 
@@ -72,13 +72,14 @@ def proc_all(all_pairs, dock=False, rmsd=False):
         os.system('sbatch -p {} -t 1:00:00 -o dock.out dock{}.sh'.format(queue, i))
 
 def dock(lm, chembl=None, maxnum=20):
+    if lm.st is None: return
 
     os.system('mkdir -p docking/{}'.format(lm.sp['docking']))
     os.chdir('docking/{}'.format(lm.sp['docking']))
 
     if chembl is None:
         ligs = lm.pdb[:maxnum]
-        grids = lm.grids[:maxnum]
+        grids = [lm.st]
     else:
         ligs = set([])
         grids = [lm.st]

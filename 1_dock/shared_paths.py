@@ -1,6 +1,6 @@
 shared_paths = { 
-    'code'      : '/scratch/PI/rondror/helenarm/combind',
-    'data'      : '/scratch/PI/rondror/helenarm/data',
+    'code'      : '/scratch/PI/rondror/combind/combind',
+    'data'      : '/scratch/PI/rondror/combind/bpp_data',
     'docking'   : 'glide12',
     'mcss'      : 'custom_mcss',
     'mcss_type' : 'mcss14',
