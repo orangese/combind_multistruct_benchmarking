@@ -3,17 +3,17 @@ import sys
 from grouper import grouper
 
 group_size=1
-output_dir = 'scores/scores11'
+output_dir = 'scores/scores17'
 cmd = '$SCHRODINGER/run /scratch/PI/rondror/jpaggi/combind/combind/3_analyze/scores.py {} {} {}'
 
 settings = {
-    'k_list' : ['hbond','sb2','contact','pipi'],
+    'k_list' : ['mcss', 'hbond','sb2','contact'],
     'num_stats_ligs' : 10,
     'normalize' : True,
     'num_pred_chembl' : 10,
     'num_poses' : 100,
     't' : 0.1,
-    'chembl_file': 'best_affinity.txt',
+    'chembl_file': 'best_mcss.txt',
     'score_mode': 'ALL'
     #'use_chembl':False
 }
