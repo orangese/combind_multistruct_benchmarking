@@ -33,9 +33,9 @@ class csvFile:
                     assert int(csv[6]) == self.num_b
                     assert int(csv[5]) == self.msz#msize == m
         except Exception as e:
-            print e
-            print self.mpath
-            print 'mcss csv file error'
+            print(e)
+            print(self.mpath)
+            print('mcss csv file error')
 
 def csv_equality(f1, f2, smarts=False, alist=False, size=False):
     match = True
@@ -139,8 +139,8 @@ class WritePairMCSS:
 
     def load_ref(self):#,alt=False):
         #if alt: ref_path = ref_path2
-        ref1 = StructureReader(ref_path.format(self.l1, self.l1)).next()
-        ref2 = StructureReader(ref_path.format(self.l2, self.l2)).next()
+        ref1 = next(StructureReader(ref_path.format(self.l1, self.l1)))
+        ref2 = next(StructureReader(ref_path.format(self.l2, self.l2)))
         return ref1, ref2
 
     def write_size_file(self):
@@ -201,15 +201,12 @@ class WritePairMCSS:
     def proc_debug(self):
         pv1 = list(StructureReader(pv_path.format(self.gdir, self.l1, self.st, self.l1, self.st)))[1:]
         pv2 = list(StructureReader(pv_path.format(self.gdir, self.l2, self.st, self.l2, self.st)))[1:]
-        print 'hi'
         stwr = StructureWriter('debug.mae')
         for i, p1 in enumerate(pv1):
             for j, p2 in enumerate(pv2):
                 if i > 3 or j > 3: 
                     continue
-                print i,j
                 all_mcss_pairs = find_mcss_matches(p1, sm1, p2, sm2, num_b)
-                print len(all_mcss_pairs)
                 stwr.append(p1)
                 stwr.append(p2)
                 rmsd = 10000
@@ -223,7 +220,6 @@ class WritePairMCSS:
                         conf_rmsd.use_heavy_atom_graph = True
                         conf_rmsd = conf_rmsd.calculate()
                     except: pass
-                    print count, conf_rmsd
                     rmsd = min(rmsd, conf_rmsd)
         stwr.close()
 
@@ -258,7 +254,7 @@ class WritePairMCSS:
 
                     if rmsd == 10000:
                         f.write('ERROR\n')
-                        print i,j,'no mcss found',self.l1,self.l2,self.st
+                        print(i,j,'no mcss found',self.l1,self.l2,self.st)
                         return
 
                     f.write('{},{},{}\n'.format(i, j, rmsd))

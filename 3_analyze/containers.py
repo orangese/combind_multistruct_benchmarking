@@ -3,6 +3,7 @@ import sys
 import numpy as np
 
 from parse_files import parse_glide_output, parse_fp_file
+
 from mcss_utils import MCSS
 
 sys.path.append('../1_dock')
@@ -51,7 +52,7 @@ class Ligand:
             fps = parse_fp_file(fp_path)
             try:
                 self.poses = [Pose(0, 0, fps[0], 'T')]
-            except: print fp_path
+            except: print(fp_path)
             return
 
         f_path = '{}/{}-to-{}'.format(dock_dir, self.lig_id, struct)
@@ -62,11 +63,11 @@ class Ligand:
         if load_fp:
             fps = parse_fp_file(fp_path)
             if len(fps) < min(100, len(rmsds)):
-                print 'missing fp?', fp_path       
+                print('missing fp?', fp_path)
  
         if not len(gscores) == len(rmsds):
-            print '{} {} {}'.format(dock_dir, self.lig_id, struct)
-            print f_path, fp_path
+            print('{} {} {}'.format(dock_dir, self.lig_id, struct))
+            print(f_path, fp_path)
             #os.system('rm -rf {}'.format(f_path))
             #os.system('rm -rf {}'.format(fp_path))
             self.poses = []
@@ -78,7 +79,7 @@ class Ligand:
             if i == 0: continue
             assert p.gscore >= self.poses[i-1].gscore, '{} {} {}'.format(dock_dir, self.lig_id, struct)
                 
-        if len(self.poses) == 0: print len(rmsds), len(gscores), len(fps)
+        if len(self.poses) == 0: print(len(rmsds), len(gscores), len(fps))
 
     def top_n(self, n):
         if len(self.poses) == 0:
@@ -227,7 +228,7 @@ class LigandManager:
                     exclude.update(dups)
                     break
             else:
-                print 'uh oh, ligand not found in unique or duplicates...', l
+                print('uh oh, ligand not found in unique or duplicates...', l)
         return unique_ligs
 
     def docked(self, l_list, st=None):

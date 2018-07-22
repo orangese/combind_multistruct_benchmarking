@@ -27,13 +27,13 @@ def align_successful(out_dir, struct, verbose=False):
             tmp = line.strip().split()
             if len(tmp) > 0 and tmp[0] == 'Alignment':
                 if float(tmp[2]) > 0.15:
-                    print '-- Alignment warning!', struct, float(tmp[2])
+                    print('-- Alignment warning!', struct, float(tmp[2]))
                     return False
                 return True
             if verbose and len(tmp) > 0 and tmp[0] == 'RMSD:':
-                print '{} to {} Alignment RMSD: {}'.format(struct, template, tmp[1])
+                print('{} to {} Alignment RMSD: {}'.format(struct, template, tmp[1]))
         else:
-            print 'alignment failure', struct
+            print('alignment failure', struct)
             return False
 
 def align_structs(verbose=False):
@@ -54,7 +54,7 @@ def align_structs(verbose=False):
 
     template_path = 'structures/processed_files/{}/{}_out.mae'.format(template, template)
     if not os.path.exists(template_path):
-        print 'template not processed', template_path
+        print('template not processed', template_path)
         return
 
     for struct in all_prot:# os.listdir('structures/processed_files'):
@@ -64,7 +64,7 @@ def align_structs(verbose=False):
         if align_successful(out_dir, struct, verbose):#
 
             if not os.path.exists('{}/{}/{}_out.mae'.format(out_dir, struct, struct)):
-                print 'renumber', struct
+                print('renumber', struct)
                 os.chdir('{}/{}'.format(out_dir, struct))
                 with open('renumber_in.sh', 'w') as f:
                     f.write('#!/bin/bash\nmodule load chemistry\n')
@@ -82,7 +82,7 @@ def align_structs(verbose=False):
         os.system('cp {} {}/{}/{}_query.mae'.format(query_path, out_dir, struct, struct))
         
         os.chdir('{}/{}'.format(out_dir, struct))
-        print 'align', struct
+        print('align', struct)
         schro = '$SCHRODINGER/utilities/structalign'
         asl = '-asl "(not chain.name L and not atom.element H) '#and not res.sec strand'
         

@@ -38,7 +38,7 @@ def score(lm, helpers):
         if not os.path.exists('{}-to-{}.sc'.format(l,lm.st))])
 
     if len(unfinished) > 0:
-        print len(unfinished), 'scores left'
+        print(len(unfinished), 'scores left')
 
     for i,group in enumerate(grouper(group_size, unfinished)):
         with open('{}.sh'.format(i),'w') as f:

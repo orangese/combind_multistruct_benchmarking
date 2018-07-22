@@ -44,8 +44,8 @@ class SM:
         if not os.path.exists('mcss/{}/{}-{}/{}-{}_in.mae'.format(self.mdir,l1,l2,l1,l2)):
             os.system('mkdir -p mcss/{}/{}-{}'.format(self.mdir,l1,l2))
             stwr = StructureWriter('mcss/{}/{}-{}/{}-{}_in.mae'.format(self.mdir,l1,l2,l1,l2))
-            stwr.append(StructureReader('ligands/prepared_ligands/{}/{}.mae'.format(l1,l1)).next())
-            stwr.append(StructureReader('ligands/prepared_ligands/{}/{}.mae'.format(l2,l2)).next())
+            stwr.append(next(StructureReader('ligands/prepared_ligands/{}/{}.mae'.format(l1,l1))))
+            stwr.append(next(StructureReader('ligands/prepared_ligands/{}/{}.mae'.format(l2,l2))))
             stwr.close()
 
     def proc(self, init=False, rmsd=False, size=False):
@@ -117,11 +117,11 @@ def mcss(lm, chembl={}, max_num=20):
     
     # Run processing
     if len(sm.no_mcss) > 0:
-        print len(sm.no_mcss), 'mcss init pairs left'
+        print(len(sm.no_mcss), 'mcss init pairs left')
         sm.proc(init=True)
     if len(sm.no_size) > 0:
-        print len(sm.no_size), 'mcss size pairs left'
+        print(len(sm.no_size), 'mcss size pairs left')
         sm.proc(size=True)
     if len(sm.no_rmsd) > 0:
-        print len(sm.no_rmsd), 'mcss rmsd pairs left'
+        print(len(sm.no_rmsd), 'mcss rmsd pairs left')
         sm.proc(rmsd=True)

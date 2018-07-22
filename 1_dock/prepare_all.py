@@ -34,7 +34,7 @@ if datasets == []:
 
 datasets=reversed(datasets)
 for i, d in enumerate(datasets):
-    print d, i
+    print(d, i)
     os.chdir(d)
     
     lm = LigandManager(shared_paths, d)

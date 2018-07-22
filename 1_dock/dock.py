@@ -97,11 +97,11 @@ def dock(lm, chembl=None, maxnum=20):
             if s == 1: to_rmsd.append((lig, grid))
             
     if len(to_dock) > 0:
-        print 'docking {} ligands'.format(len(to_dock))
+        print('docking {} ligands'.format(len(to_dock)))
         write_inp_files(to_dock)
         proc_all(to_dock, dock=True)
     if len(to_rmsd) > 0:
-        print 'computing {} rmsds'.format(len(to_rmsd))
+        print('computing {} rmsds'.format(len(to_rmsd)))
         proc_all(to_rmsd, rmsd=True)
 
     os.chdir('../..')

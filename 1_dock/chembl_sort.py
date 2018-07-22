@@ -70,17 +70,17 @@ def resolve_protonation_state(all_u):
         if os.path.exists(prepped):
             if not os.path.exists(final):
                 try:
-                    st = StructureReader(prepped).next() # first protonation state
+                    st = next(StructureReader(prepped)) # first protonation state
                     st.title = l
                     stwr = StructureWriter(final)
                     stwr.append(st)
                     stwr.close()
                     count += 1
                 except Exception as e:
-                    print l
-                    print e
+                    print(l)
+                    print(e)
                     break
-    if count: print "Resolved protonation state for {} ligands.".format(count)
+    if count: print("Resolved protonation state for {} ligands.".format(count))
 
 
 def run_ligand_processing(unfinished):
@@ -127,7 +127,7 @@ def proc_ligands():
     all_u = [l for l in all_u
              if not os.path.exists('ligands/prepared_ligands/{}/{}.mae'.format(l,l))]
     if len(all_u) > 0:
-        print len(all_u), 'unfinished ligands'
+        print(len(all_u), 'unfinished ligands')
 
     resolve_protonation_state(all_u)
 
@@ -137,6 +137,6 @@ def proc_ligands():
         if not os.path.exists(prepped):
             unfinished.append(l)
     if len(unfinished) > 0:
-        print len(unfinished), 'unprocessed ligands'
+        print(len(unfinished), 'unprocessed ligands')
     
     run_ligand_processing(unfinished)

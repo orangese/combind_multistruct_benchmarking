@@ -114,7 +114,7 @@ def write_files(ligs, log):
 
         # find the first non-covalent copy
         for l in l_copies: 
-            prot_st = StructureReader('structures/downloads/{}.pdb'.format(l.pdb)).next()
+            prot_st = next(StructureReader('structures/downloads/{}.pdb'.format(l.pdb)))
             lig_st = None
             for res in prot_st.residue:
                 if res.pdbres.strip().lower() == lname and res.chain.strip().lower() == l.chain:
@@ -289,7 +289,7 @@ def read_initial_pdbs():
 
 def mark_covalently_bound(pdbs):
     for pdb_id, pdb in pdbs.items():
-        prot_st = StructureReader('structures/downloads/{}.pdb'.format(pdb.pdb)).next()
+        prot_st = next(StructureReader('structures/downloads/{}.pdb'.format(pdb.pdb)))
         for chain_id, ligand in pdb.ligands():
             found = False
             for res in prot_st.residue:
@@ -335,7 +335,7 @@ def write_pdbs(pdbs, path):
     """
     for pdb_name, pdb in pdbs.items():
         for chain_id, ligand in pdb.ligands():
-            prot_st = StructureReader('structures/downloads/{}.pdb'.format(pdb.pdb)).next()
+            prot_st = next(StructureReader('structures/downloads/{}.pdb'.format(pdb.pdb)))
             lig_st = None
             for res in prot_st.residue:
                 if res.pdbres.strip().lower() == ligand and res.chain.strip().lower() == chain_id:
@@ -418,8 +418,8 @@ def sort_downloads():
     (1)
     """
     if os.path.exists('structures/final_pdb_processing.txt'):
-        print 'Running final processing'
+        print('Running final processing')
         final_processing()
     else:
-        print 'Running initial processing'
+        print('Running initial processing')
         initial_processing()
