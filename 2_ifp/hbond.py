@@ -23,7 +23,7 @@ class HBond_Container:
     def filter_int(self):
         # enforces 1 hbond per h        
         unique_h = {}
-        for r in set(self.all_hdon.keys() + self.all_hacc.keys()):
+        for r in set(list(self.all_hdon.keys()) + list(self.all_hacc.keys())):
             for hb in self.all_hdon.get(r, []) + self.all_hacc.get(r, []):
                 if hb.h.index not in unique_h or unique_h[hb.h.index].score() < hb.score():
                     unique_h[hb.h.index] = hb
