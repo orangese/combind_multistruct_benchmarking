@@ -201,8 +201,8 @@ class LigandManager:
 
     def chembl(self, filters=[], sort_key=lambda x:0, unique=False):
         default = [
-            lambda x,ci: ci[x].ki <= 1000,
-            lambda x,ci: ci[x].mw <= 1000
+            lambda x,ci: ci[x].ki is not None and ci[x].ki <= 1000,
+            lambda x,ci: ci[x].mw is not None and ci[x].mw <= 1000
         ]
         c = sorted([l for l in self.all_ligs if l in self.chembl_info 
                     and False not in [f(l,self.chembl_info) for f in default+filters]], key=sort_key)
