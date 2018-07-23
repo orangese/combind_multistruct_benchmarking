@@ -88,7 +88,7 @@ class PairMCSS:
     def load_mcss_size(self):
         pth = self.get_mcss_path(add_dir=True,ext='size')
         if not os.path.exists(pth):
-            #print 'no size file',pth
+            #printno size file',pth
             #os.system('rm -f {}'.format(self.get_mcss_path(add_dir=True,add_st=True)))
             return False
         try:
@@ -106,8 +106,6 @@ class PairMCSS:
                     self.l_sz[lig] = int(lsize)
                     self.smarts[lig].append(smarts)
         except Exception as e:
-            print e
-            print 'mcss size file error'
             return False
         return True
 
@@ -115,7 +113,6 @@ class PairMCSS:
         if len(self.rmsds) > 0: return
         pth = self.get_mcss_path(add_dir=True,add_st=True)
         if os.path.exists(pth) and os.stat(pth).st_size == 0:
-            print 'deleting empty file',pth
             return
         if not os.path.exists(pth): return#continue
         try:
@@ -128,19 +125,15 @@ class PairMCSS:
                     #     assert s2 == self.l_sz[self.l2]
                     #     assert s3 == self.m_sz
                     if 'ERROR' in line:
-                        print 'ERROR',self.l1,self.l2,s1, s2, s3
                         break
                     p1,p2,rmsd = int(line[0]), int(line[1]), float(line[2])
                     self.rmsds[(p1,p2)] = rmsd
                 else:
                     if line_count < 2:
-                        print line_count,'too small'
+                        pass
                     elif p1+1 < min(num_poses[self.l1], 100) or p2+1 < min(num_poses[self.l2], 100) or rmsd == float(10000):
-                        print line_count, 'hmmmm', pth, p1, p2, num_poses[self.l1], num_poses[self.l2], rmsd
                         #os.system('rm {}'.format(fpath))
+                        pass
         except Exception as e:
-            print 'mcss parse error', pth
-            print e
-            print line
             #os.system('rm {}'.format(fpath))
-
+            pass

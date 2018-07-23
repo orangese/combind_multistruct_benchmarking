@@ -10,11 +10,11 @@ def check_h(st):
            'Na':[-1], 'Ca':[-2], 'I':[1]}
     for a in st.atom:
         if a.element not in val: 
-            #print a.element
+            #printa.element
             continue
         bonds = sum([b.order for b in a.bond])
         if bonds - a.formal_charge not in val[a.element]:
-            print a.element, bonds, a.index
+            print(a.element, bonds, a.index)
             return False
     return True
 
@@ -32,7 +32,7 @@ def split_complex(st, pdb_id):
         lig_st.title = '{}_lig'.format(pdb_id)
 
         if not check_h(lig_st):# or not check_w(lig_st):
-            print 'lig error', pdb_id#, lig_out_dir
+            print('lig error', pdb_id) 
         else:
             lig_wr = StructureWriter(lig_path)
             lig_wr.append(lig_st)
@@ -47,11 +47,10 @@ def sort_files():#output_dir, prot):
     os.system('mkdir -p structures/proteins structures/ligands structures/complexes')
 
     for pdb_id in os.listdir('structures/aligned_files'):#uniprot.pdbs.items():
-        #print pdb_id
         opt_complex = 'structures/aligned_files/{}/{}_out.mae'.format(pdb_id, pdb_id)
 
         if os.path.exists(opt_complex):
             if not os.path.exists('structures/complexes/{}.mae'.format(pdb_id)):
                 os.system('cp {} structures/complexes/{}.mae'.format(opt_complex, pdb_id))
-            comp_st = StructureReader(opt_complex).next()
+            comp_st = next(StructureReader(opt_complex))
             split_complex(comp_st, pdb_id)

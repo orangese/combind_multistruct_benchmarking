@@ -205,7 +205,6 @@ class MCSS:
                 # evaluate_smarts returns [[atom_index, ...], ...]
                 mcss1 = evaluate_smarts(st1, smarts1, unique_sets=True)
                 mcss2 = evaluate_smarts(st2, smarts2, unique_sets=True)
-
                 # st.extract returns a schrodinger.structure.Structure
                 if unproc:
                     list1 = [self._unproc_st(st1.extract(m)) for m in mcss1]

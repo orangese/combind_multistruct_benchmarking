@@ -102,11 +102,11 @@ class FP:
         pdb = self.params['output_file'].split('_')[0]
 
         try:
-            prot_st = StructureReader('../../structures/proteins/{}_prot.mae'.format(pdb)).next()
+            prot_st = next(StructureReader('../../structures/proteins/{}_prot.mae'.format(pdb)))
         except:
-            prot_st = StructureReader('../../structures/proteins/{}_prot.mae'.format(os.listdir('../../docking/grids')[0])).next()
+            prot_st = next(StructureReader('../../structures/proteins/{}_prot.mae'.format(os.listdir('../../docking/grids')[0])))
 
-        lig_st = StructureReader('../../structures/ligands/{}_lig.mae'.format(pdb)).next()
+        lig_st = next(StructureReader('../../structures/ligands/{}_lig.mae'.format(pdb)))
          
         return [self.fingerprint(lig_st, prot_st)]
 

@@ -24,7 +24,7 @@ class MCSSController:
     SIZE_GROUP_SIZE = 25
     RMSD_GROUP_SIZE = 10
 
-    QUEUE = 'rondror'
+    QUEUE = 'owners'
     
     TEMPLATE = ('#!/bin/bash\n'
                 '#SBATCH -p {}\n'
@@ -80,7 +80,7 @@ class MCSSController:
         Chembl - Chembl pairs that are specified by "chembl"
         pick_helpers: {pick_helpers_filename: {query_pdb: [chembl, ...]}}
         """
-        for fname, queries in pickhelpers.items():
+        for fname, queries in pick_helpers.items():
             for query, chembl_ligands in queries.items():
                 for i, l1 in enumerate(chembl_ligands):
                     assert l1 != '' # switch to continue if this happens
@@ -112,13 +112,13 @@ class MCSSController:
         Execute all jobs.
         """
         if len(self.no_mcss) > 0:
-            print len(self.no_mcss), 'mcss init pairs left'
+            print(len(self.no_mcss), 'mcss init pairs left')
             self._execute('INIT')
         if len(self.no_size) > 0:
-            print len(self.no_size), 'mcss size pairs left'
+            print(len(self.no_size), 'mcss size pairs left')
             self._execute('SIZE')
         if len(self.no_rmsd) > 0:
-            print len(self.no_rmsd), 'mcss rmsd pairs left'
+            print(len(self.no_rmsd), 'mcss rmsd pairs left')
             self._execute('RMSD')
 
     def _execute(self, mode):

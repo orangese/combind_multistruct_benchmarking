@@ -7,7 +7,7 @@ def read_molw(dir_path=None):
     if dir_path is not None:
         fpath = '{}/{}'.format(dir_path, fpath)
     if not os.path.exists(fpath):# and os.path.exists('chembl'):
-        print 'missing molw file'
+        print('missing molw file')
         return {}
     with open(fpath) as fname:
         for line in fname:
@@ -25,12 +25,12 @@ def write_props(lm):
 def write_molw(lm,l_path,StructureReader):
     with open('chembl/molw.txt', 'w') as fname:
         for f in lm.all_ligs:
-            mw = StructureReader(l_path.format(f,f)).next().total_weight
+            mw = next(StructureReader(l_path.format(f,f))).total_weight
             fname.write('{},{}\n'.format(f,mw))
 
 def write_duplicates(lm,l_path,StructureReader):
     duplicates = {}
-    all_ligs = {l : StructureReader(l_path.format(l,l)).next() for l in lm.all_ligs}
+    all_ligs = {l : next(StructureReader(l_path.format(l,l))) for l in lm.all_ligs}
     for l1 in all_ligs:
         for l2 in duplicates:
             if all_ligs[l1].isEquivalent(all_ligs[l2], True):
@@ -49,7 +49,7 @@ def read_duplicates(dir_path=None):
     if dir_path is not None:
         fpath = '{}/{}'.format(dir_path, fpath)
     if not os.path.exists(fpath): 
-        print 'missing duplicates file'
+        print('missing duplicates file')
         return unique, duplicates
     with open(fpath) as f:
         for line in f:

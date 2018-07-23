@@ -3,8 +3,9 @@ import sys
 from grouper import grouper
 
 group_size=1
-output_dir = 'scores/scores17'
-cmd = '$SCHRODINGER/run /scratch/PI/rondror/jpaggi/combind/combind/3_analyze/scores.py {} {} {}'
+
+output_dir = 'scores/scores11'
+cmd = '$SCHRODINGER/run /scratch/PI/rondror/combind/combind/3_analyze/scores.py {} {} {}'
 
 settings = {
     'k_list' : ['mcss', 'hbond','sb2','contact'],
@@ -38,7 +39,7 @@ def score(lm, helpers):
         if not os.path.exists('{}-to-{}.sc'.format(l,lm.st))])
 
     if len(unfinished) > 0:
-        print len(unfinished), 'scores left'
+        print(len(unfinished), 'scores left')
 
     for i,group in enumerate(grouper(group_size, unfinished)):
         with open('{}.sh'.format(i),'w') as f:

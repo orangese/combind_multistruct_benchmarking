@@ -22,13 +22,13 @@ def pick_helpers(lm, maxnum=20):
     for f, filters in all_options.items():
         fpath = '{}/{}'.format(parent, f)
         if not os.path.exists(fpath):
-            print 'picking chembl ligands', f
+            print('picking chembl ligands', f)
             # apply filters
             chembl_ligs = lm.chembl(filters)
             with open(fpath,'w') as fi:
                 for q in lm.docked(lm.pdb)[:maxnum]:
                     # sort and remove duplicates
-                    print q
+                    print(q)
                     if 'mcss' in f:
                         lm.mcss.load_mcss(set([q]), set(chembl_ligs))
                         sorted_helpers = sorted(chembl_ligs,key=ki_sort)

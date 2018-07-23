@@ -4,3 +4,4 @@ notebooks/*.out
 notebooks/.ipynb_checkpoints/*
 */.fuse*
 .fuse*
+__pycache__
