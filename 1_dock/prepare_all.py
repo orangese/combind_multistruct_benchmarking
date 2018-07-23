@@ -11,7 +11,7 @@ from sort_files import sort_files
 from grids import make_grids
 from dock import dock
 from fp import fp
-from mcss import mcss
+from compute_mcss import mcss
 from stats import stats
 
 from chembl_sort import get_ligands, proc_ligands
