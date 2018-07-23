@@ -15,13 +15,13 @@ def load_complex(pdb_id):
     prot_in = 'structures/raw_files/{}_prot.mae'.format(pdb_id)
     lig_in = 'structures/raw_files/{}_lig.mae'.format(pdb_id)
     
-    prot_st = StructureReader(prot_in).next()
+    prot_st = next(StructureReader(prot_in))
     
     if not os.path.exists(lig_in): 
         prot_st.title = pdb_id
         return prot_st
 
-    lig_st = StructureReader(lig_in).next()
+    lig_st = next(StructureReader(lig_in))
 
     assert len(lig_st.chain) == 1, pdb_id
     for c in lig_st.chain:
@@ -62,7 +62,7 @@ def process_structs():
         st_wr.close()
 
         os.chdir('structures/processed_files/{}'.format(o_dir))
-        print 'processing', o_dir
+        print('processing', o_dir)
         with open('process_in.sh', 'w') as f:
             f.write('#!/bin/bash\nmodule load schrodinger\n')
             f.write(command.format(o_dir, o_dir))

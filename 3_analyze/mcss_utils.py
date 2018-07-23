@@ -1,6 +1,22 @@
 import os
 import sys
 
+"""
+IMPORTANT!
+
+Joe is working on consolidating these classes with those in
+2_ifp/mcss_main.py and 1_dock/compute_mcss.py.
+
+Specifically, the MCSS class will be merged with the MCSSController class
+and the PairMCSS class will be merged with the MCSS class in 2_ifp,
+most of the groundwork exists for the latter merge.
+
+In this way, we will have one class controlling reading/writing of MCSS files
+for a target, and one class reading/writing MCSS files for ligand pairs.
+
+I'm not sure if the MCSSController class should live here or in 1_dock.
+"""
+
 class MCSS:
     def __init__(self, sp, st, root, num_poses=None):
         self.sp = sp
@@ -54,10 +70,10 @@ class PairMCSS:
         self.rmsds = {}
         
     def get_mcss_path(self,add_dir=False,add_st=False,ext='csv'):
-        pth = '{}-{}'.format(self.name,self.sp['mcss_type'])
-        if add_st: pth = '{}-{}-{}'.format(pth,self.st,self.sp['docking'])
-        if add_dir: pth = '{}/mcss/{}/{}/{}'.format(self.root,self.sp['mcss'],self.name,pth)
-        return '{}.{}'.format(pth,ext)
+        path = self.name
+        if add_st: path = '{}-{}-{}'.format(path,self.st,self.sp['docking'])
+        if add_dir: path = '{}/mcss/{}/{}/{}'.format(self.root,self.sp['mcss'],self.name,path)
+        return '{}.{}'.format(path,ext)
 
     def load(self,rmsd,num_poses):
         self.load_mcss_size()
@@ -72,7 +88,7 @@ class PairMCSS:
     def load_mcss_size(self):
         pth = self.get_mcss_path(add_dir=True,ext='size')
         if not os.path.exists(pth):
-            #print 'no size file',pth
+            #printno size file',pth
             #os.system('rm -f {}'.format(self.get_mcss_path(add_dir=True,add_st=True)))
             return False
         try:
@@ -90,8 +106,6 @@ class PairMCSS:
                     self.l_sz[lig] = int(lsize)
                     self.smarts[lig].append(smarts)
         except Exception as e:
-            print e
-            print 'mcss size file error'
             return False
         return True
 
@@ -99,32 +113,27 @@ class PairMCSS:
         if len(self.rmsds) > 0: return
         pth = self.get_mcss_path(add_dir=True,add_st=True)
         if os.path.exists(pth) and os.stat(pth).st_size == 0:
-            print 'deleting empty file',pth
             return
         if not os.path.exists(pth): return#continue
         try:
             with open(pth) as f:
                 for line_count, line in enumerate(f):
                     line = line.strip().split(',')
-                    if line_count == 0:
-                        s1, s2, s3 = [float(i) for i in line]
-                        assert s1 == self.l_sz[self.l1]
-                        assert s2 == self.l_sz[self.l2]
-                        assert s3 == self.m_sz
+                    # if line_count == 0:
+                    #     s1, s2, s3 = [float(i) for i in line]
+                    #     assert s1 == self.l_sz[self.l1]
+                    #     assert s2 == self.l_sz[self.l2]
+                    #     assert s3 == self.m_sz
                     if 'ERROR' in line:
-                        print 'ERROR',self.l1,self.l2,s1, s2, s3
                         break
                     p1,p2,rmsd = int(line[0]), int(line[1]), float(line[2])
                     self.rmsds[(p1,p2)] = rmsd
                 else:
                     if line_count < 2:
-                        print line_count,'too small'
+                        pass
                     elif p1+1 < min(num_poses[self.l1], 100) or p2+1 < min(num_poses[self.l2], 100) or rmsd == float(10000):
-                        print line_count, 'hmmmm', pth, p1, p2, num_poses[self.l1], num_poses[self.l2], rmsd
                         #os.system('rm {}'.format(fpath))
+                        pass
         except Exception as e:
-            print 'mcss parse error', pth
-            print e
-            print line
             #os.system('rm {}'.format(fpath))
-
+            pass

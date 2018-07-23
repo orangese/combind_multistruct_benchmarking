@@ -10,7 +10,7 @@ st_cmd = '$SCHRODINGER/run {}/2_ifp/fp_main.py -mode st -output_file {}\n'
 
 def get_fp(lm, fp_list):
     if len(fp_list) > 0:
-        print len(fp_list), 'fp left'
+        print(len(fp_list), 'fp left')
     for i, pairs in enumerate(grouper(group_size, fp_list)):
         with open('{}fp.sh'.format(i), 'w') as f:
             f.write('#!/bin/bash\nmodule load schrodinger\n')
@@ -27,7 +27,7 @@ def structure_fp(lm):
         pdb = lig.split('_')[0]
         output_file = '{}_struct.fp'.format(pdb)
         if os.path.exists(output_file): continue
-        print 'structure fp', pdb
+        print ('structure fp', pdb)
         with open('{}.sh'.format(pdb), 'w') as f:
             f.write('#!/bin/bash\nmodule load schrodinger\n')
             f.write(st_cmd.format(lm.sp['code'], output_file)) 

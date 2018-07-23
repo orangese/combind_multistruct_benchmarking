@@ -20,11 +20,11 @@ def stats(lm):
             l1,l2 = ligs[i],ligs[j]
             for k in features:
                 if not os.path.exists('stats/{}/{}-{}-to-{}-{}.txt'.format(lm.sp['stats'],l1,l2,lm.st,k)):
-                    print l1,l2,k
+                    print(l1,l2,k)
                     not_done.append((l1,l2))
 
     if len(not_done) > 0:
-        print len(not_done), 'stats pairs left'
+        print(len(not_done), 'stats pairs left')
         compute(lm, not_done)
 
 def compute(lm, all_pairs):

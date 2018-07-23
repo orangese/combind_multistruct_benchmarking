@@ -22,7 +22,7 @@ def make_grids():
         if pdb == '3J5Q':
             x,y,z = 13,-30,-33
         else:
-            st_2 = StructureReader('structures/ligands/{}_lig.mae'.format(pdb)).next()
+            st_2 = next(StructureReader('structures/ligands/{}_lig.mae'.format(pdb)))
             c2 = get_centroid(st_2)
             x,y,z = c2[:3]
                       
@@ -39,10 +39,7 @@ def make_grids():
             f.write('#!/bin/bash\nmodule load schrodinger\n')
             f.write('$SCHRODINGER/glide -WAIT {}.in'.format(out_f))
                         
-        print 'making grid', out_f
+        print('making grid', out_f)
         os.chdir('docking/grids/{}'.format(out_f))
         os.system('sbatch -p owners -t 00:30:00 -o grid.out grid_in.sh')
         os.chdir('../../..')
-
-
-

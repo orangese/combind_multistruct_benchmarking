@@ -3,17 +3,18 @@ import sys
 from grouper import grouper
 
 group_size=1
+
 output_dir = 'scores/scores11'
 cmd = '$SCHRODINGER/run /scratch/PI/rondror/combind/combind/3_analyze/scores.py {} {} {}'
 
 settings = {
-    'k_list' : ['hbond','sb2','contact','pipi'],
+    'k_list' : ['mcss', 'hbond','sb2','contact'],
     'num_stats_ligs' : 10,
     'normalize' : True,
     'num_pred_chembl' : 10,
     'num_poses' : 100,
     't' : 0.1,
-    'chembl_file': 'best_affinity.txt',
+    'chembl_file': 'best_mcss.txt',
     'score_mode': 'ALL'
     #'use_chembl':False
 }
@@ -38,7 +39,7 @@ def score(lm, helpers):
         if not os.path.exists('{}-to-{}.sc'.format(l,lm.st))])
 
     if len(unfinished) > 0:
-        print len(unfinished), 'scores left'
+        print(len(unfinished), 'scores left')
 
     for i,group in enumerate(grouper(group_size, unfinished)):
         with open('{}.sh'.format(i),'w') as f:

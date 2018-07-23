@@ -28,11 +28,11 @@ def parse_fp_file(fp_file):
                 #ifps[pose_num][(i,r)][ss] = float(sc)*w[i]
 
     except Exception as e:
-        print e#, ss
-        print fp_file, 'fp not found'
+        print(e)
+        print(fp_file, 'fp not found')
         #ifps.append(None)
     if len(ifps) == 0:
-        print 'check', fp_file
+        print('check', fp_file)
         return {}
     return ifps
 
@@ -47,7 +47,7 @@ def parse_glide_output(g_dir):
     elif os.path.exists('{}_pv.maegz'.format(pair)):
         return parse_rept_file(pair)
     else:
-        print 'not finished', g_dir
+        print('not finished', g_dir)
         return [], []
     #assert len(gscores) == len(rmsds)
     #return [Pose(rmsds[i], gscores[i]) for i in range(len(gscores))]

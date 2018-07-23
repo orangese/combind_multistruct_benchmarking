@@ -51,7 +51,7 @@ def load_chembl_proc(dir_path=None):
                     chembl_id, prot, stereo, ki, smi = line.strip().split(',')
                     chembl_id = '{}_lig'.format(chembl_id)
                 except:
-                    print 'chembl_info error', line
+                    print('chembl_info error', line)
                 ligs[chembl_id] = CHEMBL(chembl_id, smi, float(ki), 'nM', prot)#(prot, stereo, ki, smi)
                 ligs[chembl_id].valid_stereo = True if stereo == 'True' else False
     
