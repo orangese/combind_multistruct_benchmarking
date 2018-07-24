@@ -11,7 +11,7 @@ from sort_files import sort_files
 from grids import make_grids
 from dock import dock
 from fp import fp
-from compute_mcss import mcss
+from MCSSController import compute_mcss
 from stats import stats
 
 from chembl_sort import get_ligands, proc_ligands
@@ -54,9 +54,10 @@ for i, d in enumerate(datasets):
     if '2' in todo:
        get_ligands()                  # Writes MAE files for all ligs to ligands/raw_files
        proc_ligands()                 # Runs prepwizard & epik on all ligs
+       compute_mcss(lm, compute_rmsds = False) # Computes MCSS, for use in pick_helpers
 
     # force redo of chembl info (do this if new chembl ligands have been added)
-    # Do this after all MCSS size files have been written!
+    # Do this after all MCSS files have been written!
     if 'c' in todo: #pass
          os.system('rm -f chembl/helpers/*')
          os.system('rm -f chembl/duplicates.txt')
@@ -68,7 +69,7 @@ for i, d in enumerate(datasets):
         pick_helpers(lm)              # Picks chembl ligands for use in scoring for each pdb ligand
         dock(lm, load_helpers())      # Dock chembl ligands to be used for scoring all pdb ligands
         fp(lm)                        # Writeout fingerprints for docked poses and pdb structures
-        mcss(lm, load_helpers())      # Performs all 3 phases of MCSS computation
+        compute_mcss(lm, load_helpers())  # Performs all phases of MCSS computation
 
     # 4. compute statistics
     if '4' in todo:
