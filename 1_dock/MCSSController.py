@@ -192,7 +192,8 @@ class MCSSController:
                 fp.write(str(mcss)+'\n')
         
         os.system('mv mcss_temp.csv {}'.format(self.mcss_file))
-        os.system('rm -r {}'.format(' '.join(temp_directories)))
+        for temp in temp_directories:
+            os.system('rm -rf {}'.format(temp))
 
     def _get_temp_directories(self):
         """
