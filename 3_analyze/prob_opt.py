@@ -30,7 +30,7 @@ class PredictStructs:
         max_sc, best_cluster, all_scores, all_rmsds = opt(initial_cluster,sampling=sampling, en_landscape=en_landscape)
 
         if verbose:
-            print 'cluster -1, score {}'.format(max_sc)
+            print('cluster -1, score {}'.format(max_sc))
 
         for i in range(restart):
             rand_cluster = {}
@@ -44,7 +44,7 @@ class PredictStructs:
             if new_sc > max_sc:
                 max_sc, best_cluster = new_sc, new_cluster
             if verbose:
-                print 'cluster {}, score {}'.format(i,new_sc)
+                print('cluster {}, score {}'.format(i,new_sc))
 
         return best_cluster, all_scores, all_rmsds
 

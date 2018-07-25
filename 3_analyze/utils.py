@@ -23,7 +23,7 @@ def plot_docking(rmsds_list, title_list, plt_title=''):
 
     count_none = len([i for i in rmsds_list[0] if i is None])
     if count_none != 0:  
-        print plt_title, count_none, 'did not dock'
+        print(plt_title, count_none, 'did not dock')
         frac_docked = 1 - float(count_none)/float(len(rmsds_list[0]))
         plt.plot([0,8],[frac_docked, frac_docked], '--k')
     for i, r in enumerate(rmsds_list):
@@ -186,7 +186,7 @@ def export(data, cluster, cluster_name, receptor, struct=None, ligs=None, verbos
         #    command.append('R')
         #else:
         command.append(str(p.rank))
-    if verbose: print '$SCHRODINGER/run {} {}'.format(export_script, ' '.join(command))
+    if verbose: print('$SCHRODINGER/run {} {}'.format(export_script, ' '.join(command)))
     os.system('$SCHRODINGER/run {} {}'.format(export_script, ' '.join(command)))
 
 def get_fp_vectors(c):
