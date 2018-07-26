@@ -1,7 +1,6 @@
 import os
 import sys
 
-
 class MCSS:
     """
     Reads and writes MCSS features for a ligand pair.
@@ -124,10 +123,10 @@ class MCSS:
                 ligs[lig] += [smarts]
                 n_mcss_atoms = _n_mcss_atoms
                 n_mcss_bonds = _n_mcss_bonds
+
         if len(ligs) != 2:
             print('Wrong number of ligands in MCSS file', ligs, dir_name)
             return None
-        #assert len(ligs) == 2, dir_name
         assert all(smarts for smarts in ligs.values()), dir_name
 
         mcss = MCSS(*ligs.keys())
