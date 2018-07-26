@@ -89,7 +89,7 @@ class PosePair:
         Returns 1 if both poses are at most 2 A RMSD from their
         crystallographic pose.
         """
-        return int(self.pose1.rmsd <= 2 and self.pose2.rmsd <= 2:)
+        return int(self.pose1.rmsd <= 2 and self.pose2.rmsd <= 2)
 
     def get_feature(self, feature):
         """
