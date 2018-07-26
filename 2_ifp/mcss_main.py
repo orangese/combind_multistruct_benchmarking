@@ -1,6 +1,6 @@
 import os
 import sys
-from schrodinger.structure import StructureReader, StructureWriter
+
 
 class MCSS:
     """
@@ -94,10 +94,18 @@ class MCSS:
         """
         Reads the direct output of canvasMCSS and returns an MCSS instance.
         """
+        from schrodinger.structure import StructureReader
         mcss_output = "{}/{}".format(dir_name, cls.canvasMCSS_csv)
         mcss_struct = "{}/{}".format(dir_name, cls.structure_path)
         if not (os.path.exists(mcss_output) and os.path.exists(mcss_struct)): return None
-
+        try:
+            refs = [st for st in StructureReader(mcss_struct)]
+        except:
+            print('Unable to read MCSS structure file for', dir_name)
+            return None
+        if len(refs) != 2:
+            print('Wrong number of structures', dir_name)
+            return None
         ligs = {}
         n_mcss_bonds = None
         n_mcss_atoms = None
@@ -108,17 +116,19 @@ class MCSS:
                 smarts = line.strip().split(',')[-1] # There are commas in some of the fields
                 _n_mcss_atoms, _n_mcss_bons = int(_n_mcss_atoms), int(_n_mcss_bonds)
                 
-                assert n_mcss_atoms is None or n_mcss_atoms == _n_mcss_atoms
-                assert n_mcss_bonds is None or n_mcss_bonds == _n_mcss_bonds
-                assert lig in dir_name
+                assert n_mcss_atoms is None or n_mcss_atoms == _n_mcss_atoms, dir_name
+                assert n_mcss_bonds is None or n_mcss_bonds == _n_mcss_bonds, dir_name
+                assert lig in dir_name, dir_name
 
                 if lig not in ligs: ligs[lig] = []
                 ligs[lig] += [smarts]
                 n_mcss_atoms = _n_mcss_atoms
                 n_mcss_bonds = _n_mcss_bonds
-
-        assert len(ligs) == 2
-        assert all(smarts for smarts in ligs.values())
+        if len(ligs) != 2:
+            print('Wrong number of ligands in MCSS file', ligs, dir_name)
+            return None
+        #assert len(ligs) == 2, dir_name
+        assert all(smarts for smarts in ligs.values()), dir_name
 
         mcss = MCSS(*ligs.keys())
         mcss.n_mcss_atoms = n_mcss_atoms
@@ -129,7 +139,7 @@ class MCSS:
         # Get ligand sizes.
         # The below line can fail if there are multiple compies of each ligand
         # writtent of the mcss_struct file
-        ref1, ref2 = [st for st in StructureReader(mcss_struct)]
+        ref1, ref2 = refs
         mcss.n_l1_atoms = len([a for a in ref1.atom if a.element != 'H'])
         mcss.n_l2_atoms = len([a for a in ref2.atom if a.element != 'H'])
         return mcss
@@ -294,6 +304,7 @@ class MCSS:
             st1.addBond(atom11, atom12, order1)
 
 if __name__ == '__main__':
+    from schrodinger.structure import StructureReader, StructureWriter
     mode = sys.argv[1]
     if mode == 'INIT':
         l1, l2, l1_path, l2_path, mcss_types_file = sys.argv[2:]

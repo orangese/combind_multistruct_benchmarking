@@ -147,7 +147,7 @@ class Protein:
         self.docking[st].load(l_list, load_fp)
 
         if load_mcss:
-            self.lm.mcss_controller.load_rmsds(l_list)      
+            self.lm.mcss.load_rmsds(l_list, 1000)
 
         if load_crystal:
             for l in l_list:
@@ -191,7 +191,7 @@ class LigandManager:
         if struct is None:
             self.st = self.all_st.get(prot, self.first_st)
 
-        # Load MCSS
+        # MCSS
         self.mcss = MCSSController(self)
         self.helpers = {}
 

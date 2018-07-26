@@ -1,9 +1,9 @@
 import os
 import sys
 from grouper import grouper
-from schrodinger.structure import StructureReader, StructureWriter
+from shared_paths import shared_paths
 
-sys.path.append('../2_ifp')
+sys.path.append('{}/2_ifp'.format(shared_paths['code']))
 from mcss_main import MCSS
 
 class MCSSController:
@@ -34,7 +34,7 @@ class MCSSController:
     no_rmsd: set(string), Ligands with no MCSS RMSD
     """
 
-    INIT_GROUP_SIZE = 100
+    INIT_GROUP_SIZE = 1000
     RMSD_GROUP_SIZE = 10
 
     QUEUE = 'owners'
@@ -48,6 +48,7 @@ class MCSSController:
                 '{}'
                 'wait\n'
                 ).format(QUEUE, '{}')
+
 
     def __init__(self, lm, max_pdb=20, max_poses = 100):
         self.lm = lm
@@ -67,7 +68,10 @@ class MCSSController:
         self.mcss_file = "{}/{}_mcss.csv".format(self.root, self.lm.prot)
         self.rmsd_file = "{}/{}-{}-{}.csv".format(self.root, '{}',
                                                      self.lm.st, self.lm.sp['docking'])
-        
+
+        self.lig_template = '{0:}/{1:}/ligands/prepared_ligands/{2:}/{2:}.mae '.format(self.lm.sp['data'], self.lm.prot, '{0:}')
+        self.pv_template = '{0:}/{1:}/docking/{2:}/{3:}-to-{4:}/{3:}-to-{4:}_pv.maegz '.format(self.lm.sp['data'], self.lm.prot,
+                                                                                               self.lm.sp['docking'], '{0:}', self.lm.st)
         self.init_command, self.rmsd_command = self._construct_commands(max_poses)
 
     def _construct_commands(self, max_poses):
@@ -77,24 +81,20 @@ class MCSSController:
         Commands contain remaining substitutions to handle ligand specific info:
             '{0:}' ligand1, '{1:}' ligand2, '{2:}' str(MCSS).
         """
-        lig_template = '{0:}/{1:}/ligands/prepared_ligands/{2:}/{2:}.mae '
-        pv_template = '{0:}/{1:}/docking/{2:}/{3:}-to-{4:}/{3:}-to-{4:}_pv.maegz '
         
         init_command  = 'mkdir -p {0:}-{1:}; cd {0:}-{1:}; '
         init_command += '$SCHRODINGER/run {0:}/2_ifp/mcss_main.py INIT '.format(self.lm.sp['code'])
         init_command += '{0:} {1:} ' # ligand names
-        init_command += lig_template.format(self.lm.sp['data'], self.lm.prot, '{0:}') # l1_path
-        init_command += lig_template.format(self.lm.sp['data'], self.lm.prot, '{1:}') # l2_path
+        init_command += self.lig_template.format('{0:}') # l1_path
+        init_command += self.lig_template.format('{1:}') # l2_path
         init_command += '{}/2_ifp/custom_types/{}.typ'.format(self.lm.sp['code'],
                                                               self.lm.sp['mcss']) # Atom typing
         init_command += ' ; cd ..\n'
         
         rmsd_command = '$SCHRODINGER/run {0:}/2_ifp/mcss_main.py RMSD '.format(self.lm.sp['code'])
         rmsd_command += '{0:} {1:} ' # ligand names
-        rmsd_command += pv_template.format(self.lm.sp['data'], self.lm.prot,
-                                           self.lm.sp['docking'], '{0:}', self.lm.st) # pv1_path
-        rmsd_command += pv_template.format(self.lm.sp['data'], self.lm.prot,
-                                           self.lm.sp['docking'], '{1:}', self.lm.st) # pv2_path
+        rmsd_command += self.pv_template.format('{0:}') # pv1_path
+        rmsd_command += self.pv_template.format('{1:}') # pv2_path
         rmsd_command += self.rmsd_file.format('{0:}-{1:}')
         rmsd_command += " {} ".format(max_poses)
         rmsd_command += ' "{2:}"\n'
@@ -109,7 +109,7 @@ class MCSSController:
         pose1, pose2: int, pose numbers for which to get rmsd.
         """
         if l1 > l2: l1, l2 = l2, l1
-        return self.MCSSs["{}-{}".format(l1, l2)].rmsds[(p1, p2)]
+        return self.MCSSs["{}-{}".format(l1, l2)].rmsds[(pose1, pose2)]
 
     def load_rmsds(self, ligands, max_poses):
         """
@@ -121,13 +121,16 @@ class MCSSController:
         """
         self.load_mcss()
         ligands = list(set(ligands))
-        for i, ligand1 in enuemrate(ligands):
-            for ligand2 in ligands[i+1:]:
+        for i, l1 in enumerate(ligands):
+            for l2 in ligands[i+1:]:
                 if l1 > l2: l1, l2 = l2, l1
                 name = "{}-{}".format(l1, l2)
                 assert name in self.MCSSs
                 if self.MCSSs[name].is_valid():
-                    self.MCSSs[name].load_rmsds(self.rmsd_file.format(name), max_poses)
+                    poseviewer_paths = {l1: self.pv_template.format(l1),
+                                        l2: self.pv_template.format(l2)}
+                    self.MCSSs[name].load_rmsds(self.rmsd_file.format(name),
+                                                poseviewer_paths, max_poses)
 
     def sort_by_mcss(self, query, ligands):
         """
