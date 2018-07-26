@@ -5,14 +5,31 @@ from grouper import grouper
 queue = 'owners'
 group_size=5
 
+# TODO: features seperately set in statistics.py
 features = ['sb1','sb2','sb3','mcss','hbond','pipi','contact']
 
-def stats(lm):
+def compute(lm, all_pairs):
+    os.system('mkdir -p stats')
+    os.system('mkdir -p stats/{}'.format(lm.sp['stats']))
+    os.chdir('stats/{}'.format(lm.sp['stats']))
+    
+    for i,group in enumerate(grouper(group_size, all_pairs)):
+        with open('stats{}.sh'.format(i),'w') as f:
+            f.write('#!/bin/bash\n')
+            for pair in group:
+                if pair is None: continue
+                l1,l2 = pair
+                f.write('python {}/3_analyze/statistics.py {} {} {}\n'.format(lm.sp['code'],
+                    lm.prot, l1, l2))
+        os.system('sbatch -p {} -t 1:00:00 stats{}.sh'.format(queue, i))
+    os.chdir('../..')
+
+def stats(lm, max_ligs = 20):
     """
-    Compute statistics for 10 ligands.
+    Compute statistics for lm.prot.
     """
     ligs = lm.docked(lm.pdb)
-    num_ligs = min(10, len(ligs))
+    num_ligs = min(20, len(ligs))
     not_done = []
 
     for i in range(num_ligs):
@@ -26,19 +43,3 @@ def stats(lm):
     if len(not_done) > 0:
         print(len(not_done), 'stats pairs left')
         compute(lm, not_done)
-
-def compute(lm, all_pairs):
-    os.system('mkdir -p stats')
-    os.system('mkdir -p stats/{}'.format(lm.sp['stats']))
-    os.chdir('stats/{}'.format(lm.sp['stats']))
-    
-    for i,group in enumerate(grouper(group_size, all_pairs)):
-        with open('stats{}.sh'.format(i),'w') as f:
-            f.write('#!/bin/bash\n')
-            for pair in group:
-                if pair is None: continue
-                l1,l2 = pair
-                f.write('python {}/3_analyze/statistics.py {} {} {}\n'.format(lm.sp['code'], lm.prot, l1, l2))
-            #f.write('rm stats{}.sh\n'.format(i))
-        os.system('sbatch -p {} -t 1:00:00 stats{}.sh'.format(queue, i))
-    os.chdir('../..')

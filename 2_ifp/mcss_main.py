@@ -1,6 +1,6 @@
 import os
 import sys
-from schrodinger.structure import StructureReader, StructureWriter
+#from schrodinger.structure import StructureReader, StructureWriter
 
 class MCSS:
     """
@@ -117,8 +117,8 @@ class MCSS:
                 n_mcss_atoms = _n_mcss_atoms
                 n_mcss_bonds = _n_mcss_bonds
 
-        assert len(ligs) == 2
-        assert all(smarts for smarts in ligs.values())
+        assert len(ligs) == 2, dir_name
+        assert all(smarts for smarts in ligs.values()), dir_name
 
         mcss = MCSS(*ligs.keys())
         mcss.n_mcss_atoms = n_mcss_atoms

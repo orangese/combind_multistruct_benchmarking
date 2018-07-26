@@ -1,7 +1,6 @@
 import os
 import sys
 from grouper import grouper
-from schrodinger.structure import StructureReader, StructureWriter
 
 sys.path.append('../2_ifp')
 from mcss_main import MCSS
