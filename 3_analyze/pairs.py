@@ -56,8 +56,8 @@ class LigPair:
             for rank2 in range(min(len(self.l2.poses), self.max_poses)):
                 mcss_score = self.mcss.get_rmsd(self.l1.lig_id, self.l2.lig_id, rank1, rank2)
                 pose1, pose2 = self.l1.poses[rank1], self.l2.poses[rank2]
-                assert p1.rank == rank1, "Pose indices don't match rank"
-                assert p2.rank == rank2, "Pose indices don't match rank"
+                assert pose1.rank == rank1, "Pose indices don't match rank"
+                assert pose2.rank == rank2, "Pose indices don't match rank"
                 pairs[(rank1,rank2)] = PosePair(pose1, pose2, mcss_score)
         return pairs
 
@@ -68,7 +68,7 @@ class LigPair:
         feat_map = {feature: (float('inf'), -float('inf')) for feature in self.features}
         for key, pose_pair in self.pose_pairs.items():
             for f, (minval, maxval) in feat_map.items():
-                pp_x = pp.get_feature(f)
+                pp_x = pose_pair.get_feature(f)
                 feat_map[f] = (min(minval, pp_x),max(maxval, pp_x))
         return feat_map
 
@@ -112,5 +112,5 @@ class PosePair:
         for (i, r) in self.pose1.fp:
             if i in feature_defs[feature] and (i, r) in self.pose2.fp:
                 # Geometric mean
-                score += (self.pose1.fp[(i,r)]*self.p2.fp[(i,r)])**0.5
-        return sc
+                score += (self.pose1.fp[(i,r)]*self.pose2.fp[(i,r)])**0.5
+        return score

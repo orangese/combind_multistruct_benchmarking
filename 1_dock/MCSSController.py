@@ -2,8 +2,7 @@ import os
 import sys
 from grouper import grouper
 from shared_paths import shared_paths
-
-sys.path.append('{}/2_ifp'.format(shared_paths['code']))
+sys.path.append('/'.join(os.path.dirname(os.path.realpath(sys.argv[0])).split('/')[:-1]) + '/2_ifp')
 from mcss_main import MCSS
 
 class MCSSController:
@@ -109,6 +108,7 @@ class MCSSController:
         pose1, pose2: int, pose numbers for which to get rmsd.
         """
         if l1 > l2: l1, l2 = l2, l1
+        if not self.MCSSs["{}-{}".format(l1, l2)].is_valid(): return None
         return self.MCSSs["{}-{}".format(l1, l2)].rmsds[(pose1, pose2)]
 
     def load_rmsds(self, ligands, max_poses):
