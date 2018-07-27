@@ -2,8 +2,8 @@ import os
 import sys
 from grouper import grouper
 
-queue = 'owners'
-group_size=5
+queue = 'rondror'
+group_size=10
 
 # TODO: features seperately set in statistics.py
 features = ['sb1','sb2','sb3','mcss','hbond','pipi','contact']
@@ -24,13 +24,13 @@ def compute(lm, all_pairs):
         os.system('sbatch -p {} -t 1:00:00 stats{}.sh'.format(queue, i))
     os.chdir('../..')
 
-def stats(lm, max_ligs = 20):
+def stats(lm, max_ligs = 5):
     """
     Compute statistics for lm.prot.
     """
     ligs = lm.docked(lm.pdb)
-    num_ligs = min(20, len(ligs))
-    not_done = []
+    num_ligs = min(max_ligs, len(ligs))
+    not_done = set()
 
     for i in range(num_ligs):
         for j in range(i+1,num_ligs):
@@ -38,7 +38,7 @@ def stats(lm, max_ligs = 20):
             for k in features:
                 if not os.path.exists('stats/{}/{}-{}-to-{}-{}.txt'.format(lm.sp['stats'],l1,l2,lm.st,k)):
                     print(l1,l2,k)
-                    not_done.append((l1,l2))
+                    not_done.add((l1,l2))
 
     if len(not_done) > 0:
         print(len(not_done), 'stats pairs left')
