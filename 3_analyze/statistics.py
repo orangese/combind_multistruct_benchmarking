@@ -159,6 +159,7 @@ if __name__ == '__main__':
     import sys
 
     script_path, prot, l1, l2 = sys.argv
+    print l1, l2
     code_path = '/'.join(script_path.split('/')[:-2])
     for i in ['1_dock','2_fp','3_analyze','4_score']:
         sys.path.append(code_path+'/'+i)

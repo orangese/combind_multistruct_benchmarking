@@ -283,10 +283,11 @@ class MCSS:
             st1, st2 = st2, st1
         for bond in st1.bond:
             atom1,atom2 = bond.atom1, bond.atom2
+            order = bond.order
             st1.deleteBond(atom1, atom2)
             if st1.isEquivalent(st2,False):
                 return (st1,st2)
-            st1.addBond(atom1, atom2, bond.order)
+            st1.addBond(atom1, atom2, order)
 
     def _delete_bond_pair(self, st1, st2):
         for bond1 in st1.bond:
