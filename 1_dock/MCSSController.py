@@ -68,9 +68,9 @@ class MCSSController:
         self.rmsd_file = "{}/{}-{}-{}.csv".format(self.root, '{}',
                                                      self.lm.st, self.lm.sp['docking'])
 
-        self.lig_template = '{0:}/{1:}/ligands/prepared_ligands/{2:}/{2:}.mae '.format(self.lm.sp['data'], self.lm.prot, '{0:}')
-        self.pv_template = '{0:}/{1:}/docking/{2:}/{3:}-to-{4:}/{3:}-to-{4:}_pv.maegz '.format(self.lm.sp['data'], self.lm.prot,
-                                                                                               self.lm.sp['docking'], '{0:}', self.lm.st)
+        self.lig_template = '{0:}/{1:}/ligands/prepared_ligands/{2:}/{2:}.mae'.format(self.lm.sp['data'], self.lm.prot, '{0:}')
+        self.pv_template = '{0:}/{1:}/docking/{2:}/{3:}-to-{4:}/{3:}-to-{4:}_pv.maegz'.format(self.lm.sp['data'], self.lm.prot,
+                                                                                              self.lm.sp['docking'], '{0:}', self.lm.st)
         self.init_command, self.rmsd_command = self._construct_commands(max_poses)
 
     def _construct_commands(self, max_poses):
@@ -84,16 +84,16 @@ class MCSSController:
         init_command  = 'mkdir -p {0:}-{1:}; cd {0:}-{1:}; '
         init_command += '$SCHRODINGER/run {0:}/2_ifp/mcss_main.py INIT '.format(self.lm.sp['code'])
         init_command += '{0:} {1:} ' # ligand names
-        init_command += self.lig_template.format('{0:}') # l1_path
-        init_command += self.lig_template.format('{1:}') # l2_path
+        init_command += self.lig_template.format('{0:}')+' ' # l1_path
+        init_command += self.lig_template.format('{1:}')+' ' # l2_path
         init_command += '{}/2_ifp/custom_types/{}.typ'.format(self.lm.sp['code'],
                                                               self.lm.sp['mcss']) # Atom typing
         init_command += ' ; cd ..\n'
         
         rmsd_command = '$SCHRODINGER/run {0:}/2_ifp/mcss_main.py RMSD '.format(self.lm.sp['code'])
         rmsd_command += '{0:} {1:} ' # ligand names
-        rmsd_command += self.pv_template.format('{0:}') # pv1_path
-        rmsd_command += self.pv_template.format('{1:}') # pv2_path
+        rmsd_command += self.pv_template.format('{0:}')+' ' # pv1_path
+        rmsd_command += self.pv_template.format('{1:}')+' ' # pv2_path
         rmsd_command += self.rmsd_file.format('{0:}-{1:}')
         rmsd_command += " {} ".format(max_poses)
         rmsd_command += ' "{2:}"\n'
@@ -131,6 +131,32 @@ class MCSSController:
                                         l2: self.pv_template.format(l2)}
                     self.MCSSs[name].load_rmsds(self.rmsd_file.format(name),
                                                 poseviewer_paths, max_poses)
+
+    def verify_rmsds(self, ligands, max_poses):
+        """
+        Check that all existing RMSD files are valid
+        and contain entries for at least max_poses poses
+        or the number of poses that exost for the given
+        ligand.
+
+        * Delete all non-valid files *
+
+        max_poses: int
+        ligands: iterable
+        """
+        ligands = set(ligands)
+        self.load_mcss()
+        print(ligands)
+        for name, mcss in self.MCSSs.items():
+            if mcss.l1 in ligands and mcss.l2 in ligands and mcss.is_valid():
+                poseviewer_paths = {mcss.l1: self.pv_template.format(mcss.l1),
+                                    mcss.l2: self.pv_template.format(mcss.l2)}
+                if not self.MCSSs[name].verify_rmsds(self.rmsd_file.format(name),
+                                                     poseviewer_paths, max_poses):
+                    print("Deleting RMSD file {}.".format(self.rmsd_file.format(name)))
+                    os.system('rm {}'.format(self.rmsd_file.format(name)))
+                    
+                
 
     def sort_by_mcss(self, query, ligands):
         """
@@ -291,6 +317,9 @@ class MCSSController:
             with open(script, 'w') as f: f.write(self.TEMPLATE.format(contents))
             os.system('sbatch {}'.format(script))
 
+def verify_mcss(lm, max_pdb=20, max_poses = 100):
+    controller = MCSSController(lm, max_pdb, max_poses)
+    controller.verify_rmsds(controller.pdb, max_poses)
 
 def compute_mcss(lm, pick_helpers={}, max_pdb=20, max_poses = 100, compute_rmsds = True):
     """
@@ -309,7 +338,7 @@ def compute_mcss(lm, pick_helpers={}, max_pdb=20, max_poses = 100, compute_rmsds
     controller = MCSSController(lm, max_pdb, max_poses)
     controller.collate_mcss()
     controller.add_pdb_to_pdb(compute_rmsds)
-    controller.add_pdb_to_allchembl()
-    controller.add_pick_helpers(pick_helpers, compute_rmsds)
+    #controller.add_pdb_to_allchembl()
+    #controller.add_pick_helpers(pick_helpers, compute_rmsds)
     controller.execute()
     os.chdir('../..')

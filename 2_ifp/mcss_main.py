@@ -180,9 +180,8 @@ class MCSS:
                 rmsd = float(line[2])
                 if p1 < max_poses and p2 < max_poses:
                     self.rmsds[(p1,p2)] = rmsd
-        self._verify_rmsds(rmsd_file, poseviewer_paths, max_poses)
 
-    def _verify_rmsds(self, rmsd_file, poseviewer_paths, max_poses):
+    def verify_rmsds(self, rmsd_file, poseviewer_paths, max_poses):
         """
         Verifies that all RMSDs have been computed (based on the number of
         poses in pose_viewer_paths).
@@ -193,12 +192,17 @@ class MCSS:
             and os.path.exists(poseviewer_paths[self.l2])):
             return True
         if not os.path.exists(rmsd_file): return False
-
-        n_poses_l1 = len(StructureReader(poseviewer_paths[self.l1])) - 1
-        n_poses_l2 = len(StructureReader(poseviewer_paths[self.l2])) - 1
-        for i in min(max_poses, n_poses_l1):
-            for j in min(max_poses, n_poses_l2):
-                assert (i, j) in self.rmsds
+        
+        from schrodinger.structure import StructureReader
+        n_poses_l1 = len(list(StructureReader(poseviewer_paths[self.l1]))) - 1
+        n_poses_l2 = len(list(StructureReader(poseviewer_paths[self.l2]))) - 1
+        
+        self.load_rmsds(rmsd_file, poseviewer_paths, max_poses)
+        for i in range(min(max_poses, n_poses_l1)):
+            for j in range(min(max_poses, n_poses_l2)):
+                if (i, j) not in self.rmsds:
+                    return False
+        return True
 
     def write_rmsds(self, rmsd_file, poseviewer_paths, max_poses):
         """
