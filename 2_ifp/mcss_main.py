@@ -227,8 +227,8 @@ class MCSS:
                         conf_rmsd.use_heavy_atom_graph = True
                         rmsd = min(rmsd, conf_rmsd.calculate())
 
-                    assert rmsd != float('inf'), "no mcss found"+','.join(str(i),str(j),
-                        self.l1,self.l2)
+                    assert rmsd != float('inf'), "no mcss found"+','.join([str(i),str(j),
+                                                                           self.l1,self.l2])
                     f.write('{},{},{}\n'.format(i, j, rmsd))
 
     # Utilities for matching atoms in MCSS
