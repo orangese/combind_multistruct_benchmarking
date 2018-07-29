@@ -34,7 +34,7 @@ class MCSSController:
     """
 
     INIT_GROUP_SIZE = 1000
-    RMSD_GROUP_SIZE = 10
+    RMSD_GROUP_SIZE = 100
 
     QUEUE = 'owners'
     

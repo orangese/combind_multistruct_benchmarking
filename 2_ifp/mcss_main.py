@@ -49,10 +49,6 @@ class MCSS:
         
         self.rmsds = {}
 
-        # Cache for atom indexes of MCSS matches in pose viewers
-        self.atom_idx_l1 = None
-        self.atom_idx_l2 = None
-
     def __str__(self):
         return ','.join(map(str,
             [self.l1, self.l2,
@@ -211,102 +207,49 @@ class MCSS:
         pv1 = list(StructureReader(poseviewer_paths[self.l1]))[1:]
         pv2 = list(StructureReader(poseviewer_paths[self.l2]))[1:]
         # evaluate_smarts returns [[atom_index, ...], ...]
-        self.atom_idx_l1 = [evaluate_smarts(pv1[0], smarts, unique_sets=True)
-                            for smarts in self.smarts_l1]
-        self.atom_idx_l2 = [evaluate_smarts(pv2[0], smarts, unique_sets=True)
-                            for smarts in self.smarts_l2]
+        # These objects are lists of lists of lists of atom indices!
+        l1_atom_idxss = [evaluate_smarts(pv1[0], smarts, unique_sets=True)
+                         for smarts in self.smarts_l1]
+        l2_atom_idxss = [evaluate_smarts(pv2[0], smarts, unique_sets=True)
+                         for smarts in self.smarts_l2]
+        assert len(l1_atom_idxss) and len(l2_atom_idxss)
 
-        pv1 = [self._unproc_st(pose) for pose in pv1]
-        pv2 = [self._unproc_st(pose) for pose in pv2]
         with open(rmsd_file, 'w') as f:
             for i, p1 in enumerate(pv1[:max_poses]):
                 for j, p2 in enumerate(pv2[:max_poses]):
                     rmsd = float('inf')
-                    for m1, m2 in self._find_mcss_matches(p1, p2):
-                        conf_rmsd = ConformerRmsd(m1, m2)
-                        conf_rmsd.use_heavy_atom_graph = True
-                        rmsd = min(rmsd, conf_rmsd.calculate())
-
+                    print(l1_atom_idxss, l2_atom_idxss)
+                    for l1_atom_idxs, l2_atom_idxs in zip(l1_atom_idxss, l2_atom_idxss):
+                        for l1_atom_idx in l1_atom_idxs:
+                            for l2_atom_idx in l2_atom_idxs:
+                                rmsd = min(rmsd, self._calculate_rmsd(p1, p2, l1_atom_idx, l2_atom_idx))
+                                print(rmsd)
                     assert rmsd != float('inf'), "no mcss found"+','.join([str(i),str(j),
                                                                            self.l1,self.l2])
                     f.write('{},{},{}\n'.format(i, j, rmsd))
 
-    # Utilities for matching atoms in MCSS
-    def _find_mcss_matches(self, st1, st2):
+    def _calculate_rmsd(self, pose1, pose2, atom_idx1, atom_idx2):
         """
-        Finds all matches between pairs of substructures
-        specificed by self.smarts in st1 and st2.
-        Returns list of tuples of schrodinger.structure.Structure
-        objects where the first entry is for st1 and second is for st2.
-
-        st1, st2: schrodinger.structure.Structure, ligands
+        Calculates the RMSD between the atoms atom_idx1 in pose1
+        and the atoms atom_idx2 in pose2. The atoms corresponding
+        to the first index are matched, and the second, and so on.
+        This procedure completely depends on minimizing over all
+        possible atoms matchings, which we currently do above. This
+        also depends on the atom indexes being in the correct order
+        as they are returned from evaluate_smarts.
+        
+        pose1, pose2: schrodinger.structure
+        atom_idx1, atom_idx2: [int, ...]
         """
-        all_pairs = []
-        for mcss1 in self.atom_idx_l1:
-            for mcss2 in self.atom_idx_l2:
-                # st.extract returns a schrodinger.structure.Structure
-                list1 = [st1.extract(m) for m in mcss1]
-                list2 = [st2.extract(m) for m in mcss2]
-
-                for m1 in list1:
-                    for m2 in list2:
-                        attempt_match = self._match(m1, m2)
-                        if attempt_match is not None:
-                            all_pairs.append((m1,m2))
-        return all_pairs
-
-    def _match(self, st1, st2):
-        """
-        Attempts to find a match between the two given structures.
-        If no match immediately present, deletes extraneous bonds.
-        Returns schrodinger.structure.Structure tuple of match if
-        found otherwise None.
-
-        st1, st2: schrodinger.structure.Structure, ligand substructures
-        """
-        if st1.isEquivalent(st2, False): return (st1, st2)
-        if abs(len(st1.bond) - len(st2.bond)) == 1:
-            return self._delete_extraneous_bonds(st1, st2)
-        if len(st1.bond) == len(st2.bond) == self.n_mcss_bonds + 1:
-            return self._delete_bond_pair(st1, st2)
-
-    def _unproc_st(self, st):
-        """
-        Set bond orders to 1 and partial charges to 0.
-
-        st1: schrodinger.structure.Structure
-        """
-        st2 = st.copy()
-        for b in st2.bond: b.order = 1
-        for a in st2.atom: a.formal_charge = 0
-        st2.retype()
-        return st2
-
-    def _delete_extraneous_bonds(self, st1, st2):
-        if len(st1.bond) + 1 == len(st2.bond): # st2 has the extra bond
-            st1, st2 = st2, st1
-        for bond in st1.bond:
-            atom1,atom2 = bond.atom1, bond.atom2
-            order = bond.order
-            st1.deleteBond(atom1, atom2)
-            if st1.isEquivalent(st2,False):
-                return (st1,st2)
-            st1.addBond(atom1, atom2, order)
-
-    def _delete_bond_pair(self, st1, st2):
-        for bond1 in st1.bond:
-            order1 = bond1.order
-            atom11, atom12 = bond1.atom1, bond1.atom2
-            st1.deleteBond(atom11,atom12)
-            for bond2 in st2.bond:
-                order2 = bond2.order
-                atom21, atom22 = bond2.atom1, bond2.atom2
-                st2.deleteBond(atom21, atom22)
-                if st1.isEquivalent(st2,False):
-                    return (st1,st2)
-                st2.addBond(atom21, atom22, order2)
-            st1.addBond(atom11, atom12, order1)
-
+        sd = 0
+        for i1, i2 in zip(atom_idx1, atom_idx2):
+            atom1 = pose1.extract([i1]).atom[1]
+            atom2 = pose2.extract([i2]).atom[1]
+            # Remove this assertion if we want to consider MCSSs with distinct elements matched
+            assert atom1.element == atom2.element
+            sd += sum((coord1-coord2)**2 for coord1, coord2 in zip(atom1.xyz, atom2.xyz))
+        return (sd / float(len(atom_idx1))) ** 0.5
+            
 if __name__ == '__main__':
     from schrodinger.structure import StructureReader, StructureWriter
     mode = sys.argv[1]
