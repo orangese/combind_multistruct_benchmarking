@@ -2,7 +2,7 @@ import os
 import sys
 from grouper import grouper
 
-queue = 'rondror'
+queue = 'owners'
 group_size=10
 
 # TODO: features seperately set in statistics.py
@@ -24,7 +24,7 @@ def compute(lm, all_pairs):
         os.system('sbatch -p {} -t 1:00:00 stats{}.sh'.format(queue, i))
     os.chdir('../..')
 
-def stats(lm, max_ligs = 5):
+def stats(lm, max_ligs = 20):
     """
     Compute statistics for lm.prot.
     """

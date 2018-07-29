@@ -70,7 +70,7 @@ for i, d in enumerate(datasets):
     # # 3. decide what ligands to use and prepare them
     if '3' in todo:
         pick_helpers(lm)              # Picks chembl ligands for use in scoring for each pdb ligand
-        #dock(lm, load_helpers())      # Dock chembl ligands to be used for scoring all pdb ligands
+        dock(lm, load_helpers())      # Dock chembl ligands to be used for scoring all pdb ligands
         fp(lm)                        # Writeout fingerprints for docked poses and pdb structures
         compute_mcss(lm, load_helpers())  # Performs all phases of MCSS computation
 
