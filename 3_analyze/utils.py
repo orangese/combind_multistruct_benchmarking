@@ -23,7 +23,7 @@ def plot_docking(rmsds_list, title_list, plt_title=''):
 
     count_none = len([i for i in rmsds_list[0] if i is None])
     if count_none != 0:  
-        print plt_title, count_none, 'did not dock'
+        print(plt_title, count_none, 'did not dock')
         frac_docked = 1 - float(count_none)/float(len(rmsds_list[0]))
         plt.plot([0,8],[frac_docked, frac_docked], '--k')
     for i, r in enumerate(rmsds_list):
@@ -154,13 +154,8 @@ def load_score_file(f_path, lig_objs):
                 sq = ScoreQuery(l_q, l_i, lig_objs, lval, nposes, w_dict)
                 nei = {}
                 go = 2
-                #print len(l_i), lval, nposes, w_dict
             elif go == 2:
                 p_list = [int(i) for i in line]
-                #print f_path
-                #print p_list
-                #p_q = int(line[0])
-                #p_i = [int(p) for p in line[1:]]
                 nei[p_list[0]] = {l:lig_objs[l].poses[p_list[i]] for i,l in enumerate([l_q]+l_i)}
     sq.load(nei)
     return sq
@@ -186,7 +181,7 @@ def export(data, cluster, cluster_name, receptor, struct=None, ligs=None, verbos
         #    command.append('R')
         #else:
         command.append(str(p.rank))
-    if verbose: print '$SCHRODINGER/run {} {}'.format(export_script, ' '.join(command))
+    if verbose: print('$SCHRODINGER/run {} {}'.format(export_script, ' '.join(command)))
     os.system('$SCHRODINGER/run {} {}'.format(export_script, ' '.join(command)))
 
 def get_fp_vectors(c):
@@ -295,7 +290,6 @@ def interaction_heatmap(A, structs, res, fname='', m=None, fig=None, ax=None, di
     ax.set_xticks(np.arange(A.shape[1]), minor=False)
     ax.set_yticks(np.arange(A.shape[0]), minor=False)
     ax.xaxis.tick_top()
-    #print res
     xlabels = ['{}, {}-{}'.format(i, r.split('(')[1].split(')')[0], r.split(':')[1].split('(')[0]) for (i,r) in res]
     ax.set_xticklabels(xlabels, minor=False, rotation = 'vertical', size=14)
     ax.set_yticklabels(structs, minor=False, size=14)

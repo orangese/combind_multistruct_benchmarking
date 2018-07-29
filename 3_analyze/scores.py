@@ -81,8 +81,8 @@ class ScoreContainer:
                     try:
                         self.results[q][line[0]] = int(line[1])
                     except:
-                        print f
-                        print line
+                        print(f)
+                        print(line)
 
     def load_details(self, q):
         if q not in self.details:
@@ -93,7 +93,7 @@ class ScoreContainer:
         self.load_details(q)
         check_sc = self.ps.log_posterior(self.results[q])
         if abs(check_sc - self.validate[q]) > 0.0001:
-            print check_sc, self.validate[q]
+            print(check_sc, self.validate[q])
             return False
         return True
 
@@ -129,7 +129,7 @@ class ScoreContainer:
             title = 'min query rmsd'
 
         if show_prob and np.sum(log_p1) != 0:
-            print k, 'probability matrix'
+            print(k, 'probability matrix')
             minval = min(np.min(log_p1[np.nonzero(log_p1)]),np.min(log_p2[np.nonzero(log_p2)]))
             maxval = max(np.max(log_p1[np.nonzero(log_p1)]),np.max(log_p2[np.nonzero(log_p2)]))
 
@@ -137,7 +137,7 @@ class ScoreContainer:
                           'us top',title,size=size, mi=minval,ma=maxval)
 
         if show_x:
-            print k, 'x_k matrix'
+            print(k, 'x_k matrix')
             minval = min(np.min(x1),np.min(x2))
             maxval = max(np.max(x1),np.max(x2))
 

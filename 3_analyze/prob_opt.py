@@ -30,7 +30,7 @@ class PredictStructs:
         max_sc, best_cluster, all_scores, all_rmsds = opt(initial_cluster,sampling=sampling, en_landscape=en_landscape)
 
         if verbose:
-            print 'cluster -1, score {}'.format(max_sc)
+            print('cluster -1, score {}'.format(max_sc))
 
         for i in range(restart):
             rand_cluster = {}
@@ -44,7 +44,7 @@ class PredictStructs:
             if new_sc > max_sc:
                 max_sc, best_cluster = new_sc, new_cluster
             if verbose:
-                print 'cluster {}, score {}'.format(i,new_sc)
+                print('cluster {}, score {}'.format(i,new_sc))
 
         return best_cluster, all_scores, all_rmsds
 
@@ -64,10 +64,10 @@ class PredictStructs:
         log_posteriors, rmsds = [], []
 
         time_since_update = 0
-        while time_since_update < sampling * len(pose_cluster.keys())**2:
+        while time_since_update < sampling * len(list(pose_cluster.keys()))**2:
             time_since_update += 1
 
-            query = np.random.choice(pose_cluster.keys())
+            query = np.random.choice(list(pose_cluster.keys()))
             best_sc = self._partial_log_posterior(pose_cluster, query)
             best_p = pose_cluster[query]
             for p in range(self._num_poses(query)):
@@ -109,7 +109,7 @@ class PredictStructs:
 
         for i in range(CHAIN_LENGTH*int(T_START/COOLING) + 1):
 
-            query = np.random.choice(pose_cluster.keys())
+            query = np.random.choice(list(pose_cluster.keys()))
             current_pose  = pose_cluster[query]
             proposed_pose = random.randint(0, self._num_poses(query)-1)
 
