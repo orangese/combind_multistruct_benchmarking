@@ -143,7 +143,7 @@ class PredictStructs:
             log_prob += - self._get_gscore(ligname, pose) / self.T
         
         for i, (ligname1, pose1) in enumerate(pose_cluster.items()):
-            for ligname2, pose2 in pose_cluster.items()[i+1:]:
+            for ligname2, pose2 in list(pose_cluster.items())[i+1:]:
                 log_prob += self._log_likelihood_ratio_pair(pose_cluster, ligname1, ligname2)
         return log_prob
 

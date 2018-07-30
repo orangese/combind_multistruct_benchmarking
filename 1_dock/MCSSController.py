@@ -108,8 +108,10 @@ class MCSSController:
         pose1, pose2: int, pose numbers for which to get rmsd.
         """
         if l1 > l2: l1, l2 = l2, l1
-        if not self.MCSSs["{}-{}".format(l1, l2)].is_valid(): return None
-        return self.MCSSs["{}-{}".format(l1, l2)].rmsds[(pose1, pose2)]
+        mcss = self.MCSSs["{}-{}".format(l1, l2)]
+        if not mcss.is_valid(): return None
+        if (pose1, pose2) not in mcss.rmsds: return None
+        return mcss.rmsds[(pose1, pose2)]
 
     def load_rmsds(self, ligands, max_poses):
         """
@@ -136,27 +138,28 @@ class MCSSController:
         """
         Check that all existing RMSD files are valid
         and contain entries for at least max_poses poses
-        or the number of poses that exost for the given
-        ligand.
+        or the number of poses that exist for the given
+        ligand. If ligands is None, check all pairs.
 
         * Delete all non-valid files *
 
         max_poses: int
         ligands: iterable
         """
-        ligands = set(ligands)
+        if ligands is not None:
+            ligands = set(ligands)
+            print(ligands)
         self.load_mcss()
-        print(ligands)
         for name, mcss in self.MCSSs.items():
-            if mcss.l1 in ligands and mcss.l2 in ligands and mcss.is_valid():
+            valid_ligands = ligands is None or (mcss.l1 in ligands and mcss.l2 in ligands)
+            rmsd_file_exists = os.path.exists(self.rmsd_file.format(name))
+            if valid_ligands and rmsd_file_exists and mcss.is_valid():
                 poseviewer_paths = {mcss.l1: self.pv_template.format(mcss.l1),
                                     mcss.l2: self.pv_template.format(mcss.l2)}
                 if not self.MCSSs[name].verify_rmsds(self.rmsd_file.format(name),
                                                      poseviewer_paths, max_poses):
                     print("Deleting RMSD file {}.".format(self.rmsd_file.format(name)))
                     os.system('rm {}'.format(self.rmsd_file.format(name)))
-                    
-                
 
     def sort_by_mcss(self, query, ligands):
         """
@@ -319,7 +322,7 @@ class MCSSController:
 
 def verify_mcss(lm, max_pdb=20, max_poses = 100):
     controller = MCSSController(lm, max_pdb, max_poses)
-    controller.verify_rmsds(controller.pdb, max_poses)
+    controller.verify_rmsds(None, max_poses)
 
 def compute_mcss(lm, pick_helpers={}, max_pdb=20, max_poses = 100, compute_rmsds = True):
     """
