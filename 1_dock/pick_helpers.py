@@ -18,7 +18,7 @@ def pick_helpers(lm, maxnum=20):
         #'best_mcss_plus_stereo.txt': [mcss_sort, stereo_filter]
     }
 
-    num_chembl = 30    
+    num_chembl = 30
     for f, filters in all_options.items():
         fpath = '{}/{}'.format(parent, f)
         if not os.path.exists(fpath):
@@ -30,9 +30,9 @@ def pick_helpers(lm, maxnum=20):
                     # sort and remove duplicates
                     print(q)
                     if 'mcss' in f:
-                        lm.mcss.load_mcss(set([q]), set(chembl_ligs))
+                        lm.mcss.load_mcss()
                         sorted_helpers = sorted(chembl_ligs,key=ki_sort)
-                        sorted_helpers = lm.mcss.sort_by_mcss(q, sorted_helpers, lambda x: x.m_sz)
+                        sorted_helpers = lm.mcss.sort_by_mcss(q, sorted_helpers)
                     elif 'affinity' in f:
                         sorted_helpers = sorted(chembl_ligs,key=ki_sort)
                     unique = lm.unique([q]+sorted_helpers)

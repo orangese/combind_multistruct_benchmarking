@@ -4,7 +4,7 @@ import numpy as np
 
 from parse_files import parse_glide_output, parse_fp_file
 
-from mcss_utils import MCSS
+
 
 sys.path.append('../1_dock')
 sys.path.append('/'.join(os.path.dirname(os.path.realpath(sys.argv[0])).split('/')[:-1]) + '/1_dock')
@@ -12,6 +12,7 @@ sys.path.append('/'.join(os.path.dirname(os.path.realpath(sys.argv[0])).split('/
 from parse_chembl import load_chembl_proc
 from pick_helpers import load_helpers
 from chembl_props import read_duplicates
+from MCSSController import MCSSController
 
 class Pose:
     """
@@ -134,7 +135,7 @@ class Protein:
         # if a struct is provided (above), lm.st will use it
         # otherwise lm.st will provide a default
         self.docking = { self.lm.st : Docking( shared_paths, self.prot, self.lm.st) }
-        self.lm.mcss.num_poses = self.docking[self.lm.st].num_poses
+        #self.lm.mcss.num_poses = self.docking[self.lm.st].num_poses
         
         self.true = {}
 
@@ -146,7 +147,7 @@ class Protein:
         self.docking[st].load(l_list, load_fp)
 
         if load_mcss:
-            self.lm.mcss.load_mcss(l_list, l_list, rmsd=True)        
+            self.lm.mcss.load_rmsds(l_list, 1000)
 
         if load_crystal:
             for l in l_list:
@@ -190,8 +191,8 @@ class LigandManager:
         if struct is None:
             self.st = self.all_st.get(prot, self.first_st)
 
-        # Load MCSS
-        self.mcss = MCSS(self.sp, self.st, self.root)
+        # MCSS
+        self.mcss = MCSSController(self)
         self.helpers = {}
 
     def prepped(self):

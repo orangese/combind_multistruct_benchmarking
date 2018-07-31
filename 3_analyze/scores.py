@@ -57,7 +57,7 @@ class ScoreContainer:
             prot = self.predict_data.proteins[self.prot]
             chembl_ligs = prot.lm.get_similar(q, self.sett['chembl_file'], 
                 num=self.sett['num_pred_chembl'], struct=self.struct)
-            self.predict_data.load({self.prot:[q]+chembl_ligs},{self.prot:[self.struct]}) 
+            self.predict_data.load({self.prot:[q]+chembl_ligs},{self.prot:[self.struct]})
             best_cluster, all_scores, all_rmsds = self.ps.max_posterior([q]+chembl_ligs, restart=15, sampling=3)
             self.results[q] = best_cluster
         return self.results[q]

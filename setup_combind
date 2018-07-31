@@ -1,0 +1,11 @@
+# Run this before anything else
+
+ml load chemistry
+ml load schrodinger
+
+unset PYTHONPATH
+unset PYTHONHOME
+PYTHON=/scratch/PI/rondror/combind/miniconda3/bin
+[ ":$PATH:" == *":$PYTHON:"* ] || PATH="$PYTHON:$PATH"
+
+export COMBINDHOME=`pwd`
