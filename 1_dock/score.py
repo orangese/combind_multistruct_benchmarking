@@ -2,14 +2,14 @@ import os
 import sys
 from grouper import grouper
 
-group_size=1
+group_size=5
 
-output_dir = 'scores/scores11'
+output_dir = 'scores/scores23'
 cmd = '$SCHRODINGER/run /scratch/PI/rondror/combind/combind/3_analyze/scores.py {} {} {}'
 
 settings = {
-    'k_list' : ['mcss', 'hbond','sb2','contact'],
-    'num_stats_ligs' : 10,
+    'k_list' : ['hbond','sb2','contact', 'mcss'],
+    'num_stats_ligs' : 20,
     'normalize' : True,
     'num_pred_chembl' : 10,
     'num_poses' : 100,
