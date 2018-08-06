@@ -9,7 +9,7 @@ cmd = '$SCHRODINGER/run /scratch/PI/rondror/combind/combind/3_analyze/scores.py 
 
 settings = {
     'k_list' : ['hbond','sb2','contact', 'mcss'],
-    'num_stats_ligs' : 20,
+    'num_stats_ligs' : 10,
     'normalize' : True,
     'num_pred_chembl' : 10,
     'num_poses' : 100,

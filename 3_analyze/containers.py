@@ -4,8 +4,6 @@ import numpy as np
 
 from parse_files import parse_glide_output, parse_fp_file
 
-
-
 sys.path.append('../1_dock')
 sys.path.append('/'.join(os.path.dirname(os.path.realpath(sys.argv[0])).split('/')[:-1]) + '/1_dock')
 
