@@ -16,6 +16,8 @@ def compute(lm, all_pairs):
     for i,group in enumerate(grouper(group_size, all_pairs)):
         with open('stats{}.sh'.format(i),'w') as f:
             f.write('#!/bin/bash\n')
+            f.write('unset PYTHONPATH\n')
+            f.write('unset PYTHONHOME\n')
             for pair in group:
                 if pair is None: continue
                 l1,l2 = pair

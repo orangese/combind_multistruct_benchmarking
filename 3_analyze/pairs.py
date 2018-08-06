@@ -44,8 +44,8 @@ class LigPair:
         if not self.normalize_fp: maximum = 1
         
         if feature == 'mcss' and self.normalize_fp:
-            return 1 - feature_value / maximum
-        return feature_value / maximum
+            return 1 - feature_value / max(maximum, 6.0)
+        return feature_value / max(maximum, 1.0)
 
     def init_pose_pairs(self):
         """

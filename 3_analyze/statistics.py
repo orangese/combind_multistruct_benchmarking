@@ -1,14 +1,18 @@
 import numpy as np
-
 from pairs import LigPair
 
 def average_distributions(d_list):
-    all_x = set([])
+    all_x = set()
+    all_raw = []
     for d in d_list:
         all_x.update(d.prob.keys())
-    all_x = sorted(list(all_x))
+        if d.raw is not None:
+            all_raw += d.raw
+        else:
+            all_raw = None
+    all_x = sorted(all_x)
     p_x = [np.mean([d.prob.get(x,0) for d in d_list]) for x in all_x]
-    return Distribution(all_x, p_x)
+    return Distribution(all_x, p_x, raw=all_raw)
 
 def combine(dist, subdist):
     for i in dist:
@@ -18,11 +22,17 @@ def combine(dist, subdist):
             dist[i][k] = average_distributions(all_d)
 
 class Distribution:
-    def __init__(self, x, p_x):
-        self.prob = {x[i]:p_x[i] for i in range(len(x))}
-        self.resolution = int(np.log10(1/(x[1] - x[0])))
-        self.dx = x[1] - x[0]
+    def __init__(self, x, p_x, raw=None):
 
+        self.resolution = 2#int(np.log10(1/(x[1] - x[0])))
+        self.prob = {round(x[i], self.resolution):p_x[i] for i in range(len(x))}
+        self.dx = x[1] - x[0]
+        self.raw = raw
+        if type(raw) is dict:
+            self.raw = []
+            for ke, freq in raw.items(): 
+                self.raw += freq*[ke]
+ 
     def evaluate(self, x):
         return self.prob[round(x,self.resolution)]
 
@@ -43,15 +53,13 @@ class Statistics:
             pstats.create(prot.docking[pstats.st], prot.lm.mcss, samples, smooth, num_poses, self.normalize, hack)
         combine(self.dist, self.proteins)
 
+
     def read(self, data_dir, stats_dir):
         for p, pstats in self.proteins.items():
             self.proteins[p].read(data_dir, stats_dir)
         combine(self.dist, self.proteins)
  
     def write(self, out_f, k):
-        """
-        Write PDF to file.
-        """
         with open(out_f, 'w') as f:
             for i in self.ind:
                 d = self.dist[i][k]
@@ -102,31 +110,42 @@ class LigPairStatistics:
         self.k_list = k_list
         self.ind = [-1,0,1]
         self.dist = {i: {k: None for k in k_list} for i in self.ind}
+        self.x = {k:{i:{} for i in self.ind} for k in k_list}
 
     def create(self, lig_pair, samples=10**4, smooth=0.02, normalize=True, hack=False):
         for k in self.k_list:
-            x_k = {i: {} for i in self.ind}
+            #x_k = {i: {} for i in self.ind}
             for (r1,r2),pp in lig_pair.pose_pairs.items():
                 pp_x = lig_pair.get_feature(k, r1, r2)
                 if pp_x is not None:
-                    x_k[pp.correct()][pp_x] = x_k[pp.correct()].get(pp_x, 0) + 1#.append(pp_x)
-                    x_k[-1][pp_x] = x_k[-1].get(pp_x, 0) + 1
+                    self.x[k][pp.correct()][pp_x] = self.x[k][pp.correct()].get(pp_x, 0) + 1#.append(pp_x)
+                    self.x[k][-1][pp_x] = self.x[k][-1].get(pp_x, 0) + 1
                     if hack:
                         f = lambda x: sum([freq for ind,freq in x.items()])
-                        if min(f(x_k[1]),f(x_k[0])) >= 4 and f(x_k[-1]) >= 250: break
+                        if min(f(self.x[k][1]),f(self.x[k][0])) >= 4 and f(self.x[k][-1]) >= 250: break
+
+            if len(self.x[k][-1]) == 0: continue
             if normalize: domain = np.linspace(-1,2,3*samples+1)    
-            elif len(x_k[-1]) > 0: domain = np.linspace(min(x_k[-1])-1,max(x_k[-1])+1,3*samples+1)    
+            elif k == 'contact': domain = np.arange(-10,max(self.x[k][-1])+10,1)
+            else: domain = np.arange(-0.5,max(self.x[k][-1])+0.5,0.01)
+
+            var = smooth
+            if not normalize:
+                tot1 = float(sum([v for ke,v in self.x[k][-1].items()]))#/float(len(x_k[i]))
+                mean = sum([ke*v/tot1 for ke,v in self.x[k][-1].items()])
+                var = smooth*sum([((ke-mean)**2) * v/tot1 for ke,v in self.x[k][-1].items()])
+                if var == 0:
+                    print('variance error')
+                    var = 0.1
+
             for i in self.ind:
-                if len(x_k[i]) == 0: continue
-                tot = float(sum([v for ke,v in x_k[i].items()]))#/float(len(x_k[i]))
-
-                var = smooth
-                #mean = sum([ke*v/tot for ke,v in x_k[i].items()])
-                #var = smooth*sum([((ke-mean)**2) * v/tot for ke,v in x_k[i].items()])
-
+                if len(self.x[k][i]) == 0: continue 
+                tot = float(sum([v for ke,v in self.x[k][i].items()]))#/float(len(x_k[i]))
                 gauss = lambda x,u: (1/np.sqrt(2*np.pi*var))*np.exp(-(x-u)**2 / (2*var))
-                p_domain = [sum([gauss(j,v)*freq/tot for v,freq in x_k[i].items()]) for j in domain]
-                self.dist[i][k] = Distribution(domain, p_domain)
+                p_domain = [sum([gauss(j,v)*freq/tot for v,freq in self.x[k][i].items()]) for j in domain]
+
+                self.dist[i][k] = Distribution(domain, p_domain, raw=self.x[k][i])
+                #self.dist[i][k].raw = self.x[k][i]
 
     def read(self, data_dir, stats_dir):
         for k in self.k_list:
@@ -170,10 +189,9 @@ if __name__ == '__main__':
     lm = data.proteins[prot].lm
 
     k_list = ['sb1','sb2','sb3','mcss','hbond','pipi','contact']
-    alls = Statistics({prot:[l1,l2]}, {prot:lm.st}, k_list)
-    alls.create(data,10**2,0.005,100)
+    alls = Statistics({prot:[l1,l2]}, {prot:lm.st}, k_list, normalize=True)
+    alls.create(data,100,0.005,100)
 
     for k in k_list:
-        out_f = '{}/{}/stats/{}/{}-{}-to-{}-{}.txt'.format(shared_paths['data'],prot,
-                                                           shared_paths['stats'],l1,l2,lm.st,k)    
+        out_f = '{}/{}/stats/{}/{}-{}-to-{}-{}.txt'.format(shared_paths['data'],prot,shared_paths['stats'],l1,l2,lm.st,k)    
         alls.write(out_f, k)

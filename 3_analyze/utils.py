@@ -154,13 +154,8 @@ def load_score_file(f_path, lig_objs):
                 sq = ScoreQuery(l_q, l_i, lig_objs, lval, nposes, w_dict)
                 nei = {}
                 go = 2
-                #print len(l_i), lval, nposes, w_dict
             elif go == 2:
                 p_list = [int(i) for i in line]
-                #print f_path
-                #print p_list
-                #p_q = int(line[0])
-                #p_i = [int(p) for p in line[1:]]
                 nei[p_list[0]] = {l:lig_objs[l].poses[p_list[i]] for i,l in enumerate([l_q]+l_i)}
     sq.load(nei)
     return sq
@@ -295,7 +290,6 @@ def interaction_heatmap(A, structs, res, fname='', m=None, fig=None, ax=None, di
     ax.set_xticks(np.arange(A.shape[1]), minor=False)
     ax.set_yticks(np.arange(A.shape[0]), minor=False)
     ax.xaxis.tick_top()
-    #print res
     xlabels = ['{}, {}-{}'.format(i, r.split('(')[1].split(')')[0], r.split(':')[1].split('(')[0]) for (i,r) in res]
     ax.set_xticklabels(xlabels, minor=False, rotation = 'vertical', size=14)
     ax.set_yticklabels(structs, minor=False, size=14)
