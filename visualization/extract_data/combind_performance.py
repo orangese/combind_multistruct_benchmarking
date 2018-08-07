@@ -79,5 +79,5 @@ if __name__ == '__main__':
                         glide.append(pv[1])
                         combind.append(pv[pose+1])
                         best.append(pv[best_pose+1])
-                    
+                        if ligand == '1E1V_lig': continue
                         crystal.extend(StructureReader("{}/{}/structures/ligands/{}.mae".format(shared_paths['data'], protein, ligand)))

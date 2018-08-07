@@ -34,6 +34,8 @@ with open("{}/mcss.txt".format(D), 'w') as fp:
     fp.write(str(mcss)+'\n')
     fp.write(str(mcss.is_valid())+'\n')
 
+print(mcss.is_valid())
+
 # Write ligands to MAE file
 l1_struct = next(StructureReader(lm.mcss.lig_template.format(l1)))
 l2_struct = next(StructureReader(lm.mcss.lig_template.format(l2)))
@@ -43,9 +45,9 @@ with StructureWriter("{}/ligs.mae".format(D)) as writer:
     writer.append(l2_struct)
 
 # Write projected ASLs
-l1_atom_idxss = [evaluate_smarts(l1_struct, smarts, unique_sets=True)
+l1_atom_idxss = [evaluate_smarts(l1_struct, smarts, unique_sets=False)
                  for smarts in mcss.smarts_l1]
-l2_atom_idxss = [evaluate_smarts(l2_struct, smarts, unique_sets=True)
+l2_atom_idxss = [evaluate_smarts(l2_struct, smarts, unique_sets=False)
                  for smarts in mcss.smarts_l2]
 
 for k, (l1_atom_idxs, l2_atom_idxs) in enumerate(zip(l1_atom_idxss, l2_atom_idxss)):
