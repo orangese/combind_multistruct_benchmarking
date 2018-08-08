@@ -49,6 +49,8 @@ for i, d in enumerate(datasets):
         sort_files()                  # Creates ligand, protein, and complex directories
         make_grids()                  # Creates grid for all proteins
         dock(lm)                      # Dock PDB ligands to lm.st
+        dock(lm, mode = 'inplace')
+        dock(lm, mode = 'mininplace')
      
     # 2. prepare ligands
     if '2' in todo:

@@ -69,26 +69,22 @@ def parse_if_file(pair):
     return gscores, rmsds
 
 def parse_rept_file(pair):
-    gscores = []
-    rmsds = []
+    gscores, emodels, rmsds = [], [], []
     lig, prot = pair.split('-to-')
     with open('{}.rept'.format(pair)) as f:
         for line in f:
             line = line.strip().split()
             if len(line) <= 1 or (line[1] != lig and line[1] != lig+'_out' and line[1] != '1'): continue
-            #if line[1] == lig:
             rank, lig_name, lig_index, score = line[:4]
+            emodel = line[13]
             if line[1] == '1':
                 rank, lig_index, score = line[:3]
-            #rmsd = line[-1]
-
+                emodel = line[12]
             gscores.append(float(score))
-
-            #if rmsd == '--': rmsd = None
-            #else: rmsd = float(rmsd)
-            #rmsds.append(rmsd)
+            emodels.append(float(emodel))
+            
     if not os.path.exists('rmsd.csv'):
-        return gscores, [None]*len(gscores)
+        return gscores, emodels, [None]*len(gscores)
     with open('rmsd.csv') as f:
         for line in f:
             line = line.strip().split(',')
@@ -96,5 +92,5 @@ def parse_rept_file(pair):
             #print line
             rmsds.append(float(line[3][1:-1]))
 
-    return gscores, rmsds
+    return gscores, emodels, rmsds
 

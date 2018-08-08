@@ -16,15 +16,17 @@ class Pose:
     """
     Represents a single pose of a ligand.
     """
-    def __init__(self, rmsd, physics_score, fp, rank):
+    def __init__(self, rmsd, gscore, emodel, fp, rank):
         """
         rmsd (float): RMSD to crystallographic pose
-        physics_score (float): score from physics-based docking alg
+        gscore (float): glide score
+        emodel (float): emodel (from glide)
         fp ({(int, string): float}): dict mapping interactiontype, resname pairs to interaction score
         rank (int): ranking by physics score, and thereby index in pose file
         """
         self.rmsd = rmsd
-        self.gscore = physics_score
+        self.gscore = gscore
+        self.emodel = emodel
         self.fp_raw = fp
         self.rank = rank
 
@@ -55,7 +57,7 @@ class Ligand:
             return
 
         f_path = '{}/{}-to-{}'.format(dock_dir, self.lig_id, struct)
-        gscores, rmsds = parse_glide_output(f_path)
+        gscores, emodels, rmsds = parse_glide_output(f_path)
 
         fp_path = '{}/{}-to-{}.fp'.format(fp_dir, self.lig_id, struct)
         fps = {}
@@ -64,7 +66,7 @@ class Ligand:
             if len(fps) < min(100, len(rmsds)):
                 print('missing fp?', fp_path)
  
-        if not len(gscores) == len(rmsds):
+        if not len(gscores) == len(rmsds) == len(emodels):
             print('{} {} {}'.format(dock_dir, self.lig_id, struct))
             print(f_path, fp_path)
             #os.system('rm -rf {}'.format(f_path))
@@ -72,7 +74,7 @@ class Ligand:
             self.poses = []
             return            
 
-        self.poses = [Pose(rmsds[i], gscores[i], fps.get(i, {}), i) for i in range(len(gscores))]
+        self.poses = [Pose(rmsds[i], gscores[i], emodels[i], fps.get(i, {}), i) for i in range(len(gscores))]
         
         for i, p in enumerate(self.poses):
             if i == 0: continue
