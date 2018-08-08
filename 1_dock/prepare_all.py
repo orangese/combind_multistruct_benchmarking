@@ -51,6 +51,8 @@ for i, d in enumerate(datasets):
         dock(lm)                      # Dock PDB ligands to lm.st
         dock(lm, mode = 'inplace')
         dock(lm, mode = 'mininplace')
+        dock(lm, mode = 'XP')
+        dock(lm, mode = 'expanded')
      
     # 2. prepare ligands
     if '2' in todo:

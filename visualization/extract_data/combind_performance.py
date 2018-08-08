@@ -7,8 +7,11 @@ Ideal behaviour would be to
 """
 import os
 import sys
+sys.path.append('../../1_dock')
+sys.path.append('../../2_ifp')
+sys.path.append('../../3_analyze')
+
 from containers import Dataset
-sys.path.append('../1_dock')
 from shared_paths import shared_paths
 from schrodinger.structure import StructureReader, StructureWriter
 

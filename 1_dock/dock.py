@@ -14,6 +14,31 @@ PRECISION   SP
 NENHANCED_SAMPLING   2
 '''
 
+GLIDEXP = '''GRIDFILE   ../../grids/{}/{}.zip
+LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
+DOCKING_METHOD   confgen
+CANONICALIZE   True
+POSES_PER_LIG   300
+POSTDOCK_NPOSE   300
+WRITEREPT   True
+PRECISION   XP
+'''
+
+EXPANDED = '''GRIDFILE   ../../grids/{}/{}.zip
+LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
+DOCKING_METHOD   confgen
+CANONICALIZE   True
+EXPANDED_SAMPLING   True
+POSES_PER_LIG   300
+POSTDOCK_NPOSE   300
+NMAXRMSSYM   300
+MAXKEEP   100000
+MAXREF   1000
+WRITEREPT   True
+PRECISION   SP
+NENHANCED_SAMPLING   4
+'''
+
 INPLACE = '''GRIDFILE   ../../grids/{}/{}.zip
 LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
 DOCKING_METHOD   inplace
@@ -68,7 +93,13 @@ def write_inp_files(all_pairs, mode):
         TEMPLATE = INPLACE
     elif mode == 'mininplace':
         TEMPLATE = REFINE
-    os.system('rm -f *.sh')
+    elif mode == 'expanded':
+        TEMPLATE = EXPANDED
+    elif mode == 'XP':
+        TEMPLATE = GLIDEXP
+    else:
+        assert False, mode
+    os.system('rm *.sh')
     for ligand, grid in all_pairs:
         os.system('mkdir {}-to-{}'.format(ligand, grid))
         with open('{}-to-{}/{}-to-{}.in'.format(ligand, grid, ligand, grid), 'w') as f:
@@ -100,6 +131,10 @@ def dock(lm, chembl=None, maxnum=30, mode = 'confgen'):
         docking = 'inplace'
     elif mode == 'mininplace':
         docking = 'mininplace'
+    elif mode == 'expanded':
+        docking = 'expanded'
+    elif mode == 'XP':
+        docking = 'XP'
     os.system('mkdir -p docking/{}'.format(docking))
     os.chdir('docking/{}'.format(docking))
 
