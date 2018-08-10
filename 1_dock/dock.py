@@ -14,6 +14,20 @@ PRECISION   SP
 NENHANCED_SAMPLING   2
 '''
 
+INPLACE = '''GRIDFILE   ../../grids/{}/{}.zip
+LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
+DOCKING_METHOD   inplace
+WRITEREPT   True
+PRECISION   SP
+'''
+
+REFINE = '''GRIDFILE   ../../grids/{}/{}.zip
+LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
+DOCKING_METHOD   mininplace
+WRITEREPT   True
+PRECISION   SP
+'''
+
 queue = 'owners'
 group_size = 5
 
@@ -47,12 +61,18 @@ def get_state(ligand, grid):
     os.system('rm -rf {}-to-{}'.format(ligand, grid))
     return 2
 
-def write_inp_files(all_pairs):
+def write_inp_files(all_pairs, mode):
+    if mode == 'confgen':
+        TEMPLATE = XGLIDE_IN
+    elif mode == 'inplace':
+        TEMPLATE = INPLACE
+    elif mode == 'mininplace':
+        TEMPLATE = REFINE
     os.system('rm -f *.sh')
     for ligand, grid in all_pairs:
         os.system('mkdir {}-to-{}'.format(ligand, grid))
         with open('{}-to-{}/{}-to-{}.in'.format(ligand, grid, ligand, grid), 'w') as f:
-            f.write(XGLIDE_IN.format(grid, grid, ligand, ligand))
+            f.write(TEMPLATE.format(grid, grid, ligand, ligand))
 
 def proc_all(all_pairs, dock=False, rmsd=False):
     
@@ -71,11 +91,17 @@ def proc_all(all_pairs, dock=False, rmsd=False):
 
         os.system('sbatch -p {} -t 1:00:00 -o dock.out dock{}.sh'.format(queue, i))
 
-def dock(lm, chembl=None, maxnum=20):
+def dock(lm, chembl=None, maxnum=30, mode = 'confgen'):
     if lm.st is None: return
-
-    os.system('mkdir -p docking/{}'.format(lm.sp['docking']))
-    os.chdir('docking/{}'.format(lm.sp['docking']))
+    
+    if mode == 'confgen':
+        docking = lm.sp['docking']
+    elif mode == 'inplace':
+        docking = 'inplace'
+    elif mode == 'mininplace':
+        docking = 'mininplace'
+    os.system('mkdir -p docking/{}'.format(docking))
+    os.chdir('docking/{}'.format(docking))
 
     if chembl is None:
         ligs = lm.pdb[:maxnum]
@@ -98,11 +124,10 @@ def dock(lm, chembl=None, maxnum=20):
             
     if len(to_dock) > 0:
         print('docking {} ligands'.format(len(to_dock)))
-        write_inp_files(to_dock)
+        write_inp_files(to_dock, mode)
         proc_all(to_dock, dock=True)
     if len(to_rmsd) > 0:
         print('computing {} rmsds'.format(len(to_rmsd)))
         proc_all(to_rmsd, rmsd=True)
 
     os.chdir('../..')
-
