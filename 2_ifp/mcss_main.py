@@ -109,7 +109,7 @@ class MCSS:
             for line in f:
                 smiles, lig, _, _, _, _n_mcss_atoms, _n_mcss_bonds = line.strip().split(',')[:7]
                 smarts = line.strip().split(',')[-1] # There are commas in some of the fields
-                _n_mcss_atoms, _n_mcss_bons = int(_n_mcss_atoms), int(_n_mcss_bonds)
+                _n_mcss_atoms, _n_mcss_bonds = int(_n_mcss_atoms), int(_n_mcss_bonds)
                 
                 assert n_mcss_atoms is None or n_mcss_atoms == _n_mcss_atoms, dir_name
                 assert n_mcss_bonds is None or n_mcss_bonds == _n_mcss_bonds, dir_name
@@ -132,8 +132,8 @@ class MCSS:
         mcss.smarts_l2 = ligs[mcss.l2]
 
         # Get ligand sizes.
-        # The below line can fail if there are multiple compies of each ligand
-        # writtent of the mcss_struct file
+        # The below line can fail if there are multiple copies of each ligand
+        # written to the mcss_struct file
         ref1, ref2 = refs
         mcss.n_l1_atoms = len([a for a in ref1.atom if a.element != 'H'])
         mcss.n_l2_atoms = len([a for a in ref2.atom if a.element != 'H'])
