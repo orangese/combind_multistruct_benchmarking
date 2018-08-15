@@ -4,17 +4,17 @@ from grouper import grouper
 
 group_size=5
 
-output_dir = 'scores/scores23'
+output_dir = 'scores/scores31'
 cmd = '$SCHRODINGER/run /scratch/PI/rondror/combind/combind/3_analyze/scores.py {} {} {}'
 
 settings = {
-    'k_list' : ['hbond','sb2','contact', 'mcss'],
+    'k_list' : ['hbond','sb2','contact', 'pipi', 'mcss'],
     'num_stats_ligs' : 10,
     'normalize' : True,
-    'num_pred_chembl' : 10,
+    'num_pred_chembl' : 20,
     'num_poses' : 100,
-    't' : 0.1,
-    'chembl_file': 'best_mcss.txt',
+    't' : 1.0,
+    'chembl_file': 'best_affinity.txt',
     'score_mode': 'ALL'
     #'use_chembl':False
 }

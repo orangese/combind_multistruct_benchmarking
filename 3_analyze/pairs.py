@@ -47,6 +47,14 @@ class LigPair:
             return 1 - feature_value / max(maximum, 6.0)
         return feature_value / max(maximum, 1.0)
 
+    def get_gscores(self, rank1, rank2):
+        pp = self.pose_pairs[(rank1,rank2)]
+        return pp.pose1.gscore, pp.pose2.gscore
+
+    def get_rmsds(self, rank1, rank2):
+        pp = self.pose_pairs[(rank1,rank2)]
+        return pp.pose1.rmsd, pp.pose2.rmsd
+
     def init_pose_pairs(self):
         """
         Create pose pairs for up to the top self.max_poses poses.
