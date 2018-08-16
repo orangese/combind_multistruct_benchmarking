@@ -1,20 +1,21 @@
 import os
 import sys
 from grouper import grouper
+from shared_paths import shared_paths
 
 group_size=5
 
-output_dir = 'scores/scores31'
-cmd = '$SCHRODINGER/run /scratch/PI/rondror/combind/combind/3_analyze/scores.py {} {} {}'
+output_dir = 'scores/mcss_only'
+cmd = '$SCHRODINGER/run {0:}/3_analyze/scores.py {1:} {1:} {1:}'.format(shared_paths['code'], '{}')
 
 settings = {
-    'k_list' : ['hbond','sb2','contact', 'pipi', 'mcss'],
+    'k_list' : ['mcss'],
     'num_stats_ligs' : 10,
     'normalize' : True,
     'num_pred_chembl' : 20,
     'num_poses' : 100,
-    't' : 1.0,
-    'chembl_file': 'best_affinity.txt',
+    't' : .05,
+    'chembl_file': 'best_mcss.txt',
     'score_mode': 'ALL'
     #'use_chembl':False
 }
