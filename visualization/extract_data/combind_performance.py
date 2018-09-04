@@ -30,7 +30,7 @@ def read_score_file(fname):
 
 if __name__ == '__main__':
     scores_version = sys.argv[1]
-    base = '/scratch/PI/rondror/combind/bpp_outputs/'+scores_version
+    base = '/scratch/PI/rondror/combind/bpp_outputs/'+scores_version.replace('/', '-')
     with open('{}/rmsds.csv'.format(base), 'w') as fp:
         for protein in os.listdir(shared_paths['data']):
             print(protein)

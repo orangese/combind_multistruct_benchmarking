@@ -14,23 +14,13 @@ def parse_fp_file(fp_file):
                 sc_key, sc = line.strip().split('=')
                 i,r,ss = sc_key.split('-')
                 i = int(i)
-                #if ss == '':
-                #    ss = -1
-                #else:
-                #    ss = min([int(k) for k in ss.split(',')]) # min is the more conserved ss
-                #if r_map and struct in r_map:
-                #    r = r_map[struct].get(r, r)
-
-                #ifps[pose_num][(i,r,'0')] = ifps[pose_num].get((i,r,'0'),0) + float(sc)*w[i]
-                #if ss != '0':
-                if (i,r) not in ifps[pose_num]:
-                    ifps[pose_num][(i,r)] = float(sc)#{}
-                #ifps[pose_num][(i,r)][ss] = float(sc)*w[i]
+                sc = float(sc)
+                prev_sc = ifps[(i, r)] if (i,r) in ifps[pose_num] else 0
+                ifps[pose_num][(i,r)] = max(prev_sc, sc)
 
     except Exception as e:
         print(e)
         print(fp_file, 'fp not found')
-        #ifps.append(None)
     if len(ifps) == 0:
         print('check', fp_file)
         return {}
@@ -49,8 +39,6 @@ def parse_glide_output(g_dir):
     else:
         print('not finished', g_dir)
         return [], []
-    #assert len(gscores) == len(rmsds)
-    #return [Pose(rmsds[i], gscores[i]) for i in range(len(gscores))]
 
 def parse_if_file(pair):
     gscores = []
