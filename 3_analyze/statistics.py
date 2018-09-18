@@ -1,7 +1,10 @@
+import sys
 import numpy as np
 from density_estimate import DensityEstimate
 from pairs import LigPair
 from containers import Dataset
+
+sys.path.append('../1_dock/')
 from shared_paths import shared_paths
 
 def merge_stats(stats1, stats2):
@@ -11,14 +14,18 @@ def merge_stats(stats1, stats2):
     Merges the dictionaries of DensityEstimate's stats1 and stats2.
     '''
     out = {}
-    for d in set(list(stats1.keys()), list(stats2.keys())):
+    for d in set(list(stats1.keys()) + list(stats2.keys())):
         out[d] = {}
-        for i in set(list(stats1[d].keys()), list(stats2[d].keys())):
+        I = []
+        if d in stats1: I += list(stats1[d].keys())
+        if d in stats2: I += list(stats2[d].keys())
+        for i in set(I):
             if   d not in stats1 or i not in stats1[d]:
                 out[d][i] = stats2[d][i]
             elif d not in stats2 or i not in stats2[d]:
                 out[d][i] = stats1[d][i]
-            out[d][i] = stats1[d][i].average(stats2[d][i])
+            else:
+                out[d][i] = stats1[d][i].average(stats2[d][i])
     return out
 
 def statistics_lig_pair(interactions, lig_pair, p_native, sd=0.05):
@@ -46,7 +53,7 @@ def statistics_lig_pair(interactions, lig_pair, p_native, sd=0.05):
         stats['reference'][interaction].fit(X_ref, w_ref)
     return native_stats, ref_stats
 
-def statistics(self, data, structs, interactions, mcss=True, max_poses = 100):
+def statistics(data, structs, interactions, mcss=True, max_poses = 100):
     '''
     data    {protein (str): [ligand (str), ...]}
     structs {protein (str): PDB ID (str)}
@@ -75,7 +82,7 @@ def statistics(self, data, structs, interactions, mcss=True, max_poses = 100):
         stats = merge_stats(stats, protein_stats)
     return stats
 
-def gscore_statistics(self, data, max_poses = 100, native_thresh = 2.0,
+def gscore_statistics(data, max_poses = 100, native_thresh = 2.0, points = 1000,
                       scale_by_top = False, sd = 0.4, domain = (-16, 2)):
     '''
     data    {protein (str): [ligand (str), ...]}
@@ -85,8 +92,10 @@ def gscore_statistics(self, data, max_poses = 100, native_thresh = 2.0,
     '''
     stats = {}
     for protein, ligands in data.items():
+        print(protein, len(ligands))
+        print(ligands)
         protein_stats = {}
-        dataset = Dataset(shared_paths, [prot])
+        dataset = Dataset(shared_paths, [protein])
         dataset.load({protein: ligands}, load_fp=False, load_mcss=False)
         st = dataset.proteins[protein].lm.st
         docking = dataset.proteins[protein].docking[st]
@@ -96,16 +105,19 @@ def gscore_statistics(self, data, max_poses = 100, native_thresh = 2.0,
                 for pose in docking.ligands[ligand].poses[:max_poses]])
             glide = np.array([pose.gscore
                 for pose in docking.ligands[ligand].poses[:max_poses]])
-            if scale_by_top: glide += glide.min()
+
+            if glide.shape[0] and scale_by_top: glide -= glide.min()
             
             # Compute densities
             ligand_stats = {'native':{}, 'reference':{}}
-            ligand_stats['native'][0] = DensityEstimate(reflect = False,
+            ligand_stats['native'][0] = DensityEstimate(points = points,
+                                                        reflect = scale_by_top,
                                                         sd = sd,
                                                         domain = domain,
                                                         out_of_bounds = 0)
             ligand_stats['native'][0].fit(glide[native==1])
-            ligand_stats['reference'][0] = DensityEstimate(reflect = False,
+            ligand_stats['reference'][0] = DensityEstimate(points = points,
+                                                           reflect = scale_by_top,
                                                            sd = sd,
                                                            domain = domain,
                                                            out_of_bounds = 0)
@@ -122,7 +134,6 @@ if __name__ == '__main__':
     code_path = '/'.join(script_path.split('/')[:-2])
     for i in ['1_dock','2_fp','3_analyze']:
         sys.path.append(code_path+'/'+i)
-
 
     interactions = ['hbond', 'hbond_donor', 'hbond_acceptor',
                     'sb2','mcss','pipi','contact']

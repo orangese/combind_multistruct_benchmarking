@@ -134,13 +134,13 @@ class DensityEstimate:
         
         if self.reflect:
             # left, center, right
-            print self.x.shape, self.fx.shape
             self.fx = (  self.fx[self.points:0:-1]
                        + self.fx[self.points:2*self.points]
                        + self.fx[-1:2*self.points-1:-1])
             self.x = self.x[self.points:2*self.points]
 
-        self.fx *= (self.x.shape[0] / (self.x[-1]-self.x[0])) / self.fx.sum()
+        if self.fx.sum():
+            self.fx *= (self.x.shape[0] / (self.x[-1]-self.x[0])) / self.fx.sum()
         self.n_samples = (weights*np.ones(X.shape)).sum()
         return self
 
@@ -187,8 +187,8 @@ class DensityEstimate:
         self_fx  = np.array([ self(x) for x in de.x])
         other_fx = np.array([other(x) for x in de.x])
         if weight:
-            de.fx = (self_fx * self.n_samples + other_fx * other.n_samples)
-                     / (self.n_samples+other.n_samples)
+            de.fx = ((self_fx * self.n_samples + other_fx * other.n_samples)
+                     / (self.n_samples+other.n_samples))
         else:
             de.fx = (self_fx + other_fx) / 2.0
         return de

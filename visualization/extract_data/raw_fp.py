@@ -2,9 +2,9 @@ import numpy as np
 import sys
 import os
 
-sys.path.append('../1_dock/')
-sys.path.append('../2_ifp/')
-sys.path.append('../3_analyze/')
+sys.path.append('../../1_dock/')
+sys.path.append('../../2_ifp/')
+sys.path.append('../../3_analyze/')
 from pairs import LigPair
 from shared_paths import shared_paths
 from containers import Dataset
@@ -35,4 +35,3 @@ with open('/scratch/PI/rondror/combind/bpp_outputs/fps.csv', 'w') as out:
                 out.write('\t'.join(map(str,
                                         [protein, lm.st, lig_name, rank, pose.gscore, pose.emodel,
                                          pose.rmsd, fp]))+'\n')
-                
