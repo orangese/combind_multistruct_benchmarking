@@ -3,6 +3,8 @@ import numpy as np
 feature_defs = {
     'mcss':[],
     'hbond':[2,3],
+    'hbond_donor':[2],
+    'hbond_acceptor':[3],
     'sb1':[0],
     'sb2':[1],
     'sb3':[4],

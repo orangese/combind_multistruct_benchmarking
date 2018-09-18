@@ -28,7 +28,7 @@ def merge_stats(stats1, stats2):
                 out[d][i] = stats1[d][i].average(stats2[d][i])
     return out
 
-def statistics_lig_pair(interactions, lig_pair, p_native, sd=0.05):
+def statistics_lig_pair(lig_pair, interactions, p_native, weighted, sd):
     stats = {'native':{}, 'reference':{}}
     for interaction in interactions:
         X_native, X_ref, w_ref = [], [], []
@@ -42,6 +42,7 @@ def statistics_lig_pair(interactions, lig_pair, p_native, sd=0.05):
 
         X_native, X_ref = np.array(X_native), np.array(X_ref)
         w_ref = np.array([p_native(g1) * p_native(g2) for (g1, g2) in w_ref])
+        if not weighted: w_ref = 1
 
         stats['native'][interaction]    = DensityEstimate(domain = (0, 1),
                                                           sd = sd,
@@ -51,13 +52,15 @@ def statistics_lig_pair(interactions, lig_pair, p_native, sd=0.05):
                                                           sd = sd,
                                                           reflect = True)
         stats['reference'][interaction].fit(X_ref, w_ref)
-    return native_stats, ref_stats
+    return stats
 
-def statistics(data, structs, interactions, mcss=True, max_poses = 100):
+def statistics(data, interactions, pnative, points=100,
+               weighted = True, mcss=True, max_poses = 100, sd = 0.005):
     '''
     data    {protein (str): [ligand (str), ...]}
-    structs {protein (str): PDB ID (str)}
     interactions {name (str): [code (int), ...]}
+    pnative (DensityEstimate): Likelihood of a pose being correct
+        given its glide score.
 
     Returns DensityEstimate's representing the native and reference
     distribution of the statistics for all proteins, ligands in data.
@@ -67,8 +70,9 @@ def statistics(data, structs, interactions, mcss=True, max_poses = 100):
     '''
     stats = {}
     for protein, ligands in data.items():
+        print(protein, len(ligands))
         protein_stats = {}
-        dataset = Dataset(shared_paths, [prot])
+        dataset = Dataset(shared_paths, [protein])
         dataset.load({protein: ligands}, load_fp=True, load_mcss=mcss)
         st = dataset.proteins[protein].lm.st
         docking = dataset.proteins[protein].docking[st]
@@ -76,8 +80,8 @@ def statistics(data, structs, interactions, mcss=True, max_poses = 100):
             for ligand2 in ligands[i+1:]:
                 lig_pair = LigPair(docking.ligands[ligand1],
                                    docking.ligands[ligand2],
-                                   interactions, mcss, max_poses)
-                ligand_stats = statistics_lig_pair(lig_pair, interactions)
+                                   interactions, dataset.proteins[protein].lm.mcss, max_poses, True)
+                ligand_stats = statistics_lig_pair(lig_pair, interactions, pnative, weighted, sd)
                 protein_stats = merge_stats(protein_stats, ligand_stats)
         stats = merge_stats(stats, protein_stats)
     return stats
@@ -127,18 +131,5 @@ def gscore_statistics(data, max_poses = 100, native_thresh = 2.0, points = 1000,
         stats = merge_stats(stats, protein_stats)
     return stats['native'][0], stats['reference'][0]
 
-if __name__ == '__main__':
-    import sys
-
-    script_path, prot, l1, l2 = sys.argv
-    code_path = '/'.join(script_path.split('/')[:-2])
-    for i in ['1_dock','2_fp','3_analyze']:
-        sys.path.append(code_path+'/'+i)
-
-    interactions = ['hbond', 'hbond_donor', 'hbond_acceptor',
-                    'sb2','mcss','pipi','contact']
-    alls.create(data,100,0.005,100)
-
-    for k in k_list:
-        out_f = '{}/{}/stats/{}/{}-{}-to-{}-{}.txt'.format(shared_paths['data'],prot,shared_paths['stats'],l1,l2,lm.st,k)    
-        alls.write(out_f, k)
+if __name__ == __main__:
+    
