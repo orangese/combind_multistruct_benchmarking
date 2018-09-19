@@ -28,66 +28,154 @@ def merge_stats(stats1, stats2):
                 out[d][i] = stats1[d][i].average(stats2[d][i])
     return out
 
-def statistics_lig_pair(lig_pair, interactions, p_native, weighted, sd):
+def get_fname(protein, ligand1, ligand2):
+    '''
+    protein, ligand1, ligand2 (str): names of protein and ligands
+
+    Returns path to where statistics files should be read/written.
+    '''
+    version = shared_paths['stats']['version']
+    return "{}/{}/stats/{}/{}-{}-{}-{}.de".format(shared_paths['data'],
+                                                  version, protein,
+                                                  ligand1, ligand2,
+                                                  '{}', '{}')
+
+def read_lig_pair_stats(fname, interactions):
+    '''
+    fname (str): output from get_fname(...)
+    interactions [interaction (str),  ...]: interactions to read from files.
+    '''
     stats = {'native':{}, 'reference':{}}
-    for interaction in interactions:
-        X_native, X_ref, w_ref = [], [], []
-        for (r1,r2), pp in lig_pair.pose_pairs.items():
-            pp_x = lig_pair.get_feature(interaction, r1, r2)
-            if pp_x is not None:
-                if pp.correct():
-                    X_native += [pp_x]
-                X_ref += [pp_x]
-                w_ref += [lig_pair.get_gscores(r1, r2)]
-
-        X_native, X_ref = np.array(X_native), np.array(X_ref)
-        w_ref = np.array([p_native(g1) * p_native(g2) for (g1, g2) in w_ref])
-        if not weighted: w_ref = 1
-
-        stats['native'][interaction]    = DensityEstimate(domain = (0, 1),
-                                                          sd = sd,
-                                                          reflect = True)
-        stats['native'][interaction].fit(X_native)
-        stats['reference'][interaction] = DensityEstimate(domain = (0, 1),
-                                                          sd = sd,
-                                                          reflect = True)
-        stats['reference'][interaction].fit(X_ref, w_ref)
+    for k in stats:
+        for interaction in interactions:
+            try: 
+                stats[k][interaction] = DensityEstimate.read(
+                    fname.format(interaction, k))
+            except:
+                pass
     return stats
 
-def statistics(data, interactions, pnative, points=100,
-               weighted = True, mcss=True, max_poses = 100, sd = 0.005):
+def weighting(w_ref, protein):
+    '''
+    w_ref [(float, float), ...]: pairs of glide scores
+    protein (str): name of protein
+
+    Returns glide scores mapped to probabilities using the method specified
+    in shared_paths['stats']['weighting'].
+    '''
+    pnative = '{}/{}/stats/{}/pnative.de'.format(shared_paths['data'],
+                                            protein,
+                                            shared_paths['stats']['version'])
+    if shared_paths['stats']['weighting'] == 'absolute':
+        pnative = DensityEstimate.read(pnative)
+        return np.array([pnative(g1) * pnative(g2)
+                         for (g1, g2) in w_ref])
+    elif shared_paths['stats']['weighting'] == 'relative':
+        pnative = DensityEstimate.read(pnative)
+        g1_top, g2_top = lig_pair.get_gscores(0, 0)
+        return np.array([pnative(g1-g1_top) * pnative(g2-g2_top)
+                         for (g1, g2) in w_ref])
+    elif shared_paths['stats']['weighting'] == 'unwieghted':
+        return 1
+    else:
+        assert False
+
+def get_interaction(lig_pair, interaction):
+    '''
+    lig_pair (LigPair): ligand pair for which to get features
+    interaction (str): interaction to get scores for
+    
+    Returns X_native: features for native poses
+            X_ref:    features for all poses
+            w_ref:    pairs of glide scores for all poses
+    '''
+    X_native, X_ref, w_ref = [], [], []
+    for (r1,r2), pp in lig_pair.pose_pairs.items():
+        if max(r1, r2) > shared_paths['stats']['max_poses']: continue
+        pp_x = lig_pair.get_feature(interaction, r1, r2)
+        if pp_x is not None:
+            if pp.correct():
+                X_native += [pp_x]
+            X_ref += [pp_x]
+            w_ref += [lig_pair.get_gscores(r1, r2)]
+
+    X_native, X_ref = np.array(X_native), np.array(X_ref)
+    return X_native, X_ref,  w_ref
+
+def statistics_lig_pair(protein, ligand1, ligand2, interactions):
+    '''
+    protein (str):  protein name
+    ligand1,2 (str): names of ligands for which to compute statistics
+    interactions [interaction (str), ...]: interactions for which to compute
+        statistics
+    pnative (function): Maps glide scores to probability correct. Use a
+        DensityEstimate if you wish to weight by glide score, else pass
+        lambda x: 1
+    sd (float): standard deviation for density estimate.
+    '''
+    # If all statistics have already been computed, just read and return.
+    fname = get_fname(protein, ligand1, ligand2)
+    stats = read_lig_pair_stats(fname)
+    if all(    interaction in stats['native']
+           and interaction in stats['reference']
+           for interaction in interactions):
+        return stats
+
+    # Load relevant data.
+    dataset = Dataset(shared_paths, [protein])
+    dataset.load({protein: ligands},
+                 load_fp=True, load_mcss= 'mcss' in interactions)
+    lm = dataset.proteins[protein].lm
+    docking = dataset.proteins[protein].docking[lm.st]
+    lig_pair = LigPair(docking.ligands[ligand1],
+                       docking.ligands[ligand2],
+                       interactions, lm.mcss,
+                       shared_paths['stats']['max_poses'], True)
+
+    # Compute all remaining statistics and write to files.
+    for interaction in interactions:
+        if (    interaction in stats['native']
+            and interaction in stats['reference']):
+            continue
+
+        X_native, X_ref, w_ref = get_interaction(lig_pair, interaction)
+        w_ref = weighting(w_ref, protein)
+
+        for k, X, w in [('native', X_native, 1), ('reference', X_ref, w_ref)]:
+            sd = 
+            stats[k][interaction] = DensityEstimate(domain = (0, 1),
+                              sd = shared_paths['stats']['stats_sd'],
+                              reflect = True)
+            stats[k][interaction].fit(X)
+            stats[k][interaction].write(fname.format(interaction, k))
+    return stats
+
+def statistics(data, interactions):
     '''
     data    {protein (str): [ligand (str), ...]}
     interactions {name (str): [code (int), ...]}
     pnative (DensityEstimate): Likelihood of a pose being correct
         given its glide score.
+    points (int): resolution of density estimate
+    weighted (bool): Whether to weight statistics by glide score
+    max_poses (int): max poses per ligand to consider
+    sd (float): standard deviation of kernel in density estimate
 
     Returns DensityEstimate's representing the native and reference
     distribution of the statistics for all proteins, ligands in data.
-
-    For each ligand pair, write distribution to file after computed and
-    subsequently just read from this file.
     '''
     stats = {}
     for protein, ligands in data.items():
-        print(protein, len(ligands))
         protein_stats = {}
-        dataset = Dataset(shared_paths, [protein])
-        dataset.load({protein: ligands}, load_fp=True, load_mcss=mcss)
-        st = dataset.proteins[protein].lm.st
-        docking = dataset.proteins[protein].docking[st]
         for i, ligand1 in enumerate(ligands):
             for ligand2 in ligands[i+1:]:
-                lig_pair = LigPair(docking.ligands[ligand1],
-                                   docking.ligands[ligand2],
-                                   interactions, dataset.proteins[protein].lm.mcss, max_poses, True)
-                ligand_stats = statistics_lig_pair(lig_pair, interactions, pnative, weighted, sd)
+                ligand_stats = statistics_lig_pair(protein, ligand1, ligand2,
+                                                   interactions)
                 protein_stats = merge_stats(protein_stats, ligand_stats)
         stats = merge_stats(stats, protein_stats)
     return stats
 
-def gscore_statistics(data, max_poses = 100, native_thresh = 2.0, points = 1000,
-                      scale_by_top = False, sd = 0.4, domain = (-16, 2)):
+def gscore_statistics(data):
     '''
     data    {protein (str): [ligand (str), ...]}
 
@@ -95,9 +183,8 @@ def gscore_statistics(data, max_poses = 100, native_thresh = 2.0, points = 1000,
     distribution of the glide scores for all proteins, ligands in data.
     '''
     stats = {}
+    params = shared_paths['stats']
     for protein, ligands in data.items():
-        print(protein, len(ligands))
-        print(ligands)
         protein_stats = {}
         dataset = Dataset(shared_paths, [protein])
         dataset.load({protein: ligands}, load_fp=False, load_mcss=False)
@@ -105,31 +192,66 @@ def gscore_statistics(data, max_poses = 100, native_thresh = 2.0, points = 1000,
         docking = dataset.proteins[protein].docking[st]
         for ligand in ligands:
             # Get input data
-            native = np.array([pose.rmsd <= native_thresh
-                for pose in docking.ligands[ligand].poses[:max_poses]])
-            glide = np.array([pose.gscore
-                for pose in docking.ligands[ligand].poses[:max_poses]])
+            poses = docking.ligands[ligand].
+            native = np.array([pose.rmsd <= params['native_thresh']
+                               for pose in poses[:params['max_poses']]])
+            glide  = np.array([pose.gscore
+                               for pose in poses[:params['max_poses']]])
 
-            if glide.shape[0] and scale_by_top: glide -= glide.min()
+            if (glide.shape[0] and params['weighting'] == 'relative':
+                glide -= glide.min()
             
             # Compute densities
-            ligand_stats = {'native':{}, 'reference':{}}
-            ligand_stats['native'][0] = DensityEstimate(points = points,
-                                                        reflect = scale_by_top,
-                                                        sd = sd,
-                                                        domain = domain,
-                                                        out_of_bounds = 0)
-            ligand_stats['native'][0].fit(glide[native==1])
-            ligand_stats['reference'][0] = DensityEstimate(points = points,
-                                                           reflect = scale_by_top,
-                                                           sd = sd,
-                                                           domain = domain,
-                                                           out_of_bounds = 0)
-            ligand_stats['reference'][0].fit(glide)
+            ligand_stats = {}
+            for k, X in [('native', glide[native==1]), ('reference', glide)]:
+                ligand_stats[k] = {}
+                ligand_stats[k][0] = DensityEstimate(
+                    points  = params['gscore_points'],
+                    reflect = params['weighting'] == 'relative',
+                    sd      = params['gscore_sd'],
+                    domain  = params['gscore_domain'],
+                    out_of_bounds = 0)
+                ligand_stats[k][0].fit(X)
             
             protein_stats = merge_stats(protein_stats, ligand_stats)
         stats = merge_stats(stats, protein_stats)
     return stats['native'][0], stats['reference'][0]
 
-if __name__ == __main__:
+
+if __name__ == '__main__':
+    '''
+    mode, protein, [ligand1, ligand2, interactions]
+
+    If mode is 'gscore', compute probability native given gscore for all
+    proteins other than 'protein'.
     
+    Else, compute overlap statistics for ligand1 and ligand2 for interactions,
+    which should be passed as a comma separated list.
+    '''
+    mode = sys.argv[1]
+    if mode == 'gscore':
+        protein = sys.argv[2]
+        os.chdir(shared_paths['data'])
+        datasets = [d for d in sorted(os.listdir('.'))
+                    if d[0] != '.' and d != protein]
+        data = {}
+        for d in datasets:
+            os.chdir(d)
+            lm = LigandManager(shared_paths, d)
+            data[d] = lm.docked(lm.pdb)[:shared_paths['stats']['max_poses']]
+            os.chdir('..')
+        native, reference = gscore_statistics(data)
+        fname = '{}/{}/stats/{}/{}.de'.format(shared_paths['data'],
+                                              protein,
+                                              shared_paths['stats']['version'],
+                                              '{}')
+        native.write(fname.format('native'))
+        reference.write(fname.format('reference'))
+        native.ratio(reference, prob = False).write(fname.format('pnative'))
+
+    else:
+        protein, ligand1, ligand2, interactions = sys.argv[1:]
+        data = {protein: [ligand1, ligand2]}
+        interactions = interactions.split(',')
+
+        statistics(data, interactions)
