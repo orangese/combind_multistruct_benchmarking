@@ -1,10 +1,9 @@
 import sys
+import os
 import numpy as np
 from density_estimate import DensityEstimate
 from pairs import LigPair
-from containers import Dataset
-
-sys.path.append('../1_dock/')
+from containers import Dataset, LigandManager
 from shared_paths import shared_paths
 
 def merge_stats(stats1, stats2):
@@ -36,7 +35,7 @@ def get_fname(protein, ligand1, ligand2):
     '''
     version = shared_paths['stats']['version']
     return "{}/{}/stats/{}/{}-{}-{}-{}.de".format(shared_paths['data'],
-                                                  version, protein,
+                                                  protein, version,
                                                   ligand1, ligand2,
                                                   '{}', '{}')
 
@@ -115,12 +114,12 @@ def statistics_lig_pair(protein, ligand1, ligand2, interactions):
     '''
     # If all statistics have already been computed, just read and return.
     fname = get_fname(protein, ligand1, ligand2)
-    stats = read_lig_pair_stats(fname)
+    stats = read_lig_pair_stats(fname, interactions)
     if all(    interaction in stats['native']
            and interaction in stats['reference']
            for interaction in interactions):
         return stats
-
+    print(protein, ligand1, ligand2)
     # Load relevant data.
     dataset = Dataset(shared_paths, [protein])
     dataset.load({protein: ligands},
@@ -142,7 +141,6 @@ def statistics_lig_pair(protein, ligand1, ligand2, interactions):
         w_ref = weighting(w_ref, protein)
 
         for k, X, w in [('native', X_native, 1), ('reference', X_ref, w_ref)]:
-            sd = 
             stats[k][interaction] = DensityEstimate(domain = (0, 1),
                               sd = shared_paths['stats']['stats_sd'],
                               reflect = True)
@@ -192,13 +190,13 @@ def gscore_statistics(data):
         docking = dataset.proteins[protein].docking[st]
         for ligand in ligands:
             # Get input data
-            poses = docking.ligands[ligand].
+            poses = docking.ligands[ligand].poses
             native = np.array([pose.rmsd <= params['native_thresh']
                                for pose in poses[:params['max_poses']]])
             glide  = np.array([pose.gscore
                                for pose in poses[:params['max_poses']]])
 
-            if (glide.shape[0] and params['weighting'] == 'relative':
+            if glide.shape[0] and params['weighting'] == 'relative':
                 glide -= glide.min()
             
             # Compute densities
@@ -220,7 +218,7 @@ def gscore_statistics(data):
 
 if __name__ == '__main__':
     '''
-    mode, protein, [ligand1, ligand2, interactions]
+    python statistics.py mode protein
 
     If mode is 'gscore', compute probability native given gscore for all
     proteins other than 'protein'.
@@ -228,7 +226,7 @@ if __name__ == '__main__':
     Else, compute overlap statistics for ligand1 and ligand2 for interactions,
     which should be passed as a comma separated list.
     '''
-    mode = sys.argv[1]
+    mode, protein = sys.argv[1:]
     if mode == 'gscore':
         protein = sys.argv[2]
         os.chdir(shared_paths['data'])
@@ -236,10 +234,13 @@ if __name__ == '__main__':
                     if d[0] != '.' and d != protein]
         data = {}
         for d in datasets:
-            os.chdir(d)
             lm = LigandManager(shared_paths, d)
-            data[d] = lm.docked(lm.pdb)[:shared_paths['stats']['max_poses']]
-            os.chdir('..')
+            data[d] = lm.docked(lm.pdb)[:shared_paths['stats']['n_ligs']+1]
+            self_docked = lm.st+'_lig'
+            if self_docked in data[d]:
+                data[d].remove(self_docked)
+            else:
+                data[d].pop(-1)
         native, reference = gscore_statistics(data)
         fname = '{}/{}/stats/{}/{}.de'.format(shared_paths['data'],
                                               protein,
@@ -250,8 +251,16 @@ if __name__ == '__main__':
         native.ratio(reference, prob = False).write(fname.format('pnative'))
 
     else:
-        protein, ligand1, ligand2, interactions = sys.argv[1:]
-        data = {protein: [ligand1, ligand2]}
-        interactions = interactions.split(',')
+        lm = LigandManager(shared_paths, protein)
+        ligands = lm.docked(lm.pdb)[:shared_paths['stats']['n_ligs']+1]
+        self_docked = lm.st+'_lig'
+        if self_docked in ligands:
+            ligands.remove(self_docked)
+        else:
+            ligands.pop(-1)
 
-        statistics(data, interactions)
+
+        interactions = ['hbond', 'hbond_donor', 'hbond_acceptor', 'mcss',
+                        'contact', 'sb2', 'pipi']
+
+        statistics({protein: ligands}, interactions)
