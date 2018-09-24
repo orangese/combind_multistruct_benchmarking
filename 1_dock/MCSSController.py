@@ -127,7 +127,7 @@ class MCSSController:
             for l2 in ligands[i+1:]:
                 if l1 > l2: l1, l2 = l2, l1
                 name = "{}-{}".format(l1, l2)
-                assert name in self.MCSSs
+                assert name in self.MCSSs, name
                 if self.MCSSs[name].is_valid():
                     poseviewer_paths = {l1: self.pv_template.format(l1),
                                         l2: self.pv_template.format(l2)}
@@ -320,11 +320,11 @@ class MCSSController:
             with open(script, 'w') as f: f.write(self.TEMPLATE.format(contents))
             os.system('sbatch {}'.format(script))
 
-def verify_mcss(lm, max_pdb=20, max_poses = 100):
+def verify_mcss(lm, max_pdb=21, max_poses = 100):
     controller = MCSSController(lm, max_pdb, max_poses)
     controller.verify_rmsds(None, max_poses)
 
-def compute_mcss(lm, pick_helpers={}, max_pdb=20, max_poses = 100, compute_rmsds = True):
+def compute_mcss(lm, pick_helpers={}, max_pdb=21, max_poses = 100, compute_rmsds = True):
     """
     Compute unfinished MCSS features. See above class description for more detail.
 

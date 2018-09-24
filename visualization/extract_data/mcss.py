@@ -5,9 +5,7 @@ from schrodinger.structure import StructureReader, StructureWriter
 from schrodinger.structutils.analyze import evaluate_smarts
 
 from containers import LigandManager
-
-sys.path.append('../1_dock')
-from  MCSSController import MCSSController
+from MCSSController import MCSSController
 from shared_paths import shared_paths
 
 def color(i, total):

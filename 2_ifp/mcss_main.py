@@ -246,7 +246,7 @@ class MCSS:
             atom1 = pose1.extract([i1]).atom[1]
             atom2 = pose2.extract([i2]).atom[1]
             # Remove this assertion if we want to consider MCSSs with distinct elements matched
-            assert atom1.element == atom2.element
+            assert atom1.element == atom2.element, (atom1.element, i1, atom2.element, i2)
             sd += sum((coord1-coord2)**2 for coord1, coord2 in zip(atom1.xyz, atom2.xyz))
         return (sd / float(len(atom_idx1))) ** 0.5
             
