@@ -58,10 +58,3 @@ def read_duplicates(dir_path=None):
             else:
                 duplicates[l_list[0]] = set(l_list)
     return unique, duplicates
-
-
-
-
-
-
-
