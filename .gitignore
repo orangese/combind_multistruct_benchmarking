@@ -1,5 +1,6 @@
 *.log
 */*.pyc
+mcss/tests/outputs
 notebooks/*.out
 notebooks/.ipynb_checkpoints/*
 */.fuse*
