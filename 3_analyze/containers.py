@@ -3,14 +3,10 @@ import sys
 import numpy as np
 
 from parse_files import parse_glide_output, parse_fp_file
-
-sys.path.append('../1_dock')
-sys.path.append('/'.join(os.path.dirname(os.path.realpath(sys.argv[0])).split('/')[:-1]) + '/1_dock')
-
 from parse_chembl import load_chembl_proc
 from pick_helpers import load_helpers
 from chembl_props import read_duplicates
-from MCSSController import MCSSController
+from mcss_controller import MCSSController
 
 class Pose:
     """

@@ -1,9 +1,9 @@
 import os
 import sys
+from glob import glob
 from grouper import grouper
 from shared_paths import shared_paths
-sys.path.append('/'.join(os.path.dirname(os.path.realpath(sys.argv[0])).split('/')[:-1]) + '/2_ifp')
-from mcss_main import MCSS
+from mcss import MCSS
 
 class MCSSController:
     """
@@ -17,9 +17,9 @@ class MCSSController:
     The role of this class is to decide which ligand pairs should have MCSSs
     computed, and, for the chosen few, how far along they are in the process.
     This class also sets all file and path names, which are then passed to
-    2_ifp/mcss_main.py for the actual computation.
+    mcss.py for the actual computation.
 
-    Additionally, this class collates outputs from individual MCSS computations
+    This class collates outputs from individual MCSS computations
     into a single file. This is important, as otherwise you end up making
     on order of # PDB * # CHEMBL files!
 
@@ -47,7 +47,7 @@ class MCSSController:
                 ).format(QUEUE, '{}')
 
 
-    def __init__(self, lm, max_pdb=20, max_poses = 100):
+    def __init__(self, lm, max_pdb=21, max_poses=100):
         self.lm = lm
         self.max_pdb = max_pdb
 
@@ -61,10 +61,15 @@ class MCSSController:
         self.no_rmsd = set([])
 
         # File paths. Remaining '{}' is ligand pair name.
-        self.root = "{}/{}/mcss/{}".format(self.lm.sp['data'], self.lm.prot, self.lm.sp['mcss'])
+        self.root = "{}/{}/mcss/{}".format(self.lm.sp['data'],
+                                           self.lm.prot, self.lm.sp['mcss'])
+        self.atom_types = '{}/mcss/custom_types/{}.typ'.format(self.lm.sp['code'],
+                                                               self.lm.sp['mcss'])
         self.mcss_file = "{}/{}_mcss.csv".format(self.root, self.lm.prot)
+        self.init_file = "{}/{}.init.csv".format(self.root, '{}')
+
         self.rmsd_file = "{}/{}-{}-{}.csv".format(self.root, '{}',
-                                                     self.lm.st, self.lm.sp['docking'])
+                                                  self.lm.st, self.lm.sp['docking'])
 
         self.lig_template = '{0:}/{1:}/ligands/prepared_ligands/{2:}/{2:}.mae'.format(self.lm.sp['data'], self.lm.prot, '{0:}')
         self.pv_template = '{0:}/{1:}/docking/{2:}/{3:}-to-{4:}/{3:}-to-{4:}_pv.maegz'.format(self.lm.sp['data'], self.lm.prot,
@@ -79,19 +84,21 @@ class MCSSController:
             '{0:}' ligand1, '{1:}' ligand2, '{2:}' str(MCSS).
         """
         
-        init_command  = 'mkdir -p {0:}-{1:}; cd {0:}-{1:}; '
-        init_command += '$SCHRODINGER/run {0:}/2_ifp/mcss_main.py INIT '.format(self.lm.sp['code'])
+        init_command =  '$SCHRODINGER/run {0:}/mcss/mcss.py INIT '.format(self.lm.sp['code'])
         init_command += '{0:} {1:} ' # ligand names
-        init_command += self.lig_template.format('{0:}')+' ' # l1_path
-        init_command += self.lig_template.format('{1:}')+' ' # l2_path
-        init_command += '{}/2_ifp/custom_types/{}.typ'.format(self.lm.sp['code'],
-                                                              self.lm.sp['mcss']) # Atom typing
-        init_command += ' ; cd ..\n'
+        init_command += self.lig_template.format('{0:}') +' ' # l1_path
+        init_command += self.lig_template.format('{1:}') +' ' # l2_path
+        init_command += self.init_file.format('{0:}-{1:}') + ' '
+        init_command += self.atom_types + ' '
+        init_command += '\n'
         
-        rmsd_command = '$SCHRODINGER/run {0:}/2_ifp/mcss_main.py RMSD '.format(self.lm.sp['code'])
+        rmsd_command = '$SCHRODINGER/run {0:}/mcss/mcss.py RMSD '.format(self.lm.sp['code'])
         rmsd_command += '{0:} {1:} ' # ligand names
         rmsd_command += self.pv_template.format('{0:}')+' ' # pv1_path
         rmsd_command += self.pv_template.format('{1:}')+' ' # pv2_path
+        rmsd_command += self.init_file.format('{0:}-{1:}') + ' '
+        rmsd_command += self.atom_types + ' '
+        
         rmsd_command += self.rmsd_file.format('{0:}-{1:}')
         rmsd_command += " {} ".format(max_poses)
         rmsd_command += ' "{2:}"\n'
@@ -177,12 +184,12 @@ class MCSSController:
             return self.MCSSs[name].n_mcss_atoms
         return sorted(ligands, key=size, reverse=True)
 
-    def load_mcss(self, temp_directories = None):
+    def load_mcss(self, temp_init_files = None):
         """
         Read MCSSs both from directories and from collated file. Does not
         load rmsds! Do this with load_rmsd method.
 
-        temp_directories: string, directory names of temporary mcss files.
+        temp_init_files: string, file names of temporary mcss files.
         """
         self.MCSSs = {}
         if os.path.exists(self.mcss_file):
@@ -192,12 +199,14 @@ class MCSSController:
                    assert mcss.name not in self.MCSSs, mcss.name
                    self.MCSSs[mcss.name] = mcss
 
-        if temp_directories is None:
-            temp_directories = self._get_temp_directories()
-        for temp in temp_directories:
-            mcss = MCSS.from_canvasMCSS(temp)
-            if mcss is not None:
-                self.MCSSs[mcss.name] = mcss
+        if temp_init_files is None:
+            temp_init_files = glob('{}/*.init.csv'.format(self.root))
+        
+        for temp in temp_init_files:
+            with open(temp) as fp:
+                mcss = MCSS.from_string(fp.readline().strip())
+                if mcss is not None:
+                    self.MCSSs[mcss.name] = mcss
 
     # All of below are relevant for computation only
     def collate_mcss(self):
@@ -206,31 +215,24 @@ class MCSSController:
         the data and should be used as the load function during the
         processing step.
         """
-        # Get temp_directories before loading, so that we only
-        # delete temp directories that have been loaded.
+        # Get temp_init_files before loading, so that we only
+        # delete temp_init_files that have been loaded.
         self.MCSSs = {}
-        temp_directories = self._get_temp_directories()
-        self.load_mcss(temp_directories)
+        temp_init_files = glob('{}/*.init.csv'.format(self.root))
+        self.load_mcss(temp_init_files)
 
-        if not temp_directories: return
+        if not temp_init_files: return
 
         # Write to temp and then overwrite original file
         # so that we don't lose anything if job crashes mid-run.
-        # (okay, okay, I guess we could lose things during the move...)
         with open('mcss_temp.csv', 'w') as fp:
             for mcss in self.MCSSs.values():
                 fp.write(str(mcss)+'\n')
         
         os.system('mv mcss_temp.csv {}'.format(self.mcss_file))
-        for temp in temp_directories:
-            os.system('rm -rf {}'.format(temp))
-
-    def _get_temp_directories(self):
-        """
-        Return list of directories with completed MCSS init.
-        """
-        return [fname for fname in os.listdir(self.root)
-                if os.path.isdir("{}/{}".format(self.root, fname))]
+        
+        for temp in temp_init_files:
+            os.system('rm {}'.format(temp))
 
     # Methods to add ligand pairs
     def add_pdb_to_pdb(self, compute_rmsds):
@@ -306,7 +308,8 @@ class MCSSController:
             contents = 'export SCHRODINGER_CANVAS_MAX_MEM=1e+12\n'
             for l1, l2 in pairs:
                 contents += self.init_command.format(l1, l2)
-            with open(script, 'w') as f: f.write(self.TEMPLATE.format(contents))
+            with open(script, 'w') as f:
+                f.write(self.TEMPLATE.format(contents))
             os.system('sbatch {}'.format(script))
 
     def _execute_rmsd(self):
@@ -314,11 +317,16 @@ class MCSSController:
             script = 'rmsd{}.sh'.format(i)
             contents = ''
             for l1, l2 in pairs:
-                contents += self.rmsd_command.format(l1, l2, str(self.MCSSs["{}-{}".format(l1, l2)]))
-            with open(script, 'w') as f: f.write(self.TEMPLATE.format(contents))
+                mcss = self.MCSSs["{}-{}".format(l1, l2)]
+                contents += self.rmsd_command.format(l1, l2, str(mcss))
+            with open(script, 'w') as f:
+                f.write(self.TEMPLATE.format(contents))
             os.system('sbatch {}'.format(script))
 
 def verify_mcss(lm, max_pdb=21, max_poses = 100):
+    """
+    Verify that all MCSS RMSD files are valid. 
+    """
     controller = MCSSController(lm, max_pdb, max_poses)
     controller.verify_rmsds(None, max_poses)
 
