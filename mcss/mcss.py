@@ -1,5 +1,6 @@
 import os
 import sys
+import tempfile
 
 class MCSS:
     """
@@ -16,8 +17,8 @@ class MCSS:
     difficult task because of symmetry concerns and details of extracting
     substructures.
 
-    Inside the code we stipulate that the MCSS be at least half the size of
-    the smaller of the ligands, or no RMSDs are computed.
+    MCSS must be at least half the size of the smaller of the ligands
+    or no RMSDs are computed.
 
     A key design decision is to not specify any file names in this class
     (other than those associated with temp files). The implication of this
@@ -25,10 +26,8 @@ class MCSS:
     this class can be dedicated to actually computing the MCSS feature.
     """
     
-    structure_path = 'mcss_in.mae'
-    canvasMCSS_csv = 'mcss.csv'
-    mcss_cmd = ("$SCHRODINGER/utilities/canvasMCS -imae {} -ocsv {}"
-                " -stop 10 -atomtype C {}").format(structure_path, canvasMCSS_csv, '{}')
+    mcss_cmd = ("$SCHRODINGER/utilities/canvasMCS -imae {0:} -ocsv {}"
+                " -stop 10 -atomtype C {}")
     
     def __init__(self, l1, l2):
         """
@@ -43,11 +42,12 @@ class MCSS:
         self.n_l1_atoms = 0
         self.n_l2_atoms = 0
         self.n_mcss_atoms = 0
-        self.n_mcss_bonds = 0
         self.smarts_l1 = []
         self.smarts_l2 = []
-        
         self.rmsds = {}
+
+        # Deprecated.
+        self.n_mcss_bonds = 0
 
     def __str__(self):
         return ','.join(map(str,
@@ -59,10 +59,9 @@ class MCSS:
     def is_valid(self):
         """
         Decides if the mcss is large enough to include in calculations.
+        
         (It would be problematic if small MCSSs were taken into account
         because the score is based solely on RMSD).
-
-        * Important! *
         """
         return 2 * self.n_mcss_atoms > min(self.n_l1_atoms, self.n_l2_atoms)
     
@@ -84,81 +83,87 @@ class MCSS:
         mcss.smarts_l2 = smarts_l2.split(';')
         return mcss
 
-    @classmethod
-    def from_canvasMCSS(cls, dir_name):
+    # MCSS Computation Methods.
+    def compute_mcss(self, mcss_types_file, init_file, ligands):
         """
-        Reads the direct output of canvasMCSS and returns an MCSS instance.
+        Compute the MCSS file by calling Schrodinger canvasMCSS.
+
+        Updates instance with MCSSs present in the file
         """
-        from schrodinger.structure import StructureReader
-        mcss_output = "{}/{}".format(dir_name, cls.canvasMCSS_csv)
-        mcss_struct = "{}/{}".format(dir_name, cls.structure_path)
-        if not (os.path.exists(mcss_output) and os.path.exists(mcss_struct)): return None
+        structure_file = '{}.ligands.mae'.format(init_file, self.name)
+        mcss_file = '{}.mcss.csv'.format(init_file, self.name)
+        stwr = StructureWriter(structure_file)
+        stwr.append(ligands[self.l1])
+        stwr.append(ligands[self.l2])
+        stwr.close()
+        self._set_ligand_sizes(structure_file)
+        
+        if os.system(self.mcss_cmd.format(mcss_types_file,
+                                          structure_file,
+                                          mcss_file))
+            assert False, 'MCSS computation failed'
+        self._set_mcss(mcss_file)
+
+        os.system('rm {} {}'.format(structure_file, mcss_file))
+
+    def _set_ligand_sizes(self, structure_file):
         try:
-            refs = [st for st in StructureReader(mcss_struct)]
+            refs = [st for st in StructureReader(input_file)]
         except:
-            print('Unable to read MCSS structure file for', dir_name)
+            print('Unable to read MCSS structure file for', self.l1, self.l2)
             return None
         if len(refs) != 2:
-            print('Wrong number of structures', dir_name)
+            print('Wrong number of structures', self.l1, self.l2)
             return None
+        ref1, ref2 = refs
+        n_l1_atoms = len([a for a in ref1.atom if a.element != 'H'])
+        n_l2_atoms = len([a for a in ref2.atom if a.element != 'H'])
+        if self.n_l1_atoms:
+            assert self.n_l1_atoms == n_l1_atoms
+        if self.n_l2_atoms:
+            assert self.n_l2_atoms == n_l2_atoms
+        self.n_l1_atoms = n_l1_atoms
+        self.n_l2_atoms = n_l2_atoms
+
+    def _set_mcss(self, mcss_file):
+        """
+        Updates MCS from the direct output of canvasMCSS.
+
+        Note that there can be multiple maximum common substructures
+        of the same size.
+        """
         ligs = {}
-        n_mcss_bonds = None
-        n_mcss_atoms = None
-        with open(mcss_output) as f:
+        for line in mcss_file:
             f.readline() # Header
             for line in f:
                 smiles, lig, _, _, _, _n_mcss_atoms, _n_mcss_bonds = line.strip().split(',')[:7]
                 smarts = line.strip().split(',')[-1] # There are commas in some of the fields
-                _n_mcss_atoms, _n_mcss_bonds = int(_n_mcss_atoms), int(_n_mcss_bonds)
+                _n_mcss_atoms = int(_n_mcss_atoms)
                 
                 assert n_mcss_atoms is None or n_mcss_atoms == _n_mcss_atoms, dir_name
-                assert n_mcss_bonds is None or n_mcss_bonds == _n_mcss_bonds, dir_name
                 assert lig in dir_name, dir_name
 
                 if lig not in ligs: ligs[lig] = []
                 ligs[lig] += [smarts]
                 n_mcss_atoms = _n_mcss_atoms
-                n_mcss_bonds = _n_mcss_bonds
 
         if len(ligs) != 2:
-            print('Wrong number of ligands in MCSS file', ligs, dir_name)
+            print('Wrong number of ligands in MCSS file', ligs)
             return None
-        assert all(smarts for smarts in ligs.values()), dir_name
+        assert all(smarts for smarts in ligs.values()), ligs
 
-        mcss = MCSS(*ligs.keys())
-        mcss.n_mcss_atoms = n_mcss_atoms
-        mcss.n_mcss_bonds = n_mcss_bonds
-        mcss.smarts_l1 = ligs[mcss.l1]
-        mcss.smarts_l2 = ligs[mcss.l2]
-
-        # Get ligand sizes.
-        # The below line can fail if there are multiple copies of each ligand
-        # written to the mcss_struct file
-        ref1, ref2 = refs
-        mcss.n_l1_atoms = len([a for a in ref1.atom if a.element != 'H'])
-        mcss.n_l2_atoms = len([a for a in ref2.atom if a.element != 'H'])
-        return mcss
-
-    def compute_mcss(self, mcss_types_file, ligand_paths):
-        """
-        Compute the MCSS file by calling Schrodinger canvasMCSS.
-
-        Copies ligands to self.structure_path with self.l1 first
-        in the file.
-
-        Writes MCSS to self.canvasMCSS_csv.
-
-        * Must be called from MCSS temp directory *
-        """
-        if os.path.exists(self.structure_path):
-            os.system("rm {}".format(self.structure_path))
-        stwr = StructureWriter(self.structure_path)
-        stwr.append(next(StructureReader(ligand_paths[self.l1])))
-        stwr.append(next(StructureReader(ligand_paths[self.l2])))
-        stwr.close()
+        # Assert that the MCSS size does not change.
+        # It could be that changing tautomers could change the MCSS size
+        # but ideally it wouldn't. If this seems unavoidable, change
+        # this to set n_mcss_atoms to be the minimum of the two sizes.
+        if self.n_mcss_atoms:
+            assert self.n_mcss_atoms == n_mcss_atoms, 'MCSS size changed.'
         
-        os.system(self.mcss_cmd.format(mcss_types_file))
+        self.n_mcss_atoms = n_mcss_atoms
+        self.smarts_l1 += ligs[mcss.l1]
+        self.smarts_l2 += ligs[mcss.l2]
 
+    # RMSD Methods.
     def load_rmsds(self, rmsd_file, poseviewer_paths, max_poses):
         """
         Loads RMSDs from rmsd_file for the top max_poses poses. 
@@ -200,59 +205,85 @@ class MCSS:
                     return False
         return True
 
-    def write_rmsds(self, rmsd_file, poseviewer_paths, max_poses):
+    def write_rmsds(self, rmsd_file, init_file, poseviewer_paths,
+                    max_poses, mcss_types_file):
         """
+        rmsd_file (str): path to where to write RMSDs.
+        init_file (str): path to where to write MCSS init file if on-the-fly
+            computation is necessary.
+        pose_viewer_paths {self.l1: l1 docking, self.l2: l2 docking}
+        max_poses (int): compute RMSDs for at most max_poses poses
+
         Computes the RMSD between MCSSs for all pairs of poses.
+
         """
         pv1 = list(StructureReader(poseviewer_paths[self.l1]))[1:]
         pv2 = list(StructureReader(poseviewer_paths[self.l2]))[1:]
-        # evaluate_smarts returns [[atom_index, ...], ...]
+        
         # These objects are lists of lists of lists of atom indices!
-        l1_atom_idxss = [evaluate_smarts(pv1[0], smarts, unique_sets=True)
-                         for smarts in self.smarts_l1]
-        l2_atom_idxss = [evaluate_smarts(pv2[0], smarts, unique_sets=True)
-                         for smarts in self.smarts_l2]
-        assert len(l1_atom_idxss) and len(l2_atom_idxss)
+        l1_atom_idxss, l2_atom_idxss = self._get_atom_idxss(pv1[0], pv2[0],
+                                                            init_file, mcss_types_file)
         
-        failed = False
-        
-        with open(rmsd_file, 'w') as f:
-            for i, pose1 in enumerate(pv1[:max_poses]):
-                for j, pose2 in enumerate(pv2[:max_poses]):
-                    if failed: continue
-                    rmsd = float('inf')
-                    for l1_atom_idxs, l2_atom_idxs in zip(l1_atom_idxss, l2_atom_idxss):
-                        for l1_atom_idx in l1_atom_idxs:
-                            for l2_atom_idx in l2_atom_idxs:
-                                rmsd = min(rmsd, self._calculate_rmsd(pose1, pose2, l1_atom_idx, l2_atom_idx))
-                    f.write('{},{},{}\n'.format(i, j, rmsd))
-                    if rmsd == float('inf'):
-                        failed = True
+        rmsds = {}
+        for i, pose1 in enumerate(pv1[:max_poses]):
+            for j, pose2 in enumerate(pv2[:max_poses]):
+                rmsd = float('inf')
+                for l1_atom_idxs, l2_atom_idxs in zip(l1_atom_idxss, l2_atom_idxss):
+                    for l1_atom_idx in l1_atom_idxs:
+                        for l2_atom_idx in l2_atom_idxs:
+                            rmsd = min(rmsd, self._calculate_rmsd(pose1, pose2, l1_atom_idx, l2_atom_idx))
+                if rmsd == float('inf'):
+                    print("no mcss found"+','.join([str(i),str(j), self.l1,self.l2]))
+                    print(l1_atom_idxss, l2_atom_idxss)
+                    substructure1 = pose1.extract(l1_atom_idxss[0][0])
+                    substructure2 = pose2.extract(l2_atom_idxss[0][0])
+                    print(len(substructure1.atom), len(substructure2.atom))
+                    print(len(substructure1.bond), len(substructure2.bond))
+                    assert False
+                rmsds[(i, j)] = rmsd
 
-        if failed:
-            os.system('rm {}'.format(rmsd_file))
-            print("no mcss found"+','.join([str(i),str(j), self.l1,self.l2]))
-            print(l1_atom_idxss, l2_atom_idxss)
-            substructure1 = pose1.extract(l1_atom_idxss[0][0])
-            substructure2 = pose2.extract(l2_atom_idxss[0][0])
-            print(len(substructure1.atom), len(substructure2.atom))
-            print(len(substructure1.bond), len(substructure2.bond))
-            assert False
+        with open(rmsd_file, 'w') as f:
+            for (i, j), rmsd in rmsds.items():
+                f.write('{},{},{}\n'.format(i, j, rmsd))
+
+    def _get_atom_idxss(pose1, pose2):
+        """
+        Return atom indices of MCSS in pose1 and pose2.
+        If initially, there is no match, try recomputing MCSS
+        using docked pose.
+        """
+
+        # evaluate_smarts returns [[atom_index, ...], ...]
+        l1_atom_idxss = [evaluate_smarts(pose1, smarts, unique_sets=True)
+                         for smarts in self.smarts_l1]
+        l2_atom_idxss = [evaluate_smarts(pose2, smarts, unique_sets=True)
+                         for smarts in self.smarts_l2]
+
+        # If initially no matches, recompute MCSSs using docked ligands.
+        # This can occur do to changes in the tautomers produced by glide.
+        if not any(len(l1_atom_idxs)*len(l2_atom_idxs)
+                   for l1_atom_idxs, l2_atom_idxs in zip(l1_atom_idxss, l2_atom_idxss)):
+            self.compute_mcss({self.l1: pose1, self.l2: pose2})
+            l1_atom_idxss = [evaluate_smarts(pose1, smarts, unique_sets=True)
+                             for smarts in self.smarts_l1]
+            l2_atom_idxss = [evaluate_smarts(pose2, smarts, unique_sets=True)
+                             for smarts in self.smarts_l2]
+
+        # If still no common substructure found, exit.
+        assert len(l1_atom_idxss) and len(l2_atom_idxss)
+        assert any(len(l1_atom_idxs)*len(l2_atom_idxs)
+                   for l1_atom_idxs, l2_atom_idxs in zip(l1_atom_idxss, l2_atom_idxss))
+        
+        return l1_atom_idxss, l2_atom_idxss
 
     def _calculate_rmsd(self, pose1, pose2, atom_idx1, atom_idx2):
         """
         Calculates the RMSD between the atoms atom_idx1 in pose1
-        and the atoms atom_idx2 in pose2. The atoms corresponding
-        to the first index are matched, and the second, and so on.
-        This procedure completely depends on minimizing over all
-        possible atoms matchings, which we currently do above. This
-        also depends on the atom indexes being in the correct order
-        as they are returned from evaluate_smarts.
+        and the atoms atom_idx2 in pose2.
         
         pose1, pose2: schrodinger.structure
         atom_idx1, atom_idx2: [int, ...]
         """
-        from schrodinger.structutils.rmsd import ConformerRmsd
         substructure1 = pose1.extract(atom_idx1)
         substructure2 = pose2.extract(atom_idx2)
         calc = ConformerRmsd(substructure1, substructure2)
@@ -263,17 +294,22 @@ if __name__ == '__main__':
     from schrodinger.structure import StructureReader, StructureWriter
     mode = sys.argv[1]
     if mode == 'INIT':
-        l1, l2, l1_path, l2_path, mcss_types_file = sys.argv[2:]
+        l1, l2, l1_path, l2_path, init_file, mcss_types_file = sys.argv[2:]
         mcss = MCSS(l1, l2)
-        ligand_paths = {l1:l1_path, l2: l2_path}
-        mcss.compute_mcss(mcss_types_file, {l1: l1_path, l2: l2_path})
+        with StructureReader(l1_path) as ligand1, StructureReader(l2_path) as ligand2:
+            ligands = {l1: next(ligand1), l2: next(ligand2)}
+            mcss.compute_mcss(mcss_types_file, init_file, ligands)
+        with open(init_file, 'w') as fp:
+            fp.write(str(mcss)+'\n')
     elif mode == 'RMSD':
         from schrodinger.structutils.analyze import evaluate_smarts
         from schrodinger.structutils.rmsd import ConformerRmsd
-        l1, l2, pv1_path, pv2_path, rmsd_file, max_poses, mcss_string_rep = sys.argv[2:]
+        (l1, l2, pv1_path, pv2_path, init_file, rmsd_file,
+         max_poses, mcss_string_rep, mcss_types_file) = sys.argv[2:]
         max_poses = int(max_poses)
         poseviewer_paths = {l1:pv1_path, l2:pv2_path}
         mcss = MCSS.from_string(mcss_string_rep)
-        mcss.write_rmsds(rmsd_file, poseviewer_paths, max_poses)
+        mcss.write_rmsds(rmsd_file, init_file, poseviewer_paths,
+                         max_poses, mcss_types_file)
     else:
         assert False
