@@ -64,7 +64,10 @@ class LigPair:
         pairs = {}
         for rank1 in range(min(len(self.l1.poses), self.max_poses)):
             for rank2 in range(min(len(self.l2.poses), self.max_poses)):
-                mcss_score = self.mcss.get_rmsd(self.l1.lig_id, self.l2.lig_id, rank1, rank2)
+                if self.mcss:
+                    mcss_score = self.mcss.get_rmsd(self.l1.lig_id, self.l2.lig_id, rank1, rank2)
+                else:
+                    mcss_score = None
                 pose1, pose2 = self.l1.poses[rank1], self.l2.poses[rank2]
                 assert pose1.rank == rank1, "Pose indices don't match rank"
                 assert pose2.rank == rank2, "Pose indices don't match rank"

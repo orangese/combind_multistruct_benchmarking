@@ -171,9 +171,8 @@ class LigandManager:
         self.root = '{}/{}'.format(shared_paths['data'], prot)
         self.prot = prot
         self.sp = shared_paths
-
-        self.all_st = {} # What is this for? Vestigial?
         self.st = None
+        self.helpers = {}
 
         # Get ligand info
         self.chembl_info = load_chembl_proc(self.root)
@@ -186,14 +185,9 @@ class LigandManager:
                 and os.listdir('{}/docking/grids'.format(self.root))): return
 
         self.grids = sorted([l for l in os.listdir('{}/docking/grids'.format(self.root)) if l[0] != '.'])
-        self.first_st = self.grids[0]
-        self.st = struct
-        if struct is None:
-            self.st = self.all_st.get(prot, self.first_st)
+        self.st = self.grids[0] if struct is None else struct
 
-        # MCSS
         self.mcss = MCSSController(self)
-        self.helpers = {}
 
     def prepped(self):
         ligdir = '{}/ligands/prepared_ligands'.format(self.root)
@@ -203,7 +197,8 @@ class LigandManager:
     def chembl(self, filters=[], sort_key=lambda x:0, unique=False):
         default = [
             lambda x,ci: ci[x].ki is not None and ci[x].ki <= 1000,
-            lambda x,ci: ci[x].mw is not None and ci[x].mw <= 1000
+            lambda x,ci: ci[x].mw is not None and ci[x].mw <= 800,
+            lambda x,ci: ci[x].macrocycle is not None and not ci[x].macrocycle
         ]
         c = sorted([l for l in self.all_ligs if l in self.chembl_info 
                     and False not in [f(l,self.chembl_info) for f in default+filters]], key=sort_key)

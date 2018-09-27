@@ -213,20 +213,31 @@ class MCSS:
         l2_atom_idxss = [evaluate_smarts(pv2[0], smarts, unique_sets=True)
                          for smarts in self.smarts_l2]
         assert len(l1_atom_idxss) and len(l2_atom_idxss)
-
+        
+        failed = False
+        
         with open(rmsd_file, 'w') as f:
-            for i, p1 in enumerate(pv1[:max_poses]):
-                for j, p2 in enumerate(pv2[:max_poses]):
+            for i, pose1 in enumerate(pv1[:max_poses]):
+                for j, pose2 in enumerate(pv2[:max_poses]):
+                    if failed: continue
                     rmsd = float('inf')
-                    print(l1_atom_idxss, l2_atom_idxss)
                     for l1_atom_idxs, l2_atom_idxs in zip(l1_atom_idxss, l2_atom_idxss):
                         for l1_atom_idx in l1_atom_idxs:
                             for l2_atom_idx in l2_atom_idxs:
-                                rmsd = min(rmsd, self._calculate_rmsd(p1, p2, l1_atom_idx, l2_atom_idx))
-                                print(rmsd)
-                    assert rmsd != float('inf'), "no mcss found"+','.join([str(i),str(j),
-                                                                           self.l1,self.l2])
+                                rmsd = min(rmsd, self._calculate_rmsd(pose1, pose2, l1_atom_idx, l2_atom_idx))
                     f.write('{},{},{}\n'.format(i, j, rmsd))
+                    if rmsd == float('inf'):
+                        failed = True
+
+        if failed:
+            os.system('rm {}'.format(rmsd_file))
+            print("no mcss found"+','.join([str(i),str(j), self.l1,self.l2]))
+            print(l1_atom_idxss, l2_atom_idxss)
+            substructure1 = pose1.extract(l1_atom_idxss[0][0])
+            substructure2 = pose2.extract(l2_atom_idxss[0][0])
+            print(len(substructure1.atom), len(substructure2.atom))
+            print(len(substructure1.bond), len(substructure2.bond))
+            assert False
 
     def _calculate_rmsd(self, pose1, pose2, atom_idx1, atom_idx2):
         """
@@ -241,14 +252,12 @@ class MCSS:
         pose1, pose2: schrodinger.structure
         atom_idx1, atom_idx2: [int, ...]
         """
-        sd = 0
-        for i1, i2 in zip(atom_idx1, atom_idx2):
-            atom1 = pose1.extract([i1]).atom[1]
-            atom2 = pose2.extract([i2]).atom[1]
-            # Remove this assertion if we want to consider MCSSs with distinct elements matched
-            assert atom1.element == atom2.element, (atom1.element, i1, atom2.element, i2)
-            sd += sum((coord1-coord2)**2 for coord1, coord2 in zip(atom1.xyz, atom2.xyz))
-        return (sd / float(len(atom_idx1))) ** 0.5
+        from schrodinger.structutils.rmsd import ConformerRmsd
+        substructure1 = pose1.extract(atom_idx1)
+        substructure2 = pose2.extract(atom_idx2)
+        calc = ConformerRmsd(substructure1, substructure2)
+        calc.use_heavy_atom_graph = True
+        return calc.calculate()
             
 if __name__ == '__main__':
     from schrodinger.structure import StructureReader, StructureWriter

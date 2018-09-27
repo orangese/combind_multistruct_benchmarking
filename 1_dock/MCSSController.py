@@ -34,7 +34,7 @@ class MCSSController:
     """
 
     INIT_GROUP_SIZE = 1000
-    RMSD_GROUP_SIZE = 100
+    RMSD_GROUP_SIZE = 10
 
     QUEUE = 'owners'
     
@@ -42,8 +42,6 @@ class MCSSController:
                 '#SBATCH -p {}\n'
                 '#SBATCH --tasks=1\n'
                 '#SBATCH -t 8:00:00\n'
-                'ml load chemistry\n'
-                'ml load schrodinger\n'
                 '{}'
                 'wait\n'
                 ).format(QUEUE, '{}')

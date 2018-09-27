@@ -128,7 +128,7 @@ def statistics_lig_pair(protein, ligand1, ligand2, interactions):
     docking = dataset.proteins[protein].docking[lm.st]
     lig_pair = LigPair(docking.ligands[ligand1],
                        docking.ligands[ligand2],
-                       interactions, lm.mcss,
+                       interactions, lm.mcss if 'mcss' in interactions else None,
                        shared_paths['stats']['max_poses'], True)
 
     # Compute all remaining statistics and write to files.
@@ -260,7 +260,7 @@ if __name__ == '__main__':
             ligands.pop(-1)
 
 
-        interactions = ['hbond', 'hbond_donor', 'hbond_acceptor', 'mcss',
+        interactions = ['hbond', 'hbond_donor', 'hbond_acceptor', #'mcss',
                         'contact', 'sb2', 'pipi']
 
         statistics({protein: ligands}, interactions)
