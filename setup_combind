@@ -10,4 +10,4 @@ PYTHON=/scratch/PI/rondror/combind/miniconda3/bin
 
 export COMBINDHOME=`pwd`
 
-export PYTHONPATH=$PYTHONPATH:$COMBINDHOME/1_dock:$COMBINDHOME/2_ifp:$COMBINDHOME/3_analyze
+export PYTHONPATH=$PYTHONPATH:$COMBINDHOME/1_dock:$COMBINDHOME/ifp:$COMBINDHOME/mcss:$COMBINDHOME/3_analyze
