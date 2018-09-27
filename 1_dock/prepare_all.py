@@ -19,6 +19,8 @@ from chembl_props import write_props
 from pick_helpers import pick_helpers, load_helpers
 from score import score
 
+from verify_docking import check_docked_ligands
+
 sys.path.append('../3_analyze')
 from containers import LigandManager
 
@@ -35,6 +37,7 @@ if datasets == []:
 datasets=reversed(datasets)
 for i, d in enumerate(datasets):
     print(d, i)
+
     os.chdir(d)
     
     lm = LigandManager(shared_paths, d)
@@ -58,17 +61,21 @@ for i, d in enumerate(datasets):
     if '2' in todo:
        get_ligands()                  # Writes MAE files for all ligs to ligands/raw_files
        proc_ligands()                 # Runs prepwizard & epik on all ligs
-       compute_mcss(lm, compute_rmsds = False) # Computes MCSS, for use in pick_helpers
+       
+    if 'm' in todo:
+        compute_mcss(lm, compute_rmsds = False) # Computes MCSS, for use in pick_helpers
 
     if 'v' in todo:
         verify_mcss(lm)
-
+    if 'g' in todo:
+        check_docked_ligands(lm)
     # force redo of chembl info (do this if new chembl ligands have been added)
     # Do this after all MCSS files have been written!
     if 'c' in todo: #pass
-         os.system('rm -f chembl/helpers/*')
-         os.system('rm -f chembl/duplicates.txt')
-         os.system('rm -f chembl/molw.txt')
+         os.system('rm chembl/helpers/*')
+         os.system('rm chembl/duplicates.txt')
+         os.system('rm chembl/molw.txt')
+         os.system('rm chembl/macrocycle.txt') 
          write_props(lm)
 
     # # 3. decide what ligands to use and prepare them
