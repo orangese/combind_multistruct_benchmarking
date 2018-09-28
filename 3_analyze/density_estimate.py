@@ -115,6 +115,12 @@ class DensityEstimate:
             self.fx += [(weights*kernel).sum()]
         self.fx = np.array(self.fx)
 
+    def uniform(self):
+        self.n_samples = 0
+        self.fx = np.ones(self.x.shape)
+        self.fx /= self.x[-1]-self.x[0]
+        return self
+
     def fit(self, X, weights = 1):
         '''
         Given an array of values X and weights weights,
@@ -126,13 +132,16 @@ class DensityEstimate:
         if self.x is None:
            self.x = np.linspace(X.min(), X.max(), self.points)
 
+        if not X.shape[0]: return self.uniform()
+
         if self.reflect:
             if X.max() > self.x[-1] or X.min() < self.x[0]:
                 print('Warning: Data out of domain of density estimate'
                       ' with reflected boundary conditions. Truncating'
                       ' data to be on specified domain.')
                 X = X[(X <= self.x[-1])*(X>=self.x[0])]
-            r = self.x[-1]-self.x[0]
+                if not X.shape[0]: return self.uniform()
+            r = self.x[-1] - self.x[0]
             self.x = np.hstack([self.x-r, self.x, self.x+r])
 
         self._kde(X, weights)
@@ -144,8 +153,7 @@ class DensityEstimate:
                        + self.fx[-1:2*self.points-1:-1])
             self.x = self.x[self.points:2*self.points]
 
-        if self.fx.sum():
-            self.fx *= (self.x.shape[0] / (self.x[-1]-self.x[0])) / self.fx.sum()
+        self.fx *= (self.x.shape[0] / (self.x[-1]-self.x[0])) / self.fx.sum()
         self.n_samples = (weights*np.ones(X.shape)).sum()
         return self
 

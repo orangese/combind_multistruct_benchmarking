@@ -141,7 +141,8 @@ def statistics_lig_pair(protein, ligand1, ligand2, interactions):
         w_ref = weighting(w_ref, protein)
 
         for k, X, w in [('native', X_native, 1), ('reference', X_ref, w_ref)]:
-            stats[k][interaction] = DensityEstimate(domain = (0, 1),
+            domain = (0, 15) if interaction == 'mcss' else (0, 1)
+            stats[k][interaction] = DensityEstimate(domain = domain,
                               sd = shared_paths['stats']['stats_sd'],
                               reflect = True)
             stats[k][interaction].fit(X)
@@ -152,12 +153,6 @@ def statistics(data, interactions):
     '''
     data    {protein (str): [ligand (str), ...]}
     interactions {name (str): [code (int), ...]}
-    pnative (DensityEstimate): Likelihood of a pose being correct
-        given its glide score.
-    points (int): resolution of density estimate
-    weighted (bool): Whether to weight statistics by glide score
-    max_poses (int): max poses per ligand to consider
-    sd (float): standard deviation of kernel in density estimate
 
     Returns DensityEstimate's representing the native and reference
     distribution of the statistics for all proteins, ligands in data.
@@ -250,7 +245,7 @@ if __name__ == '__main__':
         reference.write(fname.format('reference'))
         native.ratio(reference, prob = False).write(fname.format('pnative'))
 
-    else:
+    elif mode == 'fp':
         lm = LigandManager(shared_paths, protein)
         ligands = lm.docked(lm.pdb)[:shared_paths['stats']['n_ligs']+1]
         self_docked = lm.st+'_lig'
@@ -262,5 +257,7 @@ if __name__ == '__main__':
 
         interactions = ['hbond', 'hbond_donor', 'hbond_acceptor', 'mcss',
                         'contact', 'sb2', 'pipi']
-
+        
         statistics({protein: ligands}, interactions)
+    else:
+        assert False
