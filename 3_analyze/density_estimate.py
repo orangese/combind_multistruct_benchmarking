@@ -111,7 +111,7 @@ class DensityEstimate:
         '''
         self.fx = []
         for mean in self.x:
-            kernel = np.array([self._gauss(mean, _X) for _X in X])
+            kernel = self._gauss(mean, X)
             self.fx += [(weights*kernel).sum()]
         self.fx = np.array(self.fx)
 
@@ -127,6 +127,11 @@ class DensityEstimate:
            self.x = np.linspace(X.min(), X.max(), self.points)
 
         if self.reflect:
+            if X.max() > self.x[-1] or X.min() < self.x[0]:
+                print('Warning: Data out of domain of density estimate'
+                      ' with reflected boundary conditions. Truncating'
+                      ' data to be on specified domain.')
+                X = X[(X <= self.x[-1])*(X>=self.x[0])]
             r = self.x[-1]-self.x[0]
             self.x = np.hstack([self.x-r, self.x, self.x+r])
 
