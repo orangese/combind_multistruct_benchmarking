@@ -4,7 +4,7 @@
 #SBATCH --tasks=4 --cpus-per-task=1 --ntasks-per-socket=2
 #SBATCH --array=0-9%3
 #SBATCH --open-mode=append
-#SBATCH --mem=4GB
+#SBATCH --mem=8GB
 #SBATCH --out=/home/users/jpaggi/validate.out
 #SBATCH --err=/home/users/jpaggi/validate.err
 
