@@ -3,7 +3,7 @@ import random
 from pairs import LigPair
 
 class PredictStructs:
-    def __init__(self, prot, stats, k_list, max_poses, T, reference='ALL', normalize_fp=True):
+    def __init__(self, prot, stats, k_list, max_poses, T, reference='ALL'):
         self.mcss = prot.lm.mcss
         self.docking_st = prot.docking[prot.lm.st]
         self.stats = stats
@@ -11,10 +11,8 @@ class PredictStructs:
         self.max_poses = max_poses
         self.T = float(T)
         self.reference = reference
-        self.normalize_fp = normalize_fp
         assert self.reference in ['DECOY', 'ALL', 'LTP', 'OLD']
         assert self.T >= 0
-        assert self.normalize_fp == True#evidence.normalize_fp
 
         self.ligand_partition_function_cache = {}
         self.log_likelihood_ratio_cache = {}
@@ -209,8 +207,6 @@ class PredictStructs:
                                   pose_cluster[ligname1], pose_cluster[ligname2])
         
         if x_k is None: return 0, 1, 1
-        if self.normalize_fp:
-            assert x_k <= 1 and x_k >= 0, "{} {}".format(k, x_k)
 
         p_x_native  = self.stats.evaluate(k, x_k, 1)
         
@@ -237,7 +233,7 @@ class PredictStructs:
 
         if (l1, l2) not in self.lig_pairs:
             self.lig_pairs[(l1, l2)] = LigPair(self.docking_st.ligands[l1], self.docking_st.ligands[l2],
-                                               self.k_list, self.mcss, self.max_poses, self.normalize_fp)
+                                               self.k_list, self.mcss, self.max_poses)
 
         return self.lig_pairs[(l1, l2)].get_feature(fname, p1, p2)
 

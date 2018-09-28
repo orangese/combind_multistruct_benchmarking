@@ -22,15 +22,14 @@ class LigPair:
     Importantly, this class normalizes the overlap scores
     by dividing by the maximum value.
     """
-    def __init__(self, l1, l2, features, mcss, max_poses, normalize_fp):
+    def __init__(self, l1, l2, features, mcss, max_poses):
         self.l1 = l1
         self.l2 = l2
         self.max_poses = max_poses
         self.mcss = mcss
         self.features = features
-        self.normalize_fp = normalize_fp
 
-        self.pose_pairs = self.init_pose_pairs()
+        self.pose_pairs = self._init_pose_pairs()
         self.feat_map = self._init_feat_map()
 
     def get_feature(self, feature, rank1, rank2):
@@ -41,12 +40,11 @@ class LigPair:
         feature_value = self.pose_pairs[(rank1,rank2)].get_feature(feature)
         minimum, maximum = self.feat_map[feature]
         
-        if minimum == maximum or feature_value is None: return None
+        if not maximum or feature_value is None:
+            return None
         
-        if not self.normalize_fp: maximum = 1
-        
-        if feature == 'mcss' and self.normalize_fp:
-            return 1 - feature_value / max(maximum, 6.0)
+        if feature == 'mcss':
+            return feature_value
         return feature_value / max(maximum, 1.0)
 
     def get_gscores(self, rank1, rank2):
@@ -57,7 +55,7 @@ class LigPair:
         pp = self.pose_pairs[(rank1,rank2)]
         return pp.pose1.rmsd, pp.pose2.rmsd
 
-    def init_pose_pairs(self):
+    def _init_pose_pairs(self):
         """
         Create pose pairs for up to the top self.max_poses poses.
         """
