@@ -64,7 +64,7 @@ def process_structs():
         os.chdir('structures/processed_files/{}'.format(o_dir))
         print('processing', o_dir)
         with open('process_in.sh', 'w') as f:
-            f.write('#!/bin/bash\nmodule load schrodinger\n')
+            f.write('#!/bin/bash\n')
             f.write(command.format(o_dir, o_dir))
         os.system('sbatch -p {} -t 00:30:00 -o slurm.out process_in.sh'.format(queue))
         os.chdir('../../..')

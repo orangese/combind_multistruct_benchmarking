@@ -1,7 +1,6 @@
 import os
 import sys
 from shared_paths import shared_paths
-sys.path.append('../3_analyze')
 from containers import LigandManager
 
 

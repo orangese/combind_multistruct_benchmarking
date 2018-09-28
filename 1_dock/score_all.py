@@ -4,7 +4,7 @@ import sys
 from shared_paths import shared_paths
 from grouper import grouper
 from pick_helpers import load_helpers
-sys.path.append('../3_analyze')
+
 from containers import LigandManager
 
 group_size=30

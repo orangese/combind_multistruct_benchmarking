@@ -67,8 +67,7 @@ def align_structs(verbose=False):
                 print('renumber', struct)
                 os.chdir('{}/{}'.format(out_dir, struct))
                 with open('renumber_in.sh', 'w') as f:
-                    f.write('#!/bin/bash\nmodule load chemistry\n')
-                    f.write('#!/bin/bash\nmodule load schrodinger\n')
+                    f.write('#!/bin/bash\n')
                     f.write('$SCHRODINGER/run {}'.format(renumber_script))
                 os.system('sbatch -p {} -t 00:10:00 -o renumber.out renumber_in.sh'.format(queue))
                 os.chdir('../../..')
@@ -93,8 +92,6 @@ def align_structs(verbose=False):
         
         with open('align_in.sh', 'w') as f:
             f.write('#!/bin/bash\n')
-            f.write('module load chemistry\n')
-            f.write('module load schrodinger\n')
             f.write('{} {} {}_template.mae {}_query.mae\n'.format(schro, asl, template, struct))
         os.system('sbatch -p {} -t 00:10:00 -o align.out align_in.sh'.format(queue))
         os.chdir('../../..')

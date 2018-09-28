@@ -20,8 +20,6 @@ from pick_helpers import pick_helpers, load_helpers
 from score import score
 
 from verify_docking import check_docked_ligands
-
-sys.path.append('../3_analyze')
 from containers import LigandManager
 
 os.chdir(shared_paths['data'])

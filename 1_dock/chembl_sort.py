@@ -92,7 +92,7 @@ def run_ligand_processing(unfinished):
 
     for i, ligs in enumerate(grouper(group_size, unfinished)):
         with open('ligands/prepared_ligands/batch-{}.sh'.format(i),'w') as f:
-            f.write('#!/bin/bash\nmodule load schrodinger\n')
+            f.write('#!/bin/bash\n')
             for name in ligs:
                 if name is None: continue
 
@@ -105,7 +105,7 @@ def run_ligand_processing(unfinished):
                 f.write('cd ..\n')
 
                 with open('ligands/prepared_ligands/{}/process_in.sh'.format(name), 'w') as f2:
-                    f2.write('#!/bin/bash\nmodule load schrodinger\n')
+                    f2.write('#!/bin/bash\n')
                     f2.write(add_h.format(name, name))
                     f2.write(epik_command.format(name, name))
 

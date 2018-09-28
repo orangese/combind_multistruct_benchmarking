@@ -13,7 +13,7 @@ def get_fp(lm, fp_list):
         print(len(fp_list), 'fp left')
     for i, pairs in enumerate(grouper(group_size, fp_list)):
         with open('{}fp.sh'.format(i), 'w') as f:
-            f.write('#!/bin/bash\nmodule load schrodinger\n')
+            f.write('#!/bin/bash\n')
             for p in pairs:
                 if p is None: continue
                 input_file = '../../docking/{}/{}/{}_pv.maegz'.format(lm.sp['docking'], p, p)
@@ -29,7 +29,7 @@ def structure_fp(lm):
         if os.path.exists(output_file): continue
         print ('structure fp', pdb)
         with open('{}.sh'.format(pdb), 'w') as f:
-            f.write('#!/bin/bash\nmodule load schrodinger\n')
+            f.write('#!/bin/bash\n')
             f.write(st_cmd.format(lm.sp['code'], output_file)) 
         os.system('sbatch --time=00:10:00 -n 1 -p {} {}.sh'.format(queue, pdb))
 

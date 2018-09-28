@@ -36,7 +36,7 @@ def make_grids():
             f.write('RECEP_FILE ../../../structures/proteins/{}_prot.mae\n'.format(pdb))
 
         with open('docking/grids/{}/grid_in.sh'.format(out_f), 'w') as f:
-            f.write('#!/bin/bash\nmodule load schrodinger\n')
+            f.write('#!/bin/bash\n')
             f.write('$SCHRODINGER/glide -WAIT {}.in'.format(out_f))
                         
         print('making grid', out_f)

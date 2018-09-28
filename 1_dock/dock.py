@@ -109,7 +109,7 @@ def proc_all(all_pairs, dock=False, rmsd=False):
     
     for i,group in enumerate(grouper(group_size, all_pairs)):
         with open('dock{}.sh'.format(i),'w') as f:
-            f.write('#!/bin/bash\nmodule load schrodinger\n')
+            f.write('#!/bin/bash\n')
             for pair in group:
                 if pair is None: continue
                 ligand, grid = pair
