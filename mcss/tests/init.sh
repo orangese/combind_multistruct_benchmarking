@@ -10,3 +10,6 @@ diff outputs/3AUQ_lig-CHEMBL3264162_lig.csv expected/3AUQ_lig-CHEMBL3264162_lig.
 echo case 3
 $SCHRODINGER/run ~/combind/mcss/mcss.py INIT CHEMBL210836_lig CHEMBL424880_lig inputs/CHEMBL210836_lig.mae inputs/CHEMBL424880_lig.mae outputs/CHEMBL210836_lig-CHEMBL424880_lig.csv ~/combind/mcss/custom_types/mcss14.typ
 diff outputs/CHEMBL210836_lig-CHEMBL424880_lig.csv expected/CHEMBL210836_lig-CHEMBL424880_lig.csv
+
+echo case 4
+$SCHRODINGER/run ~/combind/mcss/mcss.py INIT CHEMBL2385551_lig CHEMBL2385552_lig inputs/CHEMBL2385551_lig.mae inputs/CHEMBL2385552_lig.mae outputs/CHEMBL2385551_lig-CHEMBL2385552_lig.csv ~/combind/mcss/custom_types/mcss15.typ

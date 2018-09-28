@@ -155,12 +155,15 @@ class MCSS:
             return None
         assert all(smarts for smarts in ligs.values()), ligs
 
-        # Assert that the MCSS size does not change.
-        # It could be that changing tautomers could change the MCSS size
-        # but ideally it wouldn't. If this seems unavoidable, change
-        # this to set n_mcss_atoms to be the minimum of the two sizes.
+        # MCSS size can change when tautomers change. One particularly prevalent
+        # case is when oxyanions are neutralized. Oxyanions are sometimes specified
+        # by the smiles string, but nevertheless glide neutralizes them.
+        # Can consider initially considering oxyanions and ketones interchangable
+        # (see mcss15.typ).
         if self.n_mcss_atoms:
-            assert self.n_mcss_atoms == n_mcss_atoms, 'MCSS size changed.'
+            assert self.n_mcss_atoms <= n_mcss_atoms, 'MCSS size decreased.'
+            if self.n_mcss_atoms != n_mcss_atoms:
+                print(self.name, 'MCSS size increased.')
         
         self.n_mcss_atoms = n_mcss_atoms
         self.smarts_l1 += ligs[mcss.l1]
@@ -257,9 +260,9 @@ class MCSS:
         """
 
         # evaluate_smarts returns [[atom_index, ...], ...]
-        l1_atom_idxss = [evaluate_smarts(pose1, smarts, unique_sets=True)
+        l1_atom_idxss = [evaluate_smarts_canvas(pose1, smarts)
                          for smarts in self.smarts_l1]
-        l2_atom_idxss = [evaluate_smarts(pose2, smarts, unique_sets=True)
+        l2_atom_idxss = [evaluate_smarts_canvas(pose2, smarts)
                          for smarts in self.smarts_l2]
 
         # If initially no matches, recompute MCSSs using docked ligands.
@@ -269,15 +272,16 @@ class MCSS:
             print('Recomputing mcss for {}-{}'.format(self.l1, self.l2))
             self.compute_mcss({self.l1: pose1, self.l2: pose2}, init_file, mcss_types_file)
             
-            l1_atom_idxss = [evaluate_smarts(pose1, smarts, unique_sets=True)
+            l1_atom_idxss = [evaluate_smarts_canvas(pose1, smarts)
                              for smarts in self.smarts_l1]
-            l2_atom_idxss = [evaluate_smarts(pose2, smarts, unique_sets=True)
+            l2_atom_idxss = [evaluate_smarts_canvas(pose2, smarts)
                              for smarts in self.smarts_l2]
 
         # If still no common substructure found, exit.
-        assert len(l1_atom_idxss) and len(l2_atom_idxss)
+        assert len(l1_atom_idxss) and len(l2_atom_idxss), (l1_atom_idxss, l2_atom_idxss)
         assert any(len(l1_atom_idxs)*len(l2_atom_idxs)
-                   for l1_atom_idxs, l2_atom_idxs in zip(l1_atom_idxss, l2_atom_idxss))
+                   for l1_atom_idxs, l2_atom_idxs in zip(l1_atom_idxss, l2_atom_idxss)), \
+               (l1_atom_idxss, l2_atom_idxss, self.smarts_l1, self.smarts_l2)
         
         return l1_atom_idxss, l2_atom_idxss
 
@@ -305,7 +309,7 @@ if __name__ == '__main__':
             ligands = {l1: next(ligand1), l2: next(ligand2)}
             mcss.compute_mcss(ligands, init_file, mcss_types_file)
     elif mode == 'RMSD':
-        from schrodinger.structutils.analyze import evaluate_smarts
+        from schrodinger.structutils.analyze import evaluate_smarts_canvas
         from schrodinger.structutils.rmsd import ConformerRmsd
         (l1, l2, pv1_path, pv2_path, init_file, mcss_types_file,
          rmsd_file, max_poses, mcss_string_rep) = sys.argv[2:]
