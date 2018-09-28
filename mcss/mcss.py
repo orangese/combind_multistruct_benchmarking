@@ -161,9 +161,11 @@ class MCSS:
         # Can consider initially considering oxyanions and ketones interchangable
         # (see mcss15.typ).
         if self.n_mcss_atoms:
-            assert self.n_mcss_atoms <= n_mcss_atoms, 'MCSS size decreased.'
-            if self.n_mcss_atoms != n_mcss_atoms:
+            assert self.n_mcss_atoms <= n_mcss_atoms+1, 'MCSS size decreased by more than 1.'
+            if self.n_mcss_atoms < n_mcss_atoms:
                 print(self.name, 'MCSS size increased.')
+            if self.n_mcss_atoms > n_mcss_atoms:
+                print(self.name, 'MCSS size dencreased by one.')
         
         self.n_mcss_atoms = n_mcss_atoms
         self.smarts_l1 += ligs[mcss.l1]

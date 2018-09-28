@@ -165,6 +165,7 @@ class MCSSController:
                                                      poseviewer_paths, max_poses):
                     print("Deleting RMSD file {}.".format(self.rmsd_file.format(name)))
                     os.system('rm {}'.format(self.rmsd_file.format(name)))
+            self.MCSSs[name].rmsds = {} # To limit memory usage.
 
     def sort_by_mcss(self, query, ligands):
         """

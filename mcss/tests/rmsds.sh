@@ -2,6 +2,12 @@
 echo MCSS RMSD with atomic weight specified
 echo TODO
 
+echo MCSS size decreases mcss14 fails
+$SCHRODINGER/run ~/combind/mcss/mcss.py RMSD CHEMBL186288_lig CHEMBL187750_lig inputs/CHEMBL186288_lig-to-1AQ1_pv.maegz inputs/CHEMBL187750_lig-to-1AQ1_pv.maegz outputs/CHEMBL186288_lig-CHEMBL187750_lig.init.csv ~/combind/mcss/custom_types/mcss14.typ outputs/CHEMBL186288_lig-CHEMBL187750_lig-1AQ1-glide12.csv 10  "CHEMBL186288_lig,CHEMBL187750_lig,27,27,23,26,c1ccccc1Nc2nccc(n2)-c(cn3)c(n34)ccc(O)n4,c1ccccc1Nc2nccc(n2)-c(cn3)c(n34)ccc([O-])n4"
+
+echo MCSS size decreases mcss15
+$SCHRODINGER/run ~/combind/mcss/mcss.py RMSD CHEMBL186288_lig CHEMBL187750_lig inputs/CHEMBL186288_lig-to-1AQ1_pv.maegz inputs/CHEMBL187750_lig-to-1AQ1_pv.maegz outputs/CHEMBL186288_lig-CHEMBL187750_lig.init.csv ~/combind/mcss/custom_types/mcss15.typ outputs/CHEMBL186288_lig-CHEMBL187750_lig-1AQ1-glide12.csv 10  "CHEMBL186288_lig,CHEMBL187750_lig,27,27,23,26,c1ccccc1Nc2nccc(n2)-c(cn3)c(n34)ccc(O)n4,c1ccccc1Nc2nccc(n2)-c(cn3)c(n34)ccc([O-])n4"
+
 echo Mysteriously does not work with old schrodinger.structutils.analyze.evaluate_smarts
 $SCHRODINGER/run ~/combind/mcss/mcss.py RMSD 3PSD_lig CHEMBL1079785_lig inputs/3PSD_lig-to-1UWH_pv.maegz inputs/CHEMBL1079785_lig-to-1UWH_pv.maegz outputs/3PSD_lig-CHEMBL1079785_lig.init.csv ~/combind/mcss/custom_types/mcss14.typ outputs/3PSD_lig-CHEMBL1079785_lig-1UWH-glide12.csv 10  "3PSD_lig,CHEMBL1079785_lig,29,37,21,23,c1cnccc1-c2nn(CCC[N+])cc2-c3ccccc3,c1cnccc1-c(n2)c(cn2cccn)-c3ccccc3"
 

@@ -260,7 +260,7 @@ if __name__ == '__main__':
             ligands.pop(-1)
 
 
-        interactions = ['hbond', 'hbond_donor', 'hbond_acceptor', #'mcss',
+        interactions = ['hbond', 'hbond_donor', 'hbond_acceptor', 'mcss',
                         'contact', 'sb2', 'pipi']
 
         statistics({protein: ligands}, interactions)
