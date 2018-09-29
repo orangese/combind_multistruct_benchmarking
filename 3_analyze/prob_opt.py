@@ -3,29 +3,28 @@ import random
 from pairs import LigPair
 
 class PredictStructs:
-    def __init__(self, prot, stats, k_list, max_poses, T, reference='ALL'):
+    def __init__(self, prot, stats, k_list, max_poses, T):
         self.mcss = prot.lm.mcss
         self.docking_st = prot.docking[prot.lm.st]
         self.stats = stats
         self.k_list = k_list
         self.max_poses = max_poses
         self.T = float(T)
-        self.reference = reference
-        assert self.reference in ['DECOY', 'ALL', 'LTP', 'OLD']
         assert self.T >= 0
 
         self.ligand_partition_function_cache = {}
         self.log_likelihood_ratio_cache = {}
         self.lig_pairs = {}
 
-    def max_posterior(self, ligands, verbose=False, sampling=3, mode='MAX', restart=15, en_landscape=False):
+    def max_posterior(self, ligands, verbose=False, sampling=3, mode='MAX',
+                      restart=15, en_landscape=False):
 
         opt = self._optimize_cluster
         if mode == 'ANNEAL':
             opt = self._anneal_cluster
 
         initial_cluster = {l:0 for l in ligands}
-        max_sc, best_cluster, all_scores, all_rmsds = opt(initial_cluster,sampling=sampling, en_landscape=en_landscape)
+        max_sc, best_cluster, all_scores, all_rmsds = opt(initial_cluster, sampling=sampling, en_landscape=en_landscape)
 
         if verbose:
             print('cluster -1, score {}'.format(max_sc))
@@ -198,31 +197,19 @@ class PredictStructs:
         return self.log_likelihood_ratio_cache[pair_key]
 
 
-    def _likelihoods_for_pair_and_single_feature(self, k, pose_cluster, ligname1, ligname2):
+    def _likelihoods_for_pair_and_single_feature(self, k, pose_cluster,
+                                                 ligname1, ligname2):
         """
         Returns the feature value 'x' and its likelihoods P(x|l) and P(x)
         for feature 'fname' and poses pose_cluster[ligname1] and pose_cluster[ligname2].
         """
         x_k = self._get_feature(k, ligname1, ligname2,
-                                  pose_cluster[ligname1], pose_cluster[ligname2])
+                                pose_cluster[ligname1], pose_cluster[ligname2])
         
         if x_k is None: return 0, 1, 1
 
-        p_x_native  = self.stats.evaluate(k, x_k, 1)
-        
-        # Choose between 3 potential options for reference distribution
-        if self.reference == 'DECOY':
-            p_x= self.stats.evaluate(k, x_k, 0)
-        elif self.reference == 'ALL':
-            p_x = self.stats.evaluate(k, x_k, -1)   
-        elif self.reference == 'LTP':
-            prior = (  self._get_prior(ligname1, pose_cluster[ligname1])
-                     * self._get_prior(ligname2, pose_cluster[ligname2]))
-            p_x = (  self.stats.evaluate(k, x_k, 1) * prior
-                   + self.stats.evaluate(k, x_k, 0) * (1 - prior))
-        elif self.reference == 'OLD':
-            p_x_native = np.exp(x_k) if k != 'mcss' else 1.0
-            p_x = 1.0
+        p_x_native  = self.stats['native'][k](x_k)
+        p_x = self.stats['reference'][k](x_k)
 
         return x_k, p_x_native, p_x
 

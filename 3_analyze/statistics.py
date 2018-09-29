@@ -119,17 +119,17 @@ def statistics_lig_pair(protein, ligand1, ligand2, interactions):
            and interaction in stats['reference']
            for interaction in interactions):
         return stats
-    print(protein, ligand1, ligand2)
+    print('Computing statistics for:', protein, ligand1, ligand2)
     # Load relevant data.
     dataset = Dataset(shared_paths, [protein])
-    dataset.load({protein: ligands},
+    dataset.load({protein: [ligand1, ligand2]},
                  load_fp=True, load_mcss= 'mcss' in interactions)
     lm = dataset.proteins[protein].lm
     docking = dataset.proteins[protein].docking[lm.st]
     lig_pair = LigPair(docking.ligands[ligand1],
                        docking.ligands[ligand2],
                        interactions, lm.mcss if 'mcss' in interactions else None,
-                       shared_paths['stats']['max_poses'], True)
+                       shared_paths['stats']['max_poses'])
 
     # Compute all remaining statistics and write to files.
     for interaction in interactions:

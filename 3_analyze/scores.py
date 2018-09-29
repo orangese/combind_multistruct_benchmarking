@@ -2,7 +2,7 @@ import os
 import sys
 
 from containers import Dataset, LigandManager
-from statistics import Statistics, readf
+from statistics import statistics
 from prob_opt import PredictStructs
 
 class ScoreContainer:
@@ -20,7 +20,8 @@ class ScoreContainer:
         self.stats = self.init_stats()
         self.predict_data = Dataset(self.sp, [prot], {prot:struct})
         self.ps = PredictStructs(self.predict_data.proteins[prot], self.stats, 
-            self.settings['k_list'], self.settings['num_poses'], self.settings['t'], self.settings['score_mode'])
+                                 self.settings['k_list'], self.settings['num_poses'],
+                                 self.settings['t'])
 
     def read_settings(self):
         tr = {}
@@ -31,22 +32,17 @@ class ScoreContainer:
         return tr
 
     def init_stats(self):
-        if os.path.exists('{}/stats_{}.txt'.format(self.root, self.settings['k_list'][0])):
-            stats = Statistics({},{},self.settings['k_list'])
-            for k in self.settings['k_list']:
-                tmp = readf('{}/stats_{}.txt'.format(self.root, k), k, stats.ind)
-                for i in stats.ind:
-                    stats.dist[i][k] = tmp[i]
-        else:
-            stats_ligs = {}
-            stats_st = {}
-            for p in self.settings['stats_prots']:
-                lm = LigandManager(self.sp,p)
-                stats_ligs[p] = lm.docked(lm.pdb)[:self.settings['num_stats_ligs']]
-                stats_st[p] = lm.st
-            stats = Statistics(stats_ligs, stats_st, self.settings['k_list'])
-            stats.read(self.sp['data'], self.sp['stats'])
-        return stats
+        data = {}
+        for protein in self.settings['stats_prots']:
+            lm = LigandManager(self.sp, protein)
+            ligands = lm.docked(lm.pdb)[:self.settings['num_stats_ligs']+1]
+            self_docked = lm.st+'_lig'
+            if self_docked in ligands:
+                ligands.remove(self_docked)
+            else:
+                ligands.pop(-1)
+            data[protein] = ligands
+        return statistics(data, self.settings['k_list'])
 
     def compute_results_chembl(self, query):
         assert self.settings['chembl']
@@ -92,12 +88,12 @@ if __name__ == '__main__':
     queries = sys.argv[3:]
 
     sc = ScoreContainer(os.getcwd(), protein, struct)
-    print('exit')
 
     # Write out stats
-    for k in sc.stats.k_list:
-        out_f = '{}/stats_{}.txt'.format(sc.root, k)
-        sc.stats.write(out_f, k)
+    for dist, interactions in sc.stats.items():
+        for interaction, de in interactions.items():
+            with open('{}/{}_{}.txt'.format(sc.root, dist, interaction), 'w') as fp:
+                fp.write(str(de)+'\n')
 
     # Compute results
     if sc.settings['chembl']:
