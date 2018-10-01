@@ -40,12 +40,12 @@ class HBond_Container:
 
     def score(self):
         all_scores = {}
-        for r, hb_list in self.all_hdon.items():#all_res():
+        for r, hb_list in self.all_hdon.items():
             for hb in hb_list:
                 key = (self.ind[0], r, '')
                 all_scores[key] = all_scores.get(key, 0) + hb.score()
         for r, hb_list in self.all_hacc.items():
-            for hb in hb_list:#self.all_hacc.get(r, []):
+            for hb in hb_list:
                 key = (self.ind[1], r, '')
                 all_scores[key] = all_scores.get(key, 0) + hb.score()
         return all_scores
@@ -60,9 +60,7 @@ class HBond:
         self.r_ind = r_ind
 
         self.dist = measure_distance(h, acceptor) # angstroms
-        self.DHA_angle = 180 - measure_bond_angle(self.d, self.h, self.a)#self.get_DHA_angle() # degrees
-
-        self.charge_score = 1#1.2 if (self.d.formal_charge > 0 or self.a.formal_charge < 0) else 1
+        self.DHA_angle = 180 - measure_bond_angle(self.d, self.h, self.a) # degrees
 
     def dist_score(self):
         if self.dist <= 2.5: return 1
