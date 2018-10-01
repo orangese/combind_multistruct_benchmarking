@@ -1,8 +1,5 @@
 import os
 import sys
-sys.path.append('../../1_dock')
-sys.path.append('../../2_ifp')
-sys.path.append('../../3_analyze')
 
 from containers import Dataset
 from shared_paths import shared_paths
@@ -16,7 +13,8 @@ def read_score_file(fname):
     with open(fname) as fp:
         for line in fp:
             tok = line.strip().split(',')
-            if tok[0] != 'max_score':
+            if len(tok) == 3: continue
+            if tok[1] != 'combind_rank':
                 pose_cluster[tok[0]] = int(tok[1])
     return pose_cluster
 

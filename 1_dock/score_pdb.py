@@ -3,17 +3,16 @@ import sys
 from shared_paths import shared_paths
 from containers import LigandManager
 
+max_ligands = 20
 
-output_dir = 'scores/pdb'
+output_dir = 'scores/pdb_seperated_hbond'
 cmd = '$SCHRODINGER/run {0:}/3_analyze/scores.py {1:} {1:} {1:}'.format(shared_paths['code'], '{}')
 
 settings = {
-    'k_list' : ['mcss', 'sb2', 'contact', 'hbond', 'pipi'],
+    'k_list' : ['mcss', 'sb2', 'contact', 'hbond_donor', 'hbond_acceptor'],
     'num_stats_ligs' : 10,
     'normalize' : True,
     'num_poses' : 100,
-    't' : .1,
-    'score_mode': 'ALL',
     'chembl': False
 }
 
@@ -25,14 +24,22 @@ def write_settings_file(out_path, settings):
             f.write('{}={}\n'.format(varname, var))
 
 def score_pdb(lm):
+    ligands = lm.docked(lm.pdb)[:max_ligands+1]
+    self_docked = lm.st+'_lig'
+    if self_docked in ligands:
+        ligands.remove(self_docked)
+    else:
+        ligands.pop(-1)
+    if len(ligands) == 1: return
     all_p = [d for d in sorted(os.listdir(lm.sp['data'])) if d[0] != '.' and d[-3:] != 'old']
     settings['stats_prots'] = [p for p in all_p if p != lm.prot and p != 'D2R']
     settings['shared_paths'] = lm.sp
+    settings['t'] = 1 / float(len(ligands)-1)
     write_settings_file('settings.py', settings)
 
     with open('pdb.sh','w') as f:
         f.write('#!/bin/bash\n')
-        f.write(cmd.format(lm.st, lm.prot, ' '.join(lm.docked(lm.pdb)[:10]))+'\n')
+        f.write(cmd.format(lm.st, lm.prot, ' '.join(ligands))+'\n')
     os.system('sbatch -t 1:00:00 -p owners pdb.sh')
 
 datasets = sys.argv[1:]

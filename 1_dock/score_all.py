@@ -4,7 +4,6 @@ import sys
 from shared_paths import shared_paths
 from grouper import grouper
 from pick_helpers import load_helpers
-
 from containers import LigandManager
 
 group_size=30
@@ -39,9 +38,8 @@ def score(lm, helpers, settings, subdir):
 
 #############################################################################
 
-output_dir, chembl_file, features, temps, n_ligs = sys.argv[1:6]
+output_dir, chembl_file, features, n_ligs = sys.argv[1:5]
 features = features.split(',')
-temps = [float(t) for t in  temps.split(',')]
 n_ligs = [int(n) for n in n_ligs.split(',')]
 
 datasets = sys.argv[6:]
@@ -53,23 +51,24 @@ for i, d in enumerate(datasets):
     print(d, i)
     os.chdir(d)
     lm = LigandManager(shared_paths, d)
+
     helpers = load_helpers()
+    self_docked = lm.st+'_lig'
+    if self_docked in helpers:
+        del helpers[self_docked]
     os.chdir('scores')
     os.system('mkdir -p {}'.format(output_dir))
     os.chdir(output_dir)
-    for t in temps:
-        print(t)
-        for n in n_ligs:
-            subdir = "t={},n={}".format(t, n)
-            settings = {
-                'num_pred_chembl' : n,
-                't' : t,
-                'k_list' : features,
-                'chembl_file': chembl_file,
-                'num_stats_ligs' : 10,
-                'normalize' : True,
-                'num_poses' : 100,
-                'score_mode': 'ALL'
-            }
-            score(lm, helpers, settings, subdir)
+    for n in n_ligs:
+        subdir = "n={}".format(n)
+        settings = {
+            'num_pred_chembl' : n,
+            't' : 1 / float(n),
+            'k_list' : features,
+            'chembl_file': chembl_file,
+            'num_stats_ligs' : 10,
+            'num_poses' : 100,
+            'chembl':True
+        }
+        score(lm, helpers, settings, subdir)
     os.chdir('../../..')
