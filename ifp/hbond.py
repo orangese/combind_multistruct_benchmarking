@@ -56,7 +56,6 @@ class HBond:
         self.a = acceptor # h acceptor, \in {N,O}
         self.h = h # covalently bound to the donor
         self.resIsHDonor = resIsHDonor
-
         self.r_ind = r_ind
 
         self.dist = measure_distance(h, acceptor) # angstroms
@@ -68,7 +67,6 @@ class HBond:
         else: return 0
 
     def angle_score(self):
-        #if self.a.element == 'O':
         if self.DHA_angle <= 60: return 1
         elif self.DHA_angle <= 90: return (90 - self.DHA_angle)/30.0
         else: return 0

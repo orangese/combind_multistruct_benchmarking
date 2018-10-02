@@ -15,7 +15,7 @@ class Hydrophobic_Container:
 
                 vdw_radius = self.radii[res_atom.element] + self.radii[lig_atom.element]
                 r = measure_distance(res_atom, lig_atom)
-                if r >= 1.75*vdw_radius: continue         
+                if r >= 1.75*vdw_radius: continue
    
                 score = 0
                 if r <= 1.25*vdw_radius:
