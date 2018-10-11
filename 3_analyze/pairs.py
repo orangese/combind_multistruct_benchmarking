@@ -81,7 +81,7 @@ class LigPair:
             for f, (minval, maxval) in feat_map.items():
                 pp_x = pose_pair.get_feature(f)
                 if pp_x is None: continue
-                feat_map[f] = (min(minval, pp_x),max(maxval, pp_x))
+                feat_map[f] = (min(minval, pp_x), max(maxval, pp_x))
         return feat_map
 
 class PosePair:

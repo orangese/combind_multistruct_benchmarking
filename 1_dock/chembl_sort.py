@@ -41,10 +41,12 @@ def write_unprocessed_chembl_ligs(ligs, written_ligs):
 
 def get_ligands():
     """
-    Generates unprocessed ligand mae files for pdb ligands (by copying from structures/ligands)
-    and chembl ligands (by reading from the chembl/*.xls files). Also adds entries in 
-    chembl_info.txt for chembl ligands that are added.
+    Generates unprocessed ligand mae files for pdb ligands(by copying from
+    structures/ligands) and chembl ligands (by reading from the chembl/*.xls files).
+    Also adds entries in chembl_info.txt for chembl ligands that are added.
+    
     * Terminating execution will corrupt chembl_info.txt *
+    
     Called from datadir root.
     """
     os.system('mkdir -p ligands/raw_files')
@@ -87,7 +89,7 @@ def run_ligand_processing(unfinished):
     """
     Run prepwizard and epik on ligands in list unfinished.
     """
-    add_h = '$SCHRODINGER/utilities/prepwizard -WAIT -noepik -noprotassign -noimpref {}_in.mae {}_in_epik.mae\n' 
+    add_h = '$SCHRODINGER/utilities/prepwizard -WAIT -rehtreat -noepik -noprotassign -noimpref {}_in.mae {}_in_epik.mae\n' 
     epik_command = '$SCHRODINGER/epik -WAIT -ph 7.0 -pht 2.0 -imae {}_in_epik.mae -omae {}_out.mae\n'
 
     for i, ligs in enumerate(grouper(group_size, unfinished)):

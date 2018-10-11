@@ -40,12 +40,12 @@ class HBond_Container:
 
     def score(self):
         all_scores = {}
-        for r, hb_list in self.all_hdon.items():#all_res():
+        for r, hb_list in self.all_hdon.items():
             for hb in hb_list:
                 key = (self.ind[0], r, '')
                 all_scores[key] = all_scores.get(key, 0) + hb.score()
         for r, hb_list in self.all_hacc.items():
-            for hb in hb_list:#self.all_hacc.get(r, []):
+            for hb in hb_list:
                 key = (self.ind[1], r, '')
                 all_scores[key] = all_scores.get(key, 0) + hb.score()
         return all_scores
@@ -56,13 +56,10 @@ class HBond:
         self.a = acceptor # h acceptor, \in {N,O}
         self.h = h # covalently bound to the donor
         self.resIsHDonor = resIsHDonor
-
         self.r_ind = r_ind
 
         self.dist = measure_distance(h, acceptor) # angstroms
-        self.DHA_angle = 180 - measure_bond_angle(self.d, self.h, self.a)#self.get_DHA_angle() # degrees
-
-        self.charge_score = 1#1.2 if (self.d.formal_charge > 0 or self.a.formal_charge < 0) else 1
+        self.DHA_angle = 180 - measure_bond_angle(self.d, self.h, self.a) # degrees
 
     def dist_score(self):
         if self.dist <= 2.5: return 1
@@ -70,7 +67,6 @@ class HBond:
         else: return 0
 
     def angle_score(self):
-        #if self.a.element == 'O':
         if self.DHA_angle <= 60: return 1
         elif self.DHA_angle <= 90: return (90 - self.DHA_angle)/30.0
         else: return 0

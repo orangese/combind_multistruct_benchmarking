@@ -43,6 +43,7 @@ class FP:
             'mode': '',
             'input_file': '',
             'output_file': '',
+            'poses': 105
         }
 
         self.set_user_params(args)
@@ -58,7 +59,7 @@ class FP:
         lig = AtomGroup(lig_st, 'lig')
         interactions = {
             'hbond': HBond_Container(lig, [2,3]),
-            'saltbridge': SB_Container(lig, [0,1,4]),
+            'saltbridge': SB_Container(lig, [1]),
             'pipi': PiPi_Container(lig, [5,6]),
             'picat': PiCat_Container(lig, [7,8]),
             'hydrophobic': Hydrophobic_Container(lig, [10,11])
@@ -79,21 +80,18 @@ class FP:
             interactions[i_type].filter_int()
             i_scores = interactions[i_type].score()
             for sc_key, sc in i_scores.items(): 
-                fp[sc_key] = sc     
+                fp[sc_key] = sc
 
         return fp
 
     def fingerprint_pose_viewer(self):
         fp = []
         prot_st = None
-        
         for i, st in enumerate(StructureReader(self.params['input_file'])):
-            if i > 105: break
-
+            if i > self.params['poses']: break
             if i == 0:
                 prot_st = st
                 continue
-            
             fp.append(self.fingerprint(st, prot_st, i))
             
         return fp
@@ -116,7 +114,7 @@ class FP:
             if item[0] == '-':
                 key = item.replace('-','')
                 assert key in self.params, "Key name {} is invalid".format(key)
-                try: value = float(args[index+1])
+                try: value = int(args[index+1])
                 except ValueError: value = args[index+1]
                 self.params[key] = value
 

@@ -5,8 +5,8 @@ from grouper import grouper
 queue = 'owners'
 group_size = 10
 
-pv_cmd = '$SCHRODINGER/run {}/2_ifp/fp_main.py -mode pv -input_file {} -output_file {}\n'
-st_cmd = '$SCHRODINGER/run {}/2_ifp/fp_main.py -mode st -output_file {}\n'
+pv_cmd = '$SCHRODINGER/run {}/ifp/fp.py -mode pv -input_file {} -output_file {}\n'
+st_cmd = '$SCHRODINGER/run {}/ifp/fp.py -mode st -output_file {}\n'
 
 def get_fp(lm, fp_list):
     if len(fp_list) > 0:
@@ -33,7 +33,7 @@ def structure_fp(lm):
             f.write(st_cmd.format(lm.sp['code'], output_file)) 
         os.system('sbatch --time=00:10:00 -n 1 -p {} {}.sh'.format(queue, pdb))
 
-def fp(lm):
+def compute_fp(lm):
     os.system('mkdir -p ifp')
     os.system('mkdir -p ifp/{}'.format(lm.sp['ifp']))
 

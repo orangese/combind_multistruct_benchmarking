@@ -5,13 +5,12 @@ from containers import LigandManager
 
 max_ligands = 20
 
-output_dir = 'scores/pdb_seperated_hbond'
+output_dir = 'scores/pdb_seperated_hbond_pipi/'
 cmd = '$SCHRODINGER/run {0:}/3_analyze/scores.py {1:} {1:} {1:}'.format(shared_paths['code'], '{}')
 
 settings = {
-    'k_list' : ['mcss', 'sb2', 'contact', 'hbond_donor', 'hbond_acceptor'],
+    'k_list' : ['mcss', 'sb2', 'pipi', 'contact', 'hbond_donor', 'hbond_acceptor'],
     'num_stats_ligs' : 10,
-    'normalize' : True,
     'num_poses' : 100,
     'chembl': False
 }

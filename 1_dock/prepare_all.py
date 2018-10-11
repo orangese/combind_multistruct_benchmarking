@@ -10,9 +10,8 @@ from sort_files import sort_files
 
 from grids import make_grids
 from dock import dock
-from fp import fp
+from fp_controller import compute_fp
 from mcss_controller import compute_mcss, verify_mcss
-from stats import stats
 
 from chembl_sort import get_ligands, proc_ligands
 from chembl_props import write_props
@@ -26,7 +25,7 @@ os.chdir(shared_paths['data'])
 
 todo = list(sys.argv[1])
 if len(todo) == 0:
-    todo = list('12345') 
+    todo = list('12345')
 
 datasets = sys.argv[2:]
 if datasets == []:
@@ -78,17 +77,9 @@ for i, d in enumerate(datasets):
 
     # # 3. decide what ligands to use and prepare them
     if '3' in todo:
-        pick_helpers(lm)              # Picks chembl ligands for use in scoring for each pdb ligand
-        dock(lm, load_helpers())      # Dock chembl ligands to be used for scoring all pdb ligands
-        fp(lm)                        # Writeout fingerprints for docked poses and pdb structures
+        pick_helpers(lm)                  # Picks chembl ligands for use in scoring for each pdb ligand
+        dock(lm, load_helpers())          # Dock chembl ligands to be used for scoring all pdb ligands
+        compute_fp(lm)                    # Writeout fingerprints for docked poses and pdb structures
         compute_mcss(lm, load_helpers())  # Performs all phases of MCSS computation
-
-    # 4. compute statistics
-    if '4' in todo:
-        stats(lm)                     # Computes statistics and writes to stats/stats11
-
-    # 5. run method on all ligands
-    if '5' in todo:
-        score(lm, load_helpers())     # Computes optimal cluster
 
     os.chdir('..')
