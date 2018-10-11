@@ -1,9 +1,5 @@
 import os
 import sys
-sys.path.append('../../1_dock')
-sys.path.append('../../2_ifp')
-sys.path.append('../../3_analyze')
-
 from containers import Dataset
 from shared_paths import shared_paths
 from schrodinger.structure import StructureReader, StructureWriter
@@ -32,7 +28,7 @@ if __name__ == '__main__':
             print(protein)
             if protein[0] == '.': continue
             scores_path = "{}/{}/scores/{}/".format(shared_paths['data'], protein, scores_version)
-            if not os.path.exists(scores_path): continue
+            if not os.path.exists(scores_path+'pdb.sc'): continue
             pose_cluster = read_score_file(scores_path+'pdb.sc')
             data = Dataset(shared_paths, [protein])
             data.load({protein: [lig for lig in pose_cluster]}, load_mcss = False, load_fp = False)

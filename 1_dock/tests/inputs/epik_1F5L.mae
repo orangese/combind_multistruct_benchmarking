@@ -1,0 +1,132 @@
+{ 
+ s_m_m2io_version
+ :::
+ 2.0.0 
+} 
+
+f_m_ct { 
+ s_m_title
+ b_ppw_prepared
+ s_ppw_prepared_with_version
+ s_epik_input
+ s_epik_cmdline
+ r_lp_tautomer_probability
+ r_epik_Ionization_Penalty
+ r_epik_Ionization_Penalty_Charging
+ r_epik_Ionization_Penalty_Neutral
+ r_epik_State_Penalty
+ r_epik_Charging_Adjusted_Penalty
+ i_epik_Tot_Q
+ i_epik_Tot_abs_Q
+ s_epik_Chemistry_Notes
+ i_m_ct_format
+ :::
+ 1F5L_lig 
+  1
+  2018-2 
+  W05IMl1jMW5jKFtOSDJdKWMoQ2wpbmMxQyg9TylbTkhdQyg9W05IMitdKVtOSDJd 
+  J2VwaWtfYXBwJywgJy1pbWFlJywgJ2lucHV0cy9wcmVwd2l6YXJkXzFGNUwubWFlJywgJy1vbWFlJywgJ2lucHV0cy9lcGlrXzFGNUwubWFlJywgJy1waCcsICc3LjAnLCAnLXBodCcsICcyLjAn 
+  0.499995
+    1.9215 
+    0.0000 
+    1.9215 
+    0.0012 
+  0.00117461916743792
+  0
+  0
+  "This compound has an imine and may undergo hydrolysis." 
+  2
+ m_depend[7] { 
+  # First column is dependency index #
+  i_m_depend_dependency
+  s_m_depend_property
+  :::
+  1 10 r_lp_tautomer_probability 
+  2 10 r_epik_Ionization_Penalty 
+  3 10 r_epik_Ionization_Penalty_Charging 
+  4 10 r_epik_Ionization_Penalty_Neutral 
+  5 10 r_epik_State_Penalty 
+  6 10 r_epik_Charging_Adjusted_Penalty 
+  7 10 i_epik_Tot_Q 
+  :::
+ } 
+ m_atom[23] { 
+  # First column is atom index #
+  i_m_mmod_type
+  r_m_x_coord
+  r_m_y_coord
+  r_m_z_coord
+  i_m_residue_number
+  s_m_chain_name
+  i_m_color
+  r_m_charge1
+  r_m_charge2
+  s_m_pdb_residue_name
+  s_m_pdb_atom_name
+  i_m_atomic_number
+  s_m_atom_name
+  r_epik_H2O_pKa
+  r_epik_H2O_pKa_uncertainty
+  i_i_constraint
+  i_i_internal_atom_index
+  i_pa_atomindex
+  i_ppw_het
+  :::
+  1 25 8.828566 2.865478 26.421236 243 L 43 -0.46800 -0.46800 "AMR " " N1 " 7 "N1"    0.838    2.000  0 1 1 1
+  2 2 8.944101 2.340980 25.176883 243 L 2 0.11900 0.11900 "AMR " " C1 " 6 "C1"  <> <> 0 2 2 1
+  3 2 8.727401 0.855120 25.059938 243 L 2 0.73750 0.73750 "AMR " " C3 " 6 "C3"  <> <> 0 3 3 1
+  4 25 7.945435 0.255862 26.108844 243 L 43 -0.31767 -0.31767 "AMR " " N5 " 7 "N5"    8.391    2.220  0 4 4 1
+  5 2 7.703695 -1.061895 26.275186 243 L 2 0.83760 0.83760 "AMR " " C6 " 6 "C6"  <> <> 0 5 5 1
+  6 25 8.217556 -2.022454 25.497912 243 L 43 -0.91377 -0.91377 "AMR " " N7 " 7 "N7"  <> <> 0 6 6 1
+  7 25 6.919415 -1.444835 27.289405 243 L 43 -0.91377 -0.91377 "AMR " " N6 " 7 "N6"  <> <> 0 7 7 1
+  8 15 9.169239 0.187611 24.125271 243 L 70 -0.50000 -0.50000 "AMR " " O1 " 8 "O1"  <> <> 0 8 8 1
+  9 2 9.285889 3.171146 24.070766 243 L 2 0.43400 0.43400 "AMR " " C2 " 6 "C2"  <> <> 0 9 9 1
+  10 25 9.405934 2.700542 22.762711 243 L 43 -0.92000 -0.92000 "AMR " " N4 " 7 "N4"   -2.994    0.920  0 10 10 1
+  11 25 9.503401 4.496214 24.226766 243 L 43 -0.46800 -0.46800 "AMR " " N3 " 7 "N3"    1.199    1.474  0 11 11 1
+  12 2 9.379011 5.004513 25.471157 243 L 2 0.43400 0.43400 "AMR " " C4 " 6 "C4"  <> <> 0 12 12 1
+  13 25 9.606696 6.372270 25.612484 243 L 43 -0.92000 -0.92000 "AMR " " N2 " 7 "N2"   -2.418    0.920  0 13 13 1
+  14 2 9.037321 4.188953 26.575279 243 L 2 0.41400 0.41400 "AMR " " C5 " 6 "C5"  <> <> 0 14 14 1
+  15 57 8.881562 4.859319 28.160152 243 L 9 -0.18000 -0.18000 "AMR " "CL1 " 17 "CL1"  <> <> 0 15 15 1
+  16 43 8.868111 -1.756064 24.651854 243 L 21 0.46000 0.46000 "AMR " "H7 1" 1 ""  <> <> 0 17 3829 <>
+  17 43 7.989383 -3.078400 25.705070 243 L 21 0.46000 0.46000 "AMR " "H7 2" 1 ""  <> <> 0 18 3830 <>
+  18 43 6.474286 -0.690998 27.955431 243 L 21 0.46000 0.46000 "AMR " "H6 1" 1 ""  <> <> 0 19 3831 <>
+  19 43 6.719794 -2.513483 27.457160 243 L 21 0.46000 0.46000 "AMR " "H6 2" 1 ""  <> <> 0 20 3832 <>
+  20 43 9.245451 1.634334 22.544889 243 L 21 0.36000 0.36000 "AMR " "H4 1" 1 ""   11.012    1.117  0 21 3833 <>
+  21 43 9.661055 3.395746 21.949320 243 L 21 0.36000 0.36000 "AMR " "H4 2" 1 ""   11.012    1.117  0 22 3834 <>
+  22 43 9.870854 6.979511 24.734145 243 L 21 0.36000 0.36000 "AMR " "H2 1" 1 ""   11.156    1.117  0 23 3835 <>
+  23 43 9.522234 6.844505 26.602363 243 L 21 0.36000 0.36000 "AMR " "H2 2" 1 ""   11.156    1.117  0 24 3836 <>
+  :::
+ } 
+ m_bond[23] { 
+  # First column is bond index #
+  i_m_from
+  i_m_to
+  i_m_order
+  :::
+  1 1 14 2
+  2 1 2 1
+  3 2 9 2
+  4 2 3 1
+  5 3 8 2
+  6 3 4 1
+  7 4 5 2
+  8 5 7 1
+  9 5 6 1
+  10 6 16 1
+  11 6 17 1
+  12 7 18 1
+  13 7 19 1
+  14 9 11 1
+  15 9 10 1
+  16 10 20 1
+  17 10 21 1
+  18 11 12 2
+  19 12 14 1
+  20 12 13 1
+  21 13 22 1
+  22 13 23 1
+  23 14 15 1
+  :::
+ } 
+} 
+
