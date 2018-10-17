@@ -52,9 +52,17 @@ class ScoreContainer:
         return self.compute_results([query]+chembl_ligs)
 
     def compute_results(self, queries):
-        self.predict_data.load_docking(queries, self.struct)
-        best_cluster, all_scores, all_rmsds = self.ps.max_posterior(queries, restart=15,
-                                                                    sampling=3)
+
+        self.predict_data.load_docking(queries, load_fp = True, load_mcss = True,
+                                       st = self.struct)
+
+        if self.settings['use_crystal_pose']:
+            crystal_lig = '{}_lig'.format(self.predict_data.lm.st)
+            if crystal_lig not in queries: queries += [crystal_lig]
+            self.predict_data.load_docking([crystal_lig], load_crystal_fp = True,
+                                           st = self.struct)
+
+        best_cluster, _, _ = self.ps.max_posterior(queries, restart=15, sampling=3)
         return best_cluster
 
     def write_results(self, cluster, fname):
