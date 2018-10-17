@@ -1,7 +1,7 @@
 import os
 import sys
 
-from containers import Dataset, LigandManager
+from containers import Protein
 from statistics import statistics
 from prob_opt import PredictStructs
 
@@ -18,8 +18,8 @@ class ScoreContainer:
         self.sp = self.settings['shared_paths']
  
         self.stats = self.init_stats()
-        self.predict_data = Dataset(self.sp, [prot], {prot:struct})
-        self.ps = PredictStructs(self.predict_data.proteins[prot], self.stats, 
+        self.predict_data = Protein(prot)
+        self.ps = PredictStructs(self.predict_data, self.stats, 
                                  self.settings['k_list'], self.settings['num_poses'],
                                  self.settings['t'])
 
@@ -34,7 +34,7 @@ class ScoreContainer:
     def init_stats(self):
         data = {}
         for protein in self.settings['stats_prots']:
-            lm = LigandManager(self.sp, protein)
+            lm = Protein(protein).lm
             ligands = lm.docked(lm.pdb)[:self.settings['num_stats_ligs']+1]
             self_docked = lm.st+'_lig'
             if self_docked in ligands:
@@ -46,15 +46,15 @@ class ScoreContainer:
 
     def compute_results_chembl(self, query):
         assert self.settings['chembl']
-        prot = self.predict_data.proteins[self.prot]
-        chembl_ligs = prot.lm.get_helpers(query, self.settings['chembl_file'],
+        chembl_ligs = self.predict_data.lm.get_helpers(query, self.settings['chembl_file'],
                                           num=self.settings['num_pred_chembl'],
                                           struct=self.struct)
         return self.compute_results([query]+chembl_ligs)
 
     def compute_results(self, queries):
-        self.predict_data.load({self.prot: queries},{self.prot: [self.struct]})
-        best_cluster, all_scores, all_rmsds = self.ps.max_posterior(queries, restart=15, sampling=3)
+        self.predict_data.load_docking(queries, self.struct)
+        best_cluster, all_scores, all_rmsds = self.ps.max_posterior(queries, restart=15,
+                                                                    sampling=3)
         return best_cluster
 
     def write_results(self, cluster, fname):

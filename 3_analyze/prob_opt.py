@@ -24,7 +24,8 @@ class PredictStructs:
             opt = self._anneal_cluster
 
         initial_cluster = {l:0 for l in ligands}
-        max_sc, best_cluster, all_scores, all_rmsds = opt(initial_cluster, sampling=sampling, en_landscape=en_landscape)
+        max_sc, best_cluster, all_scores, all_rmsds = opt(initial_cluster, sampling=sampling,
+                                                          en_landscape=en_landscape)
 
         if verbose:
             print('cluster -1, score {}'.format(max_sc))
@@ -34,7 +35,8 @@ class PredictStructs:
             for l in ligands:
                 rand_cluster[l] = np.random.randint(self._num_poses(l))
 
-            new_sc, new_cluster, scores, rmsds = opt(rand_cluster,sampling=sampling, en_landscape=en_landscape)
+            new_sc, new_cluster, scores, rmsds = opt(rand_cluster,sampling=sampling,
+                                                     en_landscape=en_landscape)
             all_scores.extend(scores)
             all_rmsds.extend(rmsds)
 
