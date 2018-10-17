@@ -23,16 +23,8 @@ class Pose:
         self.rmsd = rmsd
         self.gscore = gscore
         self.emodel = emodel
-        self.fp_raw = fp
         self.rank = rank
-
         self.fp = fp
-
-    def weight_fp(self, w):
-        self.fp = {}
-        for (i, r), sc in self.fp_raw.items():
-            if i in w and w[i] != 0:
-                self.fp[(i,r)] = sc*w[i]
 
 class Ligand:
     """
@@ -249,13 +241,3 @@ class Dataset:
         for p, l_list in ligs.items():
             for st in structs.get(p, [None]):
                 dock = self.proteins[p].load(l_list, st, load_fp, load_crystal, load_mcss)
-
-    def assign_weights(self, w):
-        for p_name, p in self.proteins.items():
-            for st_name, st in p.docking.items():
-                for l_name, l in st.ligands.items():
-                    for pose in l.poses:
-                        pose.weight_fp(w)
-            for l_name, l in p.true.items():
-                for pose in l.poses:
-                    pose.weight_fp(w)
