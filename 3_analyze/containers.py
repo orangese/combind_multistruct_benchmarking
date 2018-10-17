@@ -58,7 +58,6 @@ class Ligand:
         self.crystal_fp_path = '{}/{}.fp'.format(fp_dir, ligand)
 
         self.poses = None
-        self.crystal_pose = None
 
     def load_poses(self, load_fp):
         gscores, emodels, rmsds = parse_glide_output(self.glide_path)
@@ -75,13 +74,13 @@ class Ligand:
         assert gscores == sorted(gscores), \
                'Glide scores are not correctly ordered for {}'.format(self.glide_path)
 
-        self.poses = [Pose(rmsds[i], gscores[i], emodels[i], fps.get(i, {}), i)
+        self.poses = [Pose(rmsds[i], gscores[i], emodels[i], fps.get(i, {}))
                       for i in range(len(gscores))]
 
     def load_crystal_pose(self):
         try:
             fps = parse_fp_file(self.crystal_fp_path)
-            self.crystal_pose = Pose(0, 0, 0, fps[0], 0)
+            self.pose = Pose(0, 0, 0, fps[0])
         except IOError:
             pass
 
@@ -200,7 +199,8 @@ class Protein:
         self.lm = LigandManager(self.root, None)
         self.docking = {}
 
-    def load_docking(self, ligands, load_fp, load_crystal_fp, load_mcss, st = None):
+    def load_docking(self, ligands, load_fp=False, load_crystal_fp = False,
+                     load_mcss = False, st = None):
         if st == None: st = self.lm.st
 
         if st not in self.docking:

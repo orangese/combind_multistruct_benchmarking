@@ -8,10 +8,8 @@ feature_defs = {
     'sb1':[0],
     'sb2':[1],
     'sb3':[4],
-    #'pipi1':[5],
     'pipi':[6],
     'picat':[7,8],
-    #'c1':[10],
     'contact':[11]
 }
 
