@@ -37,7 +37,8 @@ for i, d in enumerate(datasets):
 
     os.chdir(d)
     
-    lm = LigandManager(shared_paths, d)
+    protein = Protein(shared_paths, d)
+    lm = protein.lm
 
     if '0' in todo:
         sort_downloads()

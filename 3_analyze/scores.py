@@ -47,7 +47,7 @@ class ScoreContainer:
     def compute_results_chembl(self, query):
         assert self.settings['chembl']
         prot = self.predict_data.proteins[self.prot]
-        chembl_ligs = prot.lm.get_similar(query, self.settings['chembl_file'], 
+        chembl_ligs = prot.lm.get_helpers(query, self.settings['chembl_file'],
                                           num=self.settings['num_pred_chembl'],
                                           struct=self.struct)
         return self.compute_results([query]+chembl_ligs)
@@ -70,9 +70,9 @@ class ScoreContainer:
             for lig, combind_pose in sorted(cluster.items()):
                 poses = self.predict_data.proteins[self.prot].docking[self.struct].ligands[lig].poses
                 best_rmsd = float('inf')
-                for pose in poses[:self.settings['num_poses']]:
+                for i, pose in enumerate(poses[:self.settings['num_poses']]):
                     if pose.rmsd is not None and pose.rmsd < best_rmsd:
-                        best_cluster[lig] = pose.rank
+                        best_cluster[lig] = i
                         best_rmsd = pose.rmsd
                 f.write(','.join(map(str, [lig,
                                            combind_pose, poses[combind_pose].rmsd,

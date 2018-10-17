@@ -61,8 +61,7 @@ class MCSSController:
         self.no_rmsd = set([])
 
         # File paths. Remaining '{}' is ligand pair name.
-        self.root = "{}/{}/mcss/{}".format(self.lm.sp['data'],
-                                           self.lm.prot, self.lm.sp['mcss'])
+        self.root = "{}/mcss/{}".format(self.lm.root, self.lm.sp['mcss'])
         self.atom_types = '{}/mcss/custom_types/{}.typ'.format(self.lm.sp['code'],
                                                                self.lm.sp['mcss'])
         self.mcss_file = "{}/{}_mcss.csv".format(self.root, self.lm.prot)
@@ -184,6 +183,17 @@ class MCSSController:
                 name = '{}-{}'.format(query, ligand)
             return self.MCSSs[name].n_mcss_atoms
         return sorted(ligands, key=size, reverse=True)
+
+    def get_mcss_size(self, l1, l2):
+        """
+        Returns the fraction of the smaller of the ligands
+        that composes the MCSS for l1 and l2.
+
+        l1, l2: string, ligand names
+        """
+        if l1 > l2: l1, l2 = l2, l1
+        mcss = self.MCSSs["{}-{}".format(l1, l2)]
+        return mcss.n_mcss_atoms / min(mcss.n_l1_atoms, mcss.n_l2_atoms)
 
     def load_mcss(self, temp_init_files = None):
         """
