@@ -1,5 +1,6 @@
 import os
 import sys
+from shared_paths import shared_paths
 from grouper import grouper
 
 queue = 'owners'
@@ -10,8 +11,8 @@ features = ['sb1','sb2','sb3','mcss','hbond','pipi','contact']
 
 def compute(lm, all_pairs):
     os.system('mkdir -p stats')
-    os.system('mkdir -p stats/{}'.format(lm.sp['stats']))
-    os.chdir('stats/{}'.format(lm.sp['stats']))
+    os.system('mkdir -p stats/{}'.format(shared_paths['stats']))
+    os.chdir('stats/{}'.format(shared_paths['stats']))
     
     for i,group in enumerate(grouper(group_size, all_pairs)):
         with open('stats{}.sh'.format(i),'w') as f:
@@ -21,7 +22,7 @@ def compute(lm, all_pairs):
             for pair in group:
                 if pair is None: continue
                 l1,l2 = pair
-                f.write('python {}/3_analyze/statistics.py {} {} {}\n'.format(lm.sp['code'],
+                f.write('python {}/3_analyze/statistics.py {} {} {}\n'.format(shared_paths['code'],
                     lm.prot, l1, l2))
         os.system('sbatch -p {} -t 1:00:00 stats{}.sh'.format(queue, i))
     os.chdir('../..')
@@ -38,7 +39,7 @@ def stats(lm, max_ligs = 20):
         for j in range(i+1,num_ligs):
             l1,l2 = ligs[i],ligs[j]
             for k in features:
-                if not os.path.exists('stats/{}/{}-{}-to-{}-{}.txt'.format(lm.sp['stats'],l1,l2,lm.st,k)):
+                if not os.path.exists('stats/{}/{}-{}-to-{}-{}.txt'.format(shared_paths['stats'],l1,l2,lm.st,k)):
                     print(l1,l2,k)
                     not_done.add((l1,l2))
 

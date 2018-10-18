@@ -30,9 +30,9 @@ def score_pdb(lm):
     else:
         ligands.pop(-1)
     if len(ligands) == 1: return
-    all_p = [d for d in sorted(os.listdir(lm.sp['data'])) if d[0] != '.' and d[-3:] != 'old']
+    all_p = [d for d in sorted(os.listdir(shared_paths['data'])) if d[0] != '.' and d[-3:] != 'old']
     settings['stats_prots'] = [p for p in all_p if p != lm.prot and p != 'D2R']
-    settings['shared_paths'] = lm.sp
+    settings['shared_paths'] = shared_paths
     settings['t'] = 1 / float(len(ligands)-1)
     write_settings_file('settings.py', settings)
 

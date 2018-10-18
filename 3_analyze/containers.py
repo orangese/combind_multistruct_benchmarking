@@ -26,6 +26,9 @@ from pick_helpers import load_helpers
 from chembl_props import read_duplicates
 from mcss_controller import MCSSController
 
+
+MAX_POSES = 100 # TODO: add this as a param in shared_paths
+
 class Pose:
     """
     Represents a single pose of a ligand.
@@ -65,7 +68,7 @@ class Ligand:
         fps = {}
         if load_fp:  
             fps = parse_fp_file(self.fp_path)
-            assert len(fps) >= min(100, len(rmsds)), \
+            assert len(fps) >= min(MAX_POSES, len(rmsds)), \
                    ('missing for {}'.format(self.fp_path))
  
         assert len(gscores) == len(rmsds) == len(emodels), \
@@ -80,7 +83,7 @@ class Ligand:
     def load_crystal_pose(self):
         try:
             fps = parse_fp_file(self.crystal_fp_path)
-            self.pose = Pose(0, 0, 0, fps[0])
+            self.poses = [Pose(0, 0, 0, fps[0])]
         except IOError:
             pass
 
@@ -116,10 +119,11 @@ class LigandManager:
 
     Parameterized by (protein).
     """
-    def __init__(self, root, struct = None):
+    def __init__(self, protein, root, struct = None):
         """
         root (string): Path to protein's data directory.
         """
+        self.protein = protein
         self.root = root
         
         # Initialize ligand info.
@@ -140,9 +144,12 @@ class LigandManager:
 
     def docked(self, ligands, st=None):
         if st == None: st = self.st
-        return [l for l in ligands
-                if os.path.exists(Ligand(Docking(self.root, st).dock_dir,
-                                         '', ligand, st).glide_path)]
+        return [ligand for ligand in ligands
+                if os.path.exists("{}/{}-to-{}_pv.maegz".format(
+                                  Ligand(Docking(self.root, st).dock_dir,
+                                         '', ligand, st).glide_path,
+                                  ligand, st
+                                  ))]
 
     def prepped(self):
         ligdir = '{}/ligands/prepared_ligands'.format(self.root)
@@ -196,7 +203,7 @@ class Protein:
     """
     def __init__(self, protein):
         self.root = "{}/{}".format(shared_paths['data'], protein)
-        self.lm = LigandManager(self.root, None)
+        self.lm = LigandManager(protein, self.root, None)
         self.docking = {}
 
     def load_docking(self, ligands, load_fp=False, load_crystal_fp = False,
@@ -208,4 +215,4 @@ class Protein:
         self.docking[st].load(ligands, load_fp, load_crystal_fp)
 
         if load_mcss:
-            self.lm.mcss.load_rmsds(ligands, 100)
+            self.lm.mcss.load_rmsds(ligands, MAX_POSES)

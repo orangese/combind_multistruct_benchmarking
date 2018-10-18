@@ -1,6 +1,7 @@
 import os
 import sys
 from grouper import grouper
+from shared_paths import shared_paths
 
 XGLIDE_IN = '''GRIDFILE   ../../grids/{}/{}.zip
 LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
@@ -126,7 +127,7 @@ def dock(lm, chembl=None, maxnum=30, mode = 'confgen'):
     if lm.st is None: return
     
     if mode == 'confgen':
-        docking = lm.sp['docking']
+        docking = shared_paths['docking']
     elif mode == 'inplace':
         docking = 'inplace'
     elif mode == 'mininplace':

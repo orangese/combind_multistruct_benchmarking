@@ -1,11 +1,12 @@
 from schrodinger.structure import StructureReader
+from shared_paths import shared_paths
 import os
 
 def check_docked_ligands(lm):
     for ligand in lm.docked(lm.all_ligs):
         prepared = "{0:}/ligands/prepared_ligands/{1:}/{1:}.mae".format(lm.root, ligand)
         docked = "{0:}/docking/{1:}/{2:}-to-{3:}/{2:}-to-{3:}_pv.maegz".format(lm.root,
-                                                                               lm.sp['docking'],
+                                                                               shared_paths['docking'],
                                                                                ligand,
                                                                                lm.st)
         

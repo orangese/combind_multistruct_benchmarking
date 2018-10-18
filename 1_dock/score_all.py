@@ -16,9 +16,9 @@ def write_settings_file(out_path, settings):
             f.write('{}={}\n'.format(varname, var))
 
 def score(lm, helpers, settings, subdir):
-    all_p = [d for d in sorted(os.listdir(lm.sp['data'])) if d[0] != '.' and d[-3:] != 'old']
+    all_p = [d for d in sorted(os.listdir(shared_paths['data'])) if d[0] != '.' and d[-3:] != 'old']
     settings['stats_prots'] = [p for p in all_p if p != lm.prot and p != 'D2R']
-    settings['shared_paths'] = lm.sp
+    settings['shared_paths'] = shared_paths
     os.system('mkdir -p {}'.format(subdir))
     os.chdir(subdir)
     write_settings_file('settings.py', settings)

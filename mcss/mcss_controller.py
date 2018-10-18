@@ -61,18 +61,18 @@ class MCSSController:
         self.no_rmsd = set([])
 
         # File paths. Remaining '{}' is ligand pair name.
-        self.root = "{}/mcss/{}".format(self.lm.root, self.lm.sp['mcss'])
-        self.atom_types = '{}/mcss/custom_types/{}.typ'.format(self.lm.sp['code'],
-                                                               self.lm.sp['mcss'])
-        self.mcss_file = "{}/{}_mcss.csv".format(self.root, self.lm.prot)
+        self.root = "{}/mcss/{}".format(self.lm.root, shared_paths['mcss'])
+        self.atom_types = '{}/mcss/custom_types/{}.typ'.format(shared_paths['code'],
+                                                               shared_paths['mcss'])
+        self.mcss_file = "{}/{}_mcss.csv".format(self.root, self.lm.protein)
         self.init_file = "{}/{}.init.csv".format(self.root, '{}')
 
         self.rmsd_file = "{}/{}-{}-{}.csv".format(self.root, '{}',
-                                                  self.lm.st, self.lm.sp['docking'])
+                                                  self.lm.st, shared_paths['docking'])
 
-        self.lig_template = '{0:}/{1:}/ligands/prepared_ligands/{2:}/{2:}.mae'.format(self.lm.sp['data'], self.lm.prot, '{0:}')
-        self.pv_template = '{0:}/{1:}/docking/{2:}/{3:}-to-{4:}/{3:}-to-{4:}_pv.maegz'.format(self.lm.sp['data'], self.lm.prot,
-                                                                                              self.lm.sp['docking'], '{0:}', self.lm.st)
+        self.lig_template = '{0:}/ligands/prepared_ligands/{1:}/{1:}.mae'.format(self.lm.root, '{0:}')
+        self.pv_template = '{0:}/docking/{1:}/{2:}-to-{3:}/{2:}-to-{3:}_pv.maegz'.format(self.lm.root,
+                                                                                         shared_paths['docking'], '{0:}', self.lm.st)
         self.init_command, self.rmsd_command = self._construct_commands(max_poses)
 
     def _construct_commands(self, max_poses):
@@ -83,7 +83,7 @@ class MCSSController:
             '{0:}' ligand1, '{1:}' ligand2, '{2:}' str(MCSS).
         """
         
-        init_command =  '$SCHRODINGER/run {0:}/mcss/mcss.py INIT '.format(self.lm.sp['code'])
+        init_command =  '$SCHRODINGER/run {0:}/mcss/mcss.py INIT '.format(shared_paths['code'])
         init_command += '{0:} {1:} ' # ligand names
         init_command += self.lig_template.format('{0:}') +' ' # l1_path
         init_command += self.lig_template.format('{1:}') +' ' # l2_path
@@ -91,7 +91,7 @@ class MCSSController:
         init_command += self.atom_types + ' '
         init_command += '\n'
         
-        rmsd_command = '$SCHRODINGER/run {0:}/mcss/mcss.py RMSD '.format(self.lm.sp['code'])
+        rmsd_command = '$SCHRODINGER/run {0:}/mcss/mcss.py RMSD '.format(shared_paths['code'])
         rmsd_command += '{0:} {1:} ' # ligand names
         rmsd_command += self.pv_template.format('{0:}')+' ' # pv1_path
         rmsd_command += self.pv_template.format('{1:}')+' ' # pv2_path
@@ -352,8 +352,8 @@ def compute_mcss(lm, pick_helpers={}, max_pdb=21, max_poses = 100, compute_rmsds
     max_pdb: int, maximum number of pdb ligands to consider
     max_poses: int, maximum number of poses for which to compute rmsds
     """
-    os.system('mkdir -p mcss/{}'.format(lm.sp['mcss']))
-    os.chdir('mcss/{}'.format(lm.sp['mcss']))
+    os.system('mkdir -p mcss/{}'.format(shared_paths['mcss']))
+    os.chdir('mcss/{}'.format(shared_paths['mcss']))
     
     controller = MCSSController(lm, max_pdb, max_poses)
     controller.collate_mcss()
