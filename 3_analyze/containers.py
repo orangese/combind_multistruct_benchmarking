@@ -55,7 +55,7 @@ class Ligand:
 
     Parameterized by (protein, structure, ligand).
     """
-    def __init__(self, dock_dir, fp_dir, ligand, struct):
+    def __init__(self, ligand, dock_dir, fp_dir, struct):
         self.glide_path = '{}/{}-to-{}'.format(dock_dir, ligand, struct)
         self.fp_path = '{}/{}-to-{}.fp'.format(fp_dir, ligand, struct)
         self.crystal_fp_path = '{}/{}.fp'.format(fp_dir, ligand)
@@ -105,10 +105,10 @@ class Docking:
     def load(self, ligands, load_fp, load_crystal_fp):
         for ligand in ligands:
             pair = '{}-to-{}'.format(ligand, self.struct)
-            self.ligands[l] = Ligand(ligand, self.dock_dir, self.ifp_dir, self.struct)
-            self.ligands[l].load_poses(load_fp)
-            if load_crystal_fp: self.ligands[l].load_crystal_pose()
-            self.num_poses[l] = len(self.ligands[l].poses)
+            self.ligands[ligand] = Ligand(ligand, self.dock_dir, self.ifp_dir, self.struct)
+            self.ligands[ligand].load_poses(load_fp)
+            if load_crystal_fp: self.ligands[ligand].load_crystal_pose()
+            self.num_poses[ligand] = len(self.ligands[ligand].poses)
 
 class LigandManager:
     """
@@ -146,8 +146,8 @@ class LigandManager:
         if st == None: st = self.st
         return [ligand for ligand in ligands
                 if os.path.exists("{}/{}-to-{}_pv.maegz".format(
-                                  Ligand(Docking(self.root, st).dock_dir,
-                                         '', ligand, st).glide_path,
+                                  Ligand(ligand, Docking(self.root, st).dock_dir,
+                                         '', st).glide_path,
                                   ligand, st
                                   ))]
 

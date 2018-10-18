@@ -26,41 +26,24 @@ def parse_fp_file(fp_file):
         return {}
     return ifps
 
-def parse_glide_output(g_dir):
-    if not os.path.exists(g_dir):
-        #print 'did not dock', g_dir
-        return [], []
-    os.chdir(g_dir)
-    pair = g_dir.split('/')[-1]
-    if os.path.exists('{}-out.maegz'.format(pair)):
-        return parse_if_file(pair)
-    elif os.path.exists('{}_pv.maegz'.format(pair)):
-        return parse_rept_file(pair)
+def parse_glide_output(glide_dir):
+    if not os.path.exists(glide_dir):
+        return [], [], []
+    pair = glide_dir.split('/')[-1]
+    if os.path.exists('{}/{}_pv.maegz'.format(glide_dir, pair)):
+        return parse_rept_file(glide_dir, pair)
     else:
-        print('not finished', g_dir)
-        return [], []
+        print('not finished', glide_dir)
+        return [], [], []
 
-def parse_if_file(pair):
-    gscores = []
-    rmsds = []
-    try:
-        with open('{}.rmsd'.format(pair)) as rmsd_f:
-            for line in rmsd_f:
-                pnum, rmsd = line.strip().split(' ')
-                rmsds.append(float(rmsd))
-        with open('{}_workdir/scoring_dir/report.csv'.format(pair)) as g_f:
-            for i, line in enumerate(g_f):
-                if i == 0: continue
-                gscores.append(float(line.strip().split(',')[2])) # ifd score (protein and ligand)
-    except:
-        return [], []
-    return gscores, rmsds
-
-def parse_rept_file(pair):
-    gscores, emodels, rmsds = [], [], []
+def parse_rept_file(glide_dir, pair):
     lig, prot = pair.split('-to-')
-    with open('{}.rept'.format(pair)) as f:
-        for line in f:
+    rept_file = '{}/{}.rept'.format(glide_dir, pair)
+    rmsd_file = '{}/rmsd.csv'.format(glide_dir, pair)
+
+    gscores, emodels, rmsds = [], [], []
+    with open(rept_file) as fp:
+        for line in fp:
             line = line.strip().split()
             if len(line) <= 1 or (line[1] != lig and line[1] != lig+'_out' and line[1] != '1'): continue
             rank, lig_name, lig_index, score = line[:4]
@@ -71,14 +54,12 @@ def parse_rept_file(pair):
             gscores.append(float(score))
             emodels.append(float(emodel))
             
-    if not os.path.exists('rmsd.csv'):
+    if not os.path.exists(rmsd_file):
         return gscores, emodels, [None]*len(gscores)
-    with open('rmsd.csv') as f:
-        for line in f:
+    with open(rmsd_file) as fp:
+        for line in fp:
             line = line.strip().split(',')
             if line[3] == '"RMSD"': continue
-            #print line
             rmsds.append(float(line[3][1:-1]))
 
     return gscores, emodels, rmsds
-
