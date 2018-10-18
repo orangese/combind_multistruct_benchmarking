@@ -19,7 +19,7 @@ from pick_helpers import pick_helpers, load_helpers
 from score import score
 
 from verify_docking import check_docked_ligands
-from containers import LigandManager
+from containers import Protein
 
 os.chdir(shared_paths['data'])
 
@@ -37,7 +37,7 @@ for i, d in enumerate(datasets):
 
     os.chdir(d)
     
-    protein = Protein(shared_paths, d)
+    protein = Protein(d)
     lm = protein.lm
 
     if '0' in todo:
