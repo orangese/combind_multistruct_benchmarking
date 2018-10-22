@@ -69,34 +69,34 @@ as an argument, as this is unncessary and confusing.
 
 ## Evaluation Strategy Overview
 
-- Pose Generation
+- __Pose Generation__
   * Fraction of ligands where top pose is correct?
   * Fraction of ligands with any correct pose?
-  - Protein Preparation
+  - __Protein Preparation__
     * Are proteins properly aligned?
     * Do proteins have reasonable protonation states?
-  - Ligand Preparation
+  - __Ligand Preparation__
     * Do ligands get reasonable protonation states?
-  - Docking
+  - __Docking__
 
-- ComBind Rescoring
+- __ComBind Rescoring__
   * Performance improvement over Glide
-  - Scoring Function
+  - __Scoring Function__
     * How well does the overall scoring function separate native and decoy poses?
     * ... pose pairs? (More tractable to quickly evaluate)
-    - Fingerprinting
+    - __Fingerprinting__
       * Are all observed interactions correctly detected?
-    - Fingerprint Similarity Metric
+    - __Fingerprint Similarity Metric__
       * Are energies similar when merged across different normalization factors
         as compared to when computed for a single value of the normalization factor?
-    - MCSS
+    - __MCSS__
       * How many MCSS do we get?
       * Do substructures tend to overlap in correct poses?
       * Do cases where they don't seem reasonable?
       * How well are native and decoy poses seperated?
-    - Statistics Computation
+    - __Statistics Computation__
       * Are the results smooth?
       * But not too biased?
       * Monotonic?
-  - Optimization
+  - __Optimization__
     * Do we reach the global optima?
