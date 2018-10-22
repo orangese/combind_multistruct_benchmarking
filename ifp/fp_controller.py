@@ -48,3 +48,29 @@ def compute_fp(lm):
     structure_fp(lm) # Should move this so it is called by itself.
     get_fp(lm, unfinished)
     os.chdir('../..')
+
+def parse_fp_file(fp_file):
+    ifps = {}
+    try:
+        with open(fp_file) as f:
+            pose_num = 0
+            for line in f:
+                if line.strip() == '': continue
+                if line[:4] == 'Pose':
+                    pose_num = int(line.strip().split(' ')[1])
+                    ifps[pose_num] = {}
+                    continue
+                sc_key, sc = line.strip().split('=')
+                i,r,ss = sc_key.split('-')
+                i = int(i)
+                sc = float(sc)
+                prev_sc = ifps[(i, r)] if (i,r) in ifps[pose_num] else 0
+                ifps[pose_num][(i,r)] = max(prev_sc, sc)
+
+    except Exception as e:
+        print(e)
+        print(fp_file, 'fp not found')
+    if len(ifps) == 0:
+        print('check', fp_file)
+        return {}
+    return ifps

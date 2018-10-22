@@ -25,3 +25,8 @@ In addition to being used as a feature, the MCSSs are also used to determine whi
 
 3. There are lots of pose pairs, making runtimes slow.
 
+## Ideas for Improvement
+
+1. Refine custom atom typing scheme
+2. Reward larger substructures
+3. Try shape-based procedure

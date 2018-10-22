@@ -20,7 +20,7 @@ import sys
 import numpy as np
 
 from shared_paths import shared_paths
-from parse_files import parse_glide_output, parse_fp_file
+from ifp_controller import parse_fp_file
 from parse_chembl import load_chembl_proc
 from pick_helpers import load_helpers
 from chembl_props import read_duplicates
@@ -86,6 +86,45 @@ class Ligand:
             self.poses = [Pose(0, 0, 0, fps[0])]
         except IOError:
             pass
+
+    def parse_glide_output(self):
+        if not os.path.exists(self.glide_path):
+            return [], [], []
+        pair = self.glide_path.split('/')[-1]
+        if os.path.exists('{}/{}_pv.maegz'.format(self.glide_path, pair)):
+            return self.parse_rept_file(pair)
+        else:
+            print('not finished', self.glide_path)
+            return [], [], []
+
+    def parse_rept_file(self, pair):
+        lig, prot = pair.split('-to-')
+        rept_file = '{}/{}.rept'.format(self.glide_path, pair)
+        rmsd_file = '{}/rmsd.csv'.format(self.glide_path, pair)
+        
+        gscores, emodels, rmsds = [], [], []
+        with open(rept_file) as fp:
+            for line in fp:
+                line = line.strip().split()
+                if len(line) <= 1 or (line[1] != lig and line[1] != lig+'_out' and line[1] != '1'): continue
+                rank, lig_name, lig_index, score = line[:4]
+                emodel = line[13]
+                if line[1] == '1':
+                    rank, lig_index, score = line[:3]
+                    emodel = line[12]
+                gscores.append(float(score))
+                emodels.append(float(emodel))
+            
+        if not os.path.exists(rmsd_file):
+            return gscores, emodels, [None]*len(gscores)
+
+        with open(rmsd_file) as fp:
+            for line in fp:
+                line = line.strip().split(',')
+                if line[3] == '"RMSD"': continue
+                rmsds.append(float(line[3][1:-1]))
+
+        return gscores, emodels, rmsds
 
 class Docking:
     """
