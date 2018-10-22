@@ -36,13 +36,13 @@ as an argument, as this is unncessary and confusing.
    
    __Output:__ Docking results (a set of poses) for each ligand (cross-)docked into each receptor.
 
-2a. Fingerprinting
+2. (a) Fingerprinting
    
    __Input:__ Docking results and crystal structures.
    
    __Output:__ An interaction fingerprint for each pose.
 
-2b. Maximum Common Substructure (mcss) Computation
+2. (b) Maximum Common Substructure (mcss) Computation
 
    __Input:__ Docking results.
    
@@ -65,3 +65,38 @@ as an argument, as this is unncessary and confusing.
    __Input:__ Scores, fingerprints, and rmsds for all poses for all ligands.
    
    __Output:__ Many tools to visualize our performance and track our progress.
+
+
+## Evaluation Strategy Overview
+
+- Pose Generation
+  * Fraction of ligands where top pose is correct?
+  * Fraction of ligands with any correct pose?
+  - Protein Preparation
+    * Are proteins properly aligned?
+    * Do proteins have reasonable protonation states?
+  - Ligand Preparation
+    * Do ligands get reasonable protonation states?
+  - Docking
+
+- ComBind Rescoring
+  * Performance improvement over Glide
+  - Scoring Function
+    * How well does the overall scoring function separate native and decoy poses?
+    * ... pose pairs? (More tractable to quickly evaluate)
+    - Fingerprinting
+      * Are all observed interactions correctly detected?
+    - Fingerprint Similarity Metric
+      * Are energies similar when merged across different normalization factors
+        as compared to when computed for a single value of the normalization factor?
+    - MCSS
+      * How many MCSS do we get?
+      * Do substructures tend to overlap in correct poses?
+      * Do cases where they don't seem reasonable?
+      * How well are native and decoy poses seperated?
+    - Statistics Computation
+      * Are the results smooth?
+      * But not too biased?
+      * Monotonic?
+  - Optimization
+    * Do we reach the global optima?

@@ -341,7 +341,7 @@ def verify_mcss(lm, max_pdb=21, max_poses = 100):
     controller = MCSSController(lm, max_pdb, max_poses)
     controller.verify_rmsds(None, max_poses)
 
-def compute_mcss(lm, pick_helpers={}, max_pdb=21, max_poses = 100, compute_rmsds = True):
+def compute_mcss(lm, pick_helpers={}, max_pdb=31, max_poses = 100, compute_rmsds = True):
     """
     Compute unfinished MCSS features. See above class description for more detail.
 
