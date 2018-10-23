@@ -126,6 +126,7 @@ if __name__ == '__main__':
             fpath = '{}/{}-to-{}.sc'.format(sc.root, query, struct)
             sc.write_results(combind_cluster, fpath)
     else:
+        # This needs to be before compute results as therein queries is mutated
+        fpath = '{}/{}.sc'.format(sc.root, 'pdb' if len(queries) > 1 else queries[0])
         combind_cluster = sc.compute_results(queries)
-        fpath = '{}/pdb.sc'.format(sc.root)
         sc.write_results(combind_cluster, fpath)
