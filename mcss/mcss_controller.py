@@ -59,6 +59,7 @@ class MCSSController:
         # Incomplete pairs
         self.no_mcss = set([])
         self.no_rmsd = set([])
+        self.no_mcss_small = set([])
 
         # File paths. Remaining '{}' is ligand pair name.
         self.root = "{}/mcss/{}".format(self.lm.root, shared_paths['mcss'])
@@ -252,7 +253,7 @@ class MCSSController:
         """
         for i, l1 in enumerate(self.pdb):
             for l2 in self.pdb[i+1:]:
-                self._add(l1, l2, compute_rmsds)
+                self._add(l1, l2, compute_rmsds, compute_small = True)
 
     def add_pdb_to_allchembl(self):
         """
@@ -283,7 +284,7 @@ class MCSSController:
                         assert l2 != '' # switch to continue if this happens
                         self._add(l1, l2, compute_rmsds)
 
-    def _add(self, l1, l2, compute_rmsd):
+    def _add(self, l1, l2, compute_rmsd, compute_small = False):
         """
         Check if pair has been computed, if not add it.
 
@@ -300,25 +301,37 @@ class MCSSController:
               and self.MCSSs[name].is_valid()
               and not os.path.exists(self.rmsd_file.format(name))):
             self.no_rmsd.add((l1, l2))
+        elif (compute_small
+              and not self.MCSSs[name].n_mcss_atoms
+              and min(self.MCSSs[name].n_l1_atoms, self.MCSSs[name].n_l2_atoms) < 25
+              and not self.MCSSs[name].tried_small):
+            self.no_mcss_small.add((l1, l2))
 
     # Methods to execute computation
     def execute(self):
         """
         Execute all incomplete computations.
         """
-        if len(self.no_mcss) > 0:
+        if self.no_mcss:
             print(len(self.no_mcss), 'mcss init pairs left')
             self._execute_init()
-        if len(self.no_rmsd) > 0:
+        if self.no_rmsd:
             print(len(self.no_rmsd), 'mcss rmsd pairs left')
             self._execute_rmsd()
+        if self.no_mcss_small:
+            print(len(self.no_mcss_small), 'small mcss init pairs left')
+            self._execute_init(small = True)
 
-    def _execute_init(self):
-        for i, pairs in enumerate(grouper(self.INIT_GROUP_SIZE, self.no_mcss)):
+    def _execute_init(self, small = False):
+        for i, pairs in enumerate(grouper(self.INIT_GROUP_SIZE,
+                                          self.no_mcss_small if small else self.no_mcss)):
             script = 'init{}.sh'.format(i)
             contents = 'export SCHRODINGER_CANVAS_MAX_MEM=1e+12\n'
             for l1, l2 in pairs:
                 contents += self.init_command.format(l1, l2)
+                if small:
+                    contents = contents[:-1] # remove new line
+                    contents += ' small\n'
             with open(script, 'w') as f:
                 f.write(self.TEMPLATE.format(contents))
             os.system('sbatch {}'.format(script))

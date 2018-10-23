@@ -27,7 +27,7 @@ class MCSS:
     """
     
     mcss_cmd = ("$SCHRODINGER/utilities/canvasMCS -imae {} -ocsv {}"
-                " -stop 10 -atomtype C {}")
+                " -stop {} -atomtype C {}")
     
     def __init__(self, l1, l2):
         """
@@ -46,6 +46,8 @@ class MCSS:
         self.smarts_l2 = []
         self.rmsds = {}
 
+        self.tried_small = False
+
         # Deprecated.
         self.n_mcss_bonds = 0
 
@@ -53,7 +55,7 @@ class MCSS:
         return ','.join(map(str,
             [self.l1, self.l2,
             self.n_l1_atoms, self.n_l2_atoms, self.n_mcss_atoms, self.n_mcss_bonds,
-            ';'.join(self.smarts_l1), ';'.join(self.smarts_l2)]
+            ';'.join(self.smarts_l1), ';'.join(self.smarts_l2), self.tried_small]
             ))
 
     def is_valid(self):
@@ -71,8 +73,9 @@ class MCSS:
         """
         Creates an MCSS instance from a string returned by the __str__ method.
         """
+        tok = S.strip().split(',')
         (l1, l2, n_l1_atoms, n_l2_atoms,
-         n_mcss_atoms, n_mcss_bonds, smarts_l1, smarts_l2) = S.strip().split(',')
+         n_mcss_atoms, n_mcss_bonds, smarts_l1, smarts_l2) = tok[:8]
 
         mcss = MCSS(l1, l2)
         mcss.n_l1_atoms = int(n_l1_atoms)
@@ -81,10 +84,13 @@ class MCSS:
         mcss.n_mcss_bonds = int(n_mcss_bonds)
         mcss.smarts_l1 = smarts_l1.split(';')
         mcss.smarts_l2 = smarts_l2.split(';')
+
+        tried_small = len(tok)==9 and tok[8] == 'True'
+        mcss.tried_small = tried_small
         return mcss
 
     # MCSS Computation Methods.
-    def compute_mcss(self, ligands, init_file, mcss_types_file):
+    def compute_mcss(self, ligands, init_file, mcss_types_file, small = False):
         """
         Compute the MCSS file by calling Schrodinger canvasMCSS.
 
@@ -100,9 +106,11 @@ class MCSS:
         
         if os.system(self.mcss_cmd.format(structure_file,
                                           mcss_file,
+                                          5 if small else 10,
                                           mcss_types_file)):
             assert False, 'MCSS computation failed'
         self._set_mcss(mcss_file)
+        self.tried_small = small
 
         with open(init_file, 'w') as fp:
             fp.write(str(mcss)+'\n')
@@ -305,11 +313,13 @@ if __name__ == '__main__':
     from schrodinger.structure import StructureReader, StructureWriter
     mode = sys.argv[1]
     if mode == 'INIT':
-        l1, l2, l1_path, l2_path, init_file, mcss_types_file = sys.argv[2:]
+        l1, l2, l1_path, l2_path, init_file, mcss_types_file = sys.argv[2:8]
+        small = len(sys.argv) == 9
+
         mcss = MCSS(l1, l2)
         with StructureReader(l1_path) as ligand1, StructureReader(l2_path) as ligand2:
             ligands = {l1: next(ligand1), l2: next(ligand2)}
-            mcss.compute_mcss(ligands, init_file, mcss_types_file)
+            mcss.compute_mcss(ligands, init_file, mcss_types_file, small)
     elif mode == 'RMSD':
         from schrodinger.structutils.analyze import evaluate_smarts_canvas
         from schrodinger.structutils.rmsd import ConformerRmsd
