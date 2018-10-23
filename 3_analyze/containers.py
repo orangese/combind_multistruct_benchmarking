@@ -56,14 +56,15 @@ class Ligand:
     Parameterized by (protein, structure, ligand).
     """
     def __init__(self, ligand, dock_dir, fp_dir, struct):
+        self.ligand = ligand
         self.glide_path = '{}/{}-to-{}'.format(dock_dir, ligand, struct)
         self.fp_path = '{}/{}-to-{}.fp'.format(fp_dir, ligand, struct)
-        self.crystal_fp_path = '{}/{}.fp'.format(fp_dir, ligand)
+        self.crystal_fp_path = '{}/{}_struct.fp'.format(fp_dir, ligand[:4])
 
         self.poses = None
 
     def load_poses(self, load_fp):
-        gscores, emodels, rmsds = parse_glide_output(self.glide_path)
+        gscores, emodels, rmsds = self.parse_glide_output()
 
         fps = {}
         if load_fp:  
@@ -243,7 +244,8 @@ class Protein:
     def __init__(self, protein):
         self.root = "{}/{}".format(shared_paths['data'], protein)
         self.lm = LigandManager(protein, self.root, None)
-        self.docking = {}
+        # Useful to be able to reference this before loading data.
+        self.docking = {self.lm.st: Docking(self.root, self.lm.st)}
 
     def load_docking(self, ligands, load_fp=False, load_crystal_fp = False,
                      load_mcss = False, st = None):

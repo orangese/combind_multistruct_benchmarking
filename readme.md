@@ -28,8 +28,6 @@ as an argument, as this is unncessary and confusing.
 
 0. Protein and Ligand Curation and Processing
 
-   __Input:__ 
-
 1. Docking
    
    __Input:__ Ligand/receptor complexes downloaded from the Protein Data Bank and ligands from CHEMBL.

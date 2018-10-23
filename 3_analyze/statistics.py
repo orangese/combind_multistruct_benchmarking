@@ -3,7 +3,7 @@ import os
 import numpy as np
 from density_estimate import DensityEstimate
 from pairs import LigPair
-from containers import Dataset, LigandManager
+from containers import Protein
 from shared_paths import shared_paths
 
 def merge_stats(stats1, stats2):
@@ -121,11 +121,11 @@ def statistics_lig_pair(protein, ligand1, ligand2, interactions):
         return stats
     print('Computing statistics for:', protein, ligand1, ligand2)
     # Load relevant data.
-    dataset = Dataset(shared_paths, [protein])
-    dataset.load({protein: [ligand1, ligand2]},
-                 load_fp=True, load_mcss= 'mcss' in interactions)
-    lm = dataset.proteins[protein].lm
-    docking = dataset.proteins[protein].docking[lm.st]
+    prot = Protein(protein)
+    prot.load_docking([ligand1, ligand2],
+                      load_fp=True, load_mcss= 'mcss' in interactions)
+    lm = prot.lm
+    docking = prot.docking[lm.st]
     lig_pair = LigPair(docking.ligands[ligand1],
                        docking.ligands[ligand2],
                        interactions, lm.mcss if 'mcss' in interactions else None,
@@ -142,8 +142,9 @@ def statistics_lig_pair(protein, ligand1, ligand2, interactions):
 
         for k, X, w in [('native', X_native, 1), ('reference', X_ref, w_ref)]:
             domain = (0, 15) if interaction == 'mcss' else (0, 1)
+
             stats[k][interaction] = DensityEstimate(domain = domain,
-                              sd = shared_paths['stats']['stats_sd'],
+                              sd = shared_paths['stats']['stats_sd']*(domain[1]-domain[0]),
                               reflect = True)
             stats[k][interaction].fit(X)
             stats[k][interaction].write(fname.format(interaction, k))
@@ -179,10 +180,10 @@ def gscore_statistics(data):
     params = shared_paths['stats']
     for protein, ligands in data.items():
         protein_stats = {}
-        dataset = Dataset(shared_paths, [protein])
-        dataset.load({protein: ligands}, load_fp=False, load_mcss=False)
-        st = dataset.proteins[protein].lm.st
-        docking = dataset.proteins[protein].docking[st]
+        prot = Protein(protein)
+        prot.load_docking(ligands, load_fp=False, load_mcss=False)
+        st = prot.lm.st
+        docking = prot.docking[st]
         for ligand in ligands:
             # Get input data
             poses = docking.ligands[ligand].poses
@@ -229,7 +230,7 @@ if __name__ == '__main__':
                     if d[0] != '.' and d != protein]
         data = {}
         for d in datasets:
-            lm = LigandManager(shared_paths, d)
+            lm = Protein(d).lm
             data[d] = lm.docked(lm.pdb)[:shared_paths['stats']['n_ligs']+1]
             self_docked = lm.st+'_lig'
             if self_docked in data[d]:
@@ -246,14 +247,13 @@ if __name__ == '__main__':
         native.ratio(reference, prob = False).write(fname.format('pnative'))
 
     elif mode == 'fp':
-        lm = LigandManager(shared_paths, protein)
+        lm = Protein(protein).lm
         ligands = lm.docked(lm.pdb)[:shared_paths['stats']['n_ligs']+1]
         self_docked = lm.st+'_lig'
         if self_docked in ligands:
             ligands.remove(self_docked)
         else:
             ligands.pop(-1)
-
 
         interactions = ['hbond', 'hbond_donor', 'hbond_acceptor', 'mcss',
                         'contact', 'sb2', 'pipi']
