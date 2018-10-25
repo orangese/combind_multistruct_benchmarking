@@ -65,7 +65,8 @@ class MCSS:
         (It would be problematic if small MCSSs were taken into account
         because the score is based solely on RMSD).
         """
-        return 2 * self.n_mcss_atoms > min(self.n_l1_atoms, self.n_l2_atoms)
+        return (2 * self.n_mcss_atoms > min(self.n_l1_atoms, self.n_l2_atoms)
+                and self.n_mcss_atoms > 10)
     
     # Constructors
     @classmethod

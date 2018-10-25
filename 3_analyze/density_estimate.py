@@ -205,3 +205,14 @@ class DensityEstimate:
         else:
             de.fx = (self_fx + other_fx) / 2.0
         return de
+
+    def copy(self):
+        de = DensityEstimate()
+        de.points = self.points
+        de.out_of_bounds = self.out_of_bounds
+        de.sd = self.sd
+        de.n_samples = self.n_samples
+        de.reflect = self.reflect
+        de.domain = self.domain
+        de.x = np.copy(self.x)
+        de.fx = np.copy(self.fx)

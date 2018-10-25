@@ -268,5 +268,4 @@ class Protein:
         self.docking[st].load(ligands, load_fp, load_crystal)
 
         if load_mcss:
-            print(ligands)
             self.lm.mcss.load_rmsds(ligands+list(self.docking[st].ligands.keys()), MAX_POSES)
