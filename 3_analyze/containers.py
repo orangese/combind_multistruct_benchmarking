@@ -59,7 +59,8 @@ class Ligand:
         self.ligand = ligand
         self.glide_path = '{}/{}-to-{}'.format(dock_dir, ligand, struct)
         self.fp_path = '{}/{}-to-{}.fp'.format(fp_dir, ligand, struct)
-        self.crystal_fp_path = '{}/{}_struct.fp'.format(fp_dir, ligand[:4])
+        self.crystal_fp_path = '{}/{}_struct.fp'.format(fp_dir,
+                                                        ligand.replace('_crystal_lig', ''))
 
         self.poses = None
 
@@ -142,12 +143,14 @@ class Docking:
         self.ligands = {}
         self.num_poses = {}
 
-    def load(self, ligands, load_fp, load_crystal_fp):
+    def load(self, ligands, load_fp, load_crystal):
         for ligand in ligands:
-            pair = '{}-to-{}'.format(ligand, self.struct)
+            pair = '{}-to-{}'.format(ligand.replace('_crystal', ''), self.struct)
             self.ligands[ligand] = Ligand(ligand, self.dock_dir, self.ifp_dir, self.struct)
-            self.ligands[ligand].load_poses(load_fp)
-            if load_crystal_fp: self.ligands[ligand].load_crystal_pose()
+            if load_crystal:
+                self.ligands[ligand].load_crystal_pose()
+            else:
+                self.ligands[ligand].load_poses(load_fp)
             self.num_poses[ligand] = len(self.ligands[ligand].poses)
 
 class LigandManager:
@@ -247,13 +250,23 @@ class Protein:
         # Useful to be able to reference this before loading data.
         self.docking = {self.lm.st: Docking(self.root, self.lm.st)}
 
-    def load_docking(self, ligands, load_fp=False, load_crystal_fp = False,
+    def load_docking(self, ligands, load_fp=False, load_crystal = False,
                      load_mcss = False, st = None):
+        """
+        Should eventually phase out the load_crystal keyword and just
+        rely on naming. There is something nice about the redundancy though.
+        """
+        if load_crystal:
+            assert all('crystal' in ligand for ligand in ligands)
+        else:
+            assert not any('crystal' in ligand for ligand in ligands)
+
         if st == None: st = self.lm.st
 
         if st not in self.docking:
             self.docking[st] = Docking(self.root, st)
-        self.docking[st].load(ligands, load_fp, load_crystal_fp)
+        self.docking[st].load(ligands, load_fp, load_crystal)
 
         if load_mcss:
-            self.lm.mcss.load_rmsds(ligands, MAX_POSES)
+            print(ligands)
+            self.lm.mcss.load_rmsds(ligands+list(self.docking[st].ligands.keys()), MAX_POSES)

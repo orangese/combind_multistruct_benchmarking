@@ -5,15 +5,15 @@ from containers import Protein
 
 max_ligands = 20
 
-output_dir = 'scores/pdb/'
+output_dir = 'scores/pdb_crystal_only_mcss/'
 cmd = '$SCHRODINGER/run {0:}/3_analyze/scores.py {1:} {1:} {1:}'.format(shared_paths['code'], '{}')
 
 settings = {
-    'k_list' : ['mcss', 'sb2', 'pipi', 'contact', 'hbond_donor', 'hbond_acceptor'],
+    'k_list' : ['mcss'],
     'num_stats_ligs' : 10,
     'num_poses' : 100,
     'chembl': False,
-    'use_crystal_pose': False
+    'use_crystal_pose': True
 }
 
 def write_settings_file(out_path, settings):
@@ -34,7 +34,7 @@ def score_pdb(lm):
     all_p = [d for d in sorted(os.listdir(shared_paths['data'])) if d[0] != '.' and d[-3:] != 'old']
     settings['stats_prots'] = [p for p in all_p if p != lm.protein and p != 'D2R']
     settings['shared_paths'] = shared_paths
-    settings['t'] = 1 / float(len(ligands)-1)
+    settings['t'] = 0.1
     write_settings_file('settings.py', settings)
 
     with open('pdb.sh','w') as f:
