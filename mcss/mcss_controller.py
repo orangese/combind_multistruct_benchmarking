@@ -47,7 +47,7 @@ class MCSSController:
                 ).format(QUEUE, '{}')
 
 
-    def __init__(self, lm, max_pdb=21, max_poses=100):
+    def __init__(self, lm, max_pdb=31, max_poses=100):
         self.lm = lm
         self.max_pdb = max_pdb
 
@@ -72,6 +72,7 @@ class MCSSController:
                                                   self.lm.st, shared_paths['docking'])
 
         self.lig_template = '{0:}/ligands/prepared_ligands/{1:}/{1:}.mae'.format(self.lm.root, '{0:}')
+        self.crystal_template = '{0:}/structures/ligands/{1:}.mae'.format(self.lm.root, '{0:}')
         self.pv_template = '{0:}/docking/{1:}/{2:}-to-{3:}/{2:}-to-{3:}_pv.maegz'.format(self.lm.root,
                                                                                          shared_paths['docking'], '{0:}', self.lm.st)
         self.init_command, self.rmsd_command = self._construct_commands(max_poses)
@@ -81,27 +82,24 @@ class MCSSController:
         Construct commands to run MCSS computation.
         
         Commands contain remaining substitutions to handle ligand specific info:
-            '{0:}' ligand1, '{1:}' ligand2, '{2:}' str(MCSS).
+            '{0:},{1:}' ligand1,ligand2, '{2:},{3:}' poses1,poses2 '{4:}' str(MCSS).
         """
         
         init_command =  '$SCHRODINGER/run {0:}/mcss/mcss.py INIT '.format(shared_paths['code'])
-        init_command += '{0:} {1:} ' # ligand names
-        init_command += self.lig_template.format('{0:}') +' ' # l1_path
-        init_command += self.lig_template.format('{1:}') +' ' # l2_path
+        init_command += '{0:} {1:} {2:} {3:} ' # ligand names
         init_command += self.init_file.format('{0:}-{1:}') + ' '
         init_command += self.atom_types + ' '
         init_command += '\n'
         
         rmsd_command = '$SCHRODINGER/run {0:}/mcss/mcss.py RMSD '.format(shared_paths['code'])
-        rmsd_command += '{0:} {1:} ' # ligand names
-        rmsd_command += self.pv_template.format('{0:}')+' ' # pv1_path
-        rmsd_command += self.pv_template.format('{1:}')+' ' # pv2_path
+        rmsd_command += '{0:} {1:} {2:} {3:} '
         rmsd_command += self.init_file.format('{0:}-{1:}') + ' '
         rmsd_command += self.atom_types + ' '
         
         rmsd_command += self.rmsd_file.format('{0:}-{1:}')
         rmsd_command += " {} ".format(max_poses)
-        rmsd_command += ' "{2:}"\n'
+        rmsd_command += ' "{4:}"\n'
+
         return init_command, rmsd_command
 
     # Primary public methods
@@ -255,6 +253,12 @@ class MCSSController:
             for l2 in self.pdb[i+1:]:
                 self._add(l1, l2, compute_rmsds, compute_small = True)
 
+    def add_crystal(self):
+        crystal_lig = self.lm.st + '_crystal_lig'
+        for ligand in self.pdb:
+            if ligand == self.lm.st + '_lig': continue 
+            self._add(crystal_lig, ligand, True)
+
     def add_pdb_to_allchembl(self):
         """
         Add all pdb - chembl ligand pairs.
@@ -297,7 +301,8 @@ class MCSSController:
         if name not in self.MCSSs:
             self.no_mcss.add((l1,l2))
         elif (    compute_rmsd
-              and l1 in self.docked and l2 in self.docked
+              and (l1 in self.docked or 'crystal' in l1)
+              and (l2 in self.docked or 'crsytal' in l2)
               and self.MCSSs[name].is_valid()
               and not os.path.exists(self.rmsd_file.format(name))):
             self.no_rmsd.add((l1, l2))
@@ -328,7 +333,9 @@ class MCSSController:
             script = 'init{}.sh'.format(i)
             contents = 'export SCHRODINGER_CANVAS_MAX_MEM=1e+12\n'
             for l1, l2 in pairs:
-                contents += self.init_command.format(l1, l2)
+                poses1 = self.lig_template.format(l1.replace('_crystal', ''))
+                poses2 = self.lig_template.format(l2.replace('_crystal', ''))
+                contents += self.init_command.format(l1, l2, poses1, poses2)
                 if small:
                     contents = contents[:-1] # remove new line
                     contents += ' small\n'
@@ -342,12 +349,18 @@ class MCSSController:
             contents = ''
             for l1, l2 in pairs:
                 mcss = self.MCSSs["{}-{}".format(l1, l2)]
-                contents += self.rmsd_command.format(l1, l2, str(mcss))
+                poses1 = (self.crystal_template.format(l1.replace('_crystal', ''))
+                          if 'crystal' in l1 else
+                          self.pv_template.format(l1))
+                poses2 = (self.crystal_template.format(l2.replace('_crystal', ''))
+                          if 'crystal' in l2 else
+                          self.pv_template.format(l2))
+                contents += self.rmsd_command.format(l1, l2, poses1, poses2, str(mcss))
             with open(script, 'w') as f:
                 f.write(self.TEMPLATE.format(contents))
             os.system('sbatch {}'.format(script))
 
-def verify_mcss(lm, max_pdb=21, max_poses = 100):
+def verify_mcss(lm, max_pdb=31, max_poses = 100):
     """
     Verify that all MCSS RMSD files are valid. 
     """
@@ -371,6 +384,7 @@ def compute_mcss(lm, pick_helpers={}, max_pdb=31, max_poses = 100, compute_rmsds
     controller = MCSSController(lm, max_pdb, max_poses)
     controller.collate_mcss()
     controller.add_pdb_to_pdb(compute_rmsds)
+    controller.add_crystal()
     controller.add_pdb_to_allchembl()
     controller.add_pick_helpers(pick_helpers, compute_rmsds)
     controller.execute()

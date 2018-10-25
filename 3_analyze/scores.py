@@ -81,9 +81,11 @@ class ScoreContainer:
                                        st = self.struct)
 
         if 'use_crystal_pose' in self.settings and self.settings['use_crystal_pose']:
-            crystal_lig = '{}_lig'.format(self.predict_data.lm.st)
+            crystal_lig = '{}_crystal_lig'.format(self.predict_data.lm.st)
             if crystal_lig not in queries: queries += [crystal_lig]
-            self.predict_data.load_docking([crystal_lig], load_crystal_fp = True,
+            self.predict_data.load_docking([crystal_lig], load_crystal = True,
+                                           load_fp = True,
+                                           load_mcss = True,
                                            st = self.struct)
 
         best_cluster, _, _ = self.ps.max_posterior(queries, restart=15, sampling=3)
@@ -126,6 +128,7 @@ if __name__ == '__main__':
             fpath = '{}/{}-to-{}.sc'.format(sc.root, query, struct)
             sc.write_results(combind_cluster, fpath)
     else:
+        # This needs to be before compute results as therein queries is mutated
+        fpath = '{}/{}.sc'.format(sc.root, 'pdb' if len(queries) > 1 else queries[0])
         combind_cluster = sc.compute_results(queries)
-        fpath = '{}/pdb.sc'.format(sc.root)
         sc.write_results(combind_cluster, fpath)

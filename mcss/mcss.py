@@ -176,8 +176,8 @@ class MCSS:
                 print(self.name, 'MCSS size dencreased by one.')
         
         self.n_mcss_atoms = n_mcss_atoms
-        self.smarts_l1 += ligs[mcss.l1]
-        self.smarts_l2 += ligs[mcss.l2]
+        self.smarts_l1 += ligs[mcss.l1.replace('_crystal', '')]
+        self.smarts_l2 += ligs[mcss.l2.replace('_crystal', '')]
 
     # RMSD Methods.
     def load_rmsds(self, rmsd_file, poseviewer_paths, max_poses):
@@ -233,8 +233,10 @@ class MCSS:
         Computes the RMSD between MCSSs for all pairs of poses.
 
         """
-        pv1 = list(StructureReader(poseviewer_paths[self.l1]))[1:]
-        pv2 = list(StructureReader(poseviewer_paths[self.l2]))[1:]
+        pv1 = list(StructureReader(poseviewer_paths[self.l1])
+                   )[poseviewer_paths[self.l1][-8:] == 'pv.maegz':]
+        pv2 = list(StructureReader(poseviewer_paths[self.l2])
+                   )[poseviewer_paths[self.l2][-8:] == 'pv.maegz':]
         
         # These objects are lists of lists of lists of atom indices!
         l1_atom_idxss, l2_atom_idxss = self._get_atom_idxss(pv1[0], pv2[0],
