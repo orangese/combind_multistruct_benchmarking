@@ -5,12 +5,12 @@ from containers import Protein
 
 max_ligands = 20
 
-output_dir = 'scores/pdb_crystal_only_mcss/'
+output_dir = 'scores/pdb_crystal_only_mcss_nogscore/'
 cmd = '$SCHRODINGER/run {0:}/3_analyze/scores.py {1:} {1:} {1:}'.format(shared_paths['code'], '{}')
 
 settings = {
     'k_list' : ['mcss'],
-    'num_stats_ligs' : 10,
+    'num_stats_ligs' : shared_paths['stats']['n_ligs'],
     'num_poses' : 100,
     'chembl': False,
     'use_crystal_pose': True
@@ -53,7 +53,7 @@ def score_crystal(lm):
     all_p = [d for d in sorted(os.listdir(shared_paths['data'])) if d[0] != '.' and d[-3:] != 'old']
     settings['stats_prots'] = [p for p in all_p if p != lm.protein and p != 'D2R']
     settings['shared_paths'] = shared_paths
-    settings['t'] = 1.0
+    settings['t'] = 10000000
     write_settings_file('settings.py', settings)
 
     with open('crystal.sh','w') as f:
