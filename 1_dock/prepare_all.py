@@ -11,7 +11,7 @@ from sort_files import sort_files
 from grids import make_grids
 from dock import dock
 from fp_controller import compute_fp
-from mcss_controller import compute_mcss, verify_mcss
+from mcss_controller import compute_mcss, verify_mcss, compute_pdb_mcss
 
 from chembl_sort import get_ligands, proc_ligands
 from chembl_props import write_props
@@ -62,6 +62,9 @@ for i, d in enumerate(datasets):
        
     if 'm' in todo:
         compute_mcss(lm, compute_rmsds = False) # Computes MCSS, for use in pick_helpers
+
+    if 'p' in todo:
+        compute_pdb_mcss(lm) # Computes MCSS for only pdb ligands
 
     if 'v' in todo:
         verify_mcss(lm)

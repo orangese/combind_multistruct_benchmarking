@@ -367,6 +367,27 @@ def verify_mcss(lm, max_pdb=31, max_poses = 100):
     controller = MCSSController(lm, max_pdb, max_poses)
     controller.verify_rmsds(None, max_poses)
 
+def compute_pdb_mcss(lm, max_pdb=21, max_poses = 100, compute_rmsds = True):
+    """
+    Compute unfinished MCSS features. See above class description for more detail.
+
+    * This should be called from the root of a protein directory *
+
+    lm: LigandManager instance
+    pick_helpers: {pick_helpers_filename: {query_pdb: [chembl, ...]}}
+    max_pdb: int, maximum number of pdb ligands to consider
+    max_poses: int, maximum number of poses for which to compute rmsds
+    """
+    os.system('mkdir -p mcss/{}'.format(shared_paths['mcss']))
+    os.chdir('mcss/{}'.format(shared_paths['mcss']))
+    
+    controller = MCSSController(lm, max_pdb, max_poses)
+    controller.collate_mcss()
+    controller.add_pdb_to_pdb(compute_rmsds)
+    controller.add_crystal()
+    controller.execute()
+    os.chdir('../..')
+
 def compute_mcss(lm, pick_helpers={}, max_pdb=31, max_poses = 100, compute_rmsds = True):
     """
     Compute unfinished MCSS features. See above class description for more detail.
