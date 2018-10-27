@@ -1,8 +1,10 @@
 *.log
 */*.pyc
+*/*/*.pyc
 mcss/tests/outputs
 notebooks/*.out
 notebooks/.ipynb_checkpoints/*
+notebooks/*/.ipynb_checkpoints/*
 */.fuse*
 .fuse*
 __pycache__
