@@ -232,7 +232,6 @@ class MCSS:
         max_poses (int): compute RMSDs for at most max_poses poses
 
         Computes the RMSD between MCSSs for all pairs of poses.
-
         """
         pv1 = list(StructureReader(poseviewer_paths[self.l1])
                    )[poseviewer_paths[self.l1][-8:] == 'pv.maegz':]
@@ -250,7 +249,10 @@ class MCSS:
                 for l1_atom_idxs, l2_atom_idxs in zip(l1_atom_idxss, l2_atom_idxss):
                     for l1_atom_idx in l1_atom_idxs:
                         for l2_atom_idx in l2_atom_idxs:
-                            rmsd = min(rmsd, self._calculate_rmsd(pose1, pose2, l1_atom_idx, l2_atom_idx))
+                            rmsd = min(rmsd,
+                                       self._calculate_rmsd(pose1, pose2,
+                                                            l1_atom_idx, l2_atom_idx,
+                                                            'mcss16' in mcss_types_file))
                 if rmsd == float('inf'):
                     print("no mcss found"+','.join([str(i),str(j), self.l1,self.l2]))
                     print(l1_atom_idxss, l2_atom_idxss)
@@ -298,7 +300,7 @@ class MCSS:
         
         return l1_atom_idxss, l2_atom_idxss
 
-    def _calculate_rmsd(self, pose1, pose2, atom_idx1, atom_idx2):
+    def _calculate_rmsd(self, pose1, pose2, atom_idx1, atom_idx2, merge_halogens):
         """
         Calculates the RMSD between the atoms atom_idx1 in pose1
         and the atoms atom_idx2 in pose2.
@@ -308,9 +310,22 @@ class MCSS:
         """
         substructure1 = pose1.extract(atom_idx1)
         substructure2 = pose2.extract(atom_idx2)
+        if merge_halogens:
+            self._merge_halogens(substructure1)
+            self._merge_halogens(substructure2)
         calc = ConformerRmsd(substructure1, substructure2)
         calc.use_heavy_atom_graph = True
         return calc.calculate()
+
+    def _merge_halogens(self, structure):
+        """
+        Sets atomic number for all halogens to be that for flourine.
+        This enable use of ConformerRmsd for atom typing schemes that
+        merge halogens.
+        """
+        for atom in structure.atom:
+            if atom.atomic_number in [17, 35, 53]:
+                atom.atomic_number = 17
             
 if __name__ == '__main__':
     from schrodinger.structure import StructureReader, StructureWriter

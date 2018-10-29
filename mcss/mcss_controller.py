@@ -34,14 +34,14 @@ class MCSSController:
     """
 
     INIT_GROUP_SIZE = 1000
-    RMSD_GROUP_SIZE = 10
+    RMSD_GROUP_SIZE = 5
 
     QUEUE = 'owners'
     
     TEMPLATE = ('#!/bin/bash\n'
                 '#SBATCH -p {}\n'
                 '#SBATCH --tasks=1\n'
-                '#SBATCH -t 8:00:00\n'
+                '#SBATCH -t 2:00:00\n'
                 '{}'
                 'wait\n'
                 ).format(QUEUE, '{}')
