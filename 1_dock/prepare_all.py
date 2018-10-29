@@ -49,11 +49,7 @@ for i, d in enumerate(datasets):
         align_structs()               # Align and give consistent numbering
         sort_files()                  # Creates ligand, protein, and complex directories
         make_grids()                  # Creates grid for all proteins
-        dock(lm)                      # Dock PDB ligands to lm.st
-        dock(lm, mode = 'inplace')
-        dock(lm, mode = 'mininplace')
-        dock(lm, mode = 'XP')
-        dock(lm, mode = 'expanded')
+
      
     # 2. prepare ligands
     if '2' in todo:
@@ -64,7 +60,14 @@ for i, d in enumerate(datasets):
         compute_mcss(lm, compute_rmsds = False) # Computes MCSS, for use in pick_helpers
 
     if 'p' in todo:
-        compute_pdb_mcss(lm) # Computes MCSS for only pdb ligands
+        compute_pdb_mcss(lm)
+        dock(lm)
+        dock(lm, mode = 'confgen_es1')
+        dock(lm, mode = 'confgen_es4')
+        dock(lm, mode = 'inplace')
+        dock(lm, mode = 'mininplace')
+        dock(lm, mode = 'XP')
+        dock(lm, mode = 'expanded')
 
     if 'v' in todo:
         verify_mcss(lm)

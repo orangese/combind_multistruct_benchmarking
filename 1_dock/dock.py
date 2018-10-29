@@ -15,6 +15,30 @@ PRECISION   SP
 NENHANCED_SAMPLING   2
 '''
 
+GLIDE_ES4 = '''GRIDFILE   ../../grids/{}/{}.zip
+LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
+DOCKING_METHOD   confgen
+CANONICALIZE   True
+EXPANDED_SAMPLING   False
+POSES_PER_LIG   300
+POSTDOCK_NPOSE   300
+WRITEREPT   True
+PRECISION   SP
+NENHANCED_SAMPLING   4
+'''
+
+GLIDE_ES1 = '''GRIDFILE   ../../grids/{}/{}.zip
+LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
+DOCKING_METHOD   confgen
+CANONICALIZE   True
+EXPANDED_SAMPLING   False
+POSES_PER_LIG   300
+POSTDOCK_NPOSE   300
+WRITEREPT   True
+PRECISION   SP
+NENHANCED_SAMPLING   1
+'''
+
 GLIDEXP = '''GRIDFILE   ../../grids/{}/{}.zip
 LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
 DOCKING_METHOD   confgen
@@ -54,6 +78,29 @@ WRITEREPT   True
 PRECISION   SP
 '''
 
+modes = {'confgen':{
+                       'name':     shared_paths['docking'],
+                       'template': XGLIDE_IN},
+        'confgen_es1':{
+                       'name':     'confgen_es1',
+                       'template': GLIDE_ES1},
+        'confgen_es4': {
+                       'name':     'confgen_es4',
+                       'template': GLIDE_ES4},
+        'inplace':{
+                       'name':     'inplace',
+                       'template': INPLACE},
+        'mininplace':{
+                       'name':    'mininplace',
+                       'template': REFINE},
+        'expanded':{
+                       'name':     'expanded',
+                       'template': EXPANDED},
+        'XP':{
+                       'name':     'XP',
+                       'template': GLIDEXP},
+        }
+
 queue = 'owners'
 group_size = 5
 
@@ -88,18 +135,9 @@ def get_state(ligand, grid):
     return 2
 
 def write_inp_files(all_pairs, mode):
-    if mode == 'confgen':
-        TEMPLATE = XGLIDE_IN
-    elif mode == 'inplace':
-        TEMPLATE = INPLACE
-    elif mode == 'mininplace':
-        TEMPLATE = REFINE
-    elif mode == 'expanded':
-        TEMPLATE = EXPANDED
-    elif mode == 'XP':
-        TEMPLATE = GLIDEXP
-    else:
-        assert False, mode
+
+    TEMPLATE = modes[mode]['template']
+
     os.system('rm *.sh')
     for ligand, grid in all_pairs:
         os.system('mkdir {}-to-{}'.format(ligand, grid))
@@ -125,17 +163,7 @@ def proc_all(all_pairs, dock=False, rmsd=False):
 
 def dock(lm, chembl=None, maxnum=30, mode = 'confgen'):
     if lm.st is None: return
-    
-    if mode == 'confgen':
-        docking = shared_paths['docking']
-    elif mode == 'inplace':
-        docking = 'inplace'
-    elif mode == 'mininplace':
-        docking = 'mininplace'
-    elif mode == 'expanded':
-        docking = 'expanded'
-    elif mode == 'XP':
-        docking = 'XP'
+    docking = modes[mode]['name']
     os.system('mkdir -p docking/{}'.format(docking))
     os.chdir('docking/{}'.format(docking))
 

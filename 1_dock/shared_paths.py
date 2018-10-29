@@ -25,7 +25,7 @@ feature_defs = {
 
 shared_paths = { 
     'code'      : '~/combind',
-    'data'      : "/Users/jpaggi/Documents/combind/combind_data/bpp_data/",
+    'data'      : "/scratch/PI/rondror/combind/bpp_data/",
     'docking'   : 'glide12',
     'mcss'      : 'mcss14',
     'stats'     : stats['stats5'],
