@@ -4,7 +4,7 @@ class SB:
     def __init__(self, res_atom, lig_atom):
         self.res_atom = res_atom
         self.lig_atom = lig_atom
-        self.r = None
+        self.dist = None
 
     def is_valid(self):
         """
@@ -15,12 +15,16 @@ class SB:
                 and self.score())
 
     def score(self):
-        if self.r is None:
-            self.r = measure_distance(self.res_atom, self.lig_atom)
+        if self.dist is None:
+            self.dist = measure_distance(self.res_atom, self.lig_atom)
         
-        if self.r <= 4: return 1
-        elif self.r <= 5: return (5 - self.r)
-        return 0
+        if self.dist <= params['sb_dist_opt']:
+            return 1
+        elif self.dist <= params['sb_dist_cut']:
+            return ((params['sb_dist_cut'] - self.dist)
+                    / (params['sb_dist_cut'] - params['sb_dist_opt']))
+        else:
+            return 0
 
 class SB_Container:
     def __init__(self, lig, indices):

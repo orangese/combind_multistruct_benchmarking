@@ -7,8 +7,31 @@ stats = {'stats5': {'version'         : 'stats5',
                     'stats_points'    : 100,
                     'gscore_domain'   : (-16, 2),
                     'gscore_points'   : 1000,
+                    'gscore_sd'       : 0.4},
+        'stats6': {'version'         : 'stats6',
+                    'native_thresh'   : 2.0,
+                    'n_ligs'          : 20,
+                    'max_poses'       : 100,
+                    'weighting'       : 'unweighted',
+                    'stats_sd'        : 0.07,
+                    'stats_points'    : 100,
+                    'gscore_domain'   : (-16, 2),
+                    'gscore_points'   : 1000,
                     'gscore_sd'       : 0.4}
          }
+
+ifp = {'ifp3': {'version'  : 'ifp3',
+                'hbond_dist_opt': 2.5,
+                'hbond_dist_cut': 3.0,
+                'hbond_angle_opt': 60.0,
+                'hbond_angle_cut': 90.0,
+                'sb_dist_opt': 4.0,
+                'sb_dist_cut': 5.0,
+                'pipi_dist_opt': 4.5,
+                'pipi_dist_cut': 6.0,
+                'contact_scale_opt': 1.25,
+                'contact_scale_cut': 1.75}
+     }
 
 feature_defs = {
     'mcss':[],
@@ -28,6 +51,6 @@ shared_paths = {
     'data'      : "/scratch/PI/rondror/combind/bpp_data/",
     'docking'   : 'glide12',
     'mcss'      : 'mcss14',
-    'stats'     : stats['stats5'],
+    'stats'     : stats['stats6'],
     'ifp'       : 'ifp3'
 }

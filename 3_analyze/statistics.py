@@ -74,7 +74,7 @@ def weighting(w_ref, protein):
         g1_top, g2_top = lig_pair.get_gscores(0, 0)
         return np.array([pnative(g1-g1_top) * pnative(g2-g2_top)
                          for (g1, g2) in w_ref])
-    elif shared_paths['stats']['weighting'] == 'unwieghted':
+    elif shared_paths['stats']['weighting'] == 'unweighted':
         return 1
     else:
         assert False

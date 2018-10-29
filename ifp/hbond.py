@@ -1,5 +1,7 @@
 import math
 from schrodinger.structutils.measure import measure_distance, measure_bond_angle
+import shared_paths as shared_paths
+params = shared_paths['ifp']
 
 class HBond_Container:
     def __init__(self, lig, ind):
@@ -62,14 +64,22 @@ class HBond:
         self.DHA_angle = 180 - measure_bond_angle(self.d, self.h, self.a) # degrees
 
     def dist_score(self):
-        if self.dist <= 2.5: return 1
-        elif self.dist <= 3: return (3 - self.dist)/0.5
-        else: return 0
+        if self.dist <= params['hbond_dist_opt']:
+            return 1
+        elif self.dist <= params['hbond_dist_cut']:
+            return ((params['hbond_dist_cut'] - self.dist)
+                    / (params['hbond_dist_cut'] - params['hbond_dist_opt']))
+        else:
+            return 0
 
     def angle_score(self):
-        if self.DHA_angle <= 60: return 1
-        elif self.DHA_angle <= 90: return (90 - self.DHA_angle)/30.0
-        else: return 0
+        if self.DHA_angle <= params['hbond_angle_opt']:
+            return 1
+        elif self.DHA_angle <= params['hbond_angle_cut']:
+            return ((params['hbond_angle_cut'] - self.DHA_angle)
+                    / (params['hbond_angle_cut'] - params['hbond_angle_opt']))
+        else:
+            return 0
 
     def score(self):
         return self.dist_score()*self.angle_score()

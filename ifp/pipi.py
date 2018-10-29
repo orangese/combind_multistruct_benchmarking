@@ -18,17 +18,16 @@ class PiPi:
         return measure_distance(center_of_mass(st1), center_of_mass(st2))
 
     def score(self):
-        if self.dist <= 6: return 1
-        elif self.dist <= 8: return (8.0-self.dist)/2.0
-        else: return 0
-
-    def newscore(self):
-        if self.dist <= 4.5: return 1
-        elif self.dist <= 6: return (6.0-self.dist)/1.5
-        return 0
+        if self.dist <= params['pipi_dist_opt']:
+            return 1
+        elif self.dist <= params['pipi_dist_cut']:
+            return ((params['pipi_dist_cut'] - self.dist)
+                    / (params['pipi_dist_cut'] - params['pipi_dist_opt']))
+        else:
+            return 0
 
     def __str__(self):
-        str1= '\nPiPi:\nscore: ' + str(self.score())+','+ str(self.newscore())+'\n'
+        str1= '\nPiPi:\nscore: ' + str(self.score())+'\n'
         str2= '+ring 1: \n++{} atoms\n++{} aromatic\n++{} heteroaromatic\n'.format(len(self.r1.atom), self.r1.isAromatic(), self.r1.isHeteroaromatic())
         str3= '+ring 2: \n++{} atoms\n++{} aromatic\n++{} heteroaromatic\n'.format(len(self.r2.atom), self.r2.isAromatic(), self.r2.isHeteroaromatic())
         return str1+str2+str3
@@ -50,7 +49,7 @@ class PiPi_Container:
         for r in self.all_pipi:
             for pipi in self.all_pipi[r]:
                 filtered_pipi[(r, pipi.i1, pipi.i2)] = pipi
-        ranked_pipi = sorted(filtered_pipi.keys(), key=lambda x: -filtered_pipi[x].score() - filtered_pipi[x].newscore())
+        ranked_pipi = sorted(filtered_pipi.keys(), key=lambda x: -filtered_pipi[x].score())
         self.all_pipi = {}
         used_i1 = set()
         used_i2 = set()
@@ -61,16 +60,14 @@ class PiPi_Container:
                     self.all_pipi[r] = []
                 self.all_pipi[r].append(filtered_pipi[pipi_key])
                 used_i1.add(i1)
-                used_i2.add(i2) 
+                used_i2.add(i2)
 
     def score(self):
         all_scores = {}
         for r, pipi_list in self.all_pipi.items():
             for p in pipi_list:
                 key1 = (self.ind[0], r, '')
-                key2 = (self.ind[1], r, '')
                 all_scores[key1] = all_scores.get(key1, 0) + p.score()
-                all_scores[key2] = all_scores.get(key2, 0) + p.newscore()
         return all_scores
 
     def __str__(self):
