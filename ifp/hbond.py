@@ -58,11 +58,13 @@ class HBond_Container:
         all_raw = {}
         for r, hb_list in self.all_hdon.items():
             for hb in hb_list:
+                if not hb.score(): continue
                 key = (self.ind[0], r, '')
                 if key not in all_raw: all_raw[key] = []
                 all_raw[key] += [(hb.dist, hb.DHA_angle)]
         for r, hb_list in self.all_hacc.items():
             for hb in hb_list:
+                if not hb.score(): continue
                 key = (self.ind[1], r, '')
                 if key not in all_raw: all_raw[key] = []
                 all_raw[key] += [(hb.dist, hb.DHA_angle)]

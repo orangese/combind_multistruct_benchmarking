@@ -20,7 +20,7 @@ stats = {'stats5': {'version'         : 'stats5',
                     'gscore_sd'       : 0.4}
          }
 
-ifp = {'ifp3': {'version'  : 'ifp3',
+ifp = {'ifp3': {'version'  : 'raw',
                 'hbond_dist_opt': 2.5,
                 'hbond_dist_cut': 3.0,
                 'hbond_angle_opt': 60.0,
@@ -29,6 +29,21 @@ ifp = {'ifp3': {'version'  : 'ifp3',
                 'sb_dist_cut': 5.0,
                 'pipi_dist_opt': 4.5,
                 'pipi_dist_cut': 6.0,
+                'contact_scale_opt': 1.25,
+                'contact_scale_cut': 1.75}
+     }
+
+# Increased cut distance so close interactions
+# are written to file.
+ifp = {'raw_ifp4': {'version'  : 'raw',
+                'hbond_dist_opt': 2.5,
+                'hbond_dist_cut': 5.0,
+                'hbond_angle_opt': 60.0,
+                'hbond_angle_cut': 90.0,
+                'sb_dist_opt': 4.0,
+                'sb_dist_cut': 6.0,
+                'pipi_dist_opt': 4.5,
+                'pipi_dist_cut': 9.0,
                 'contact_scale_opt': 1.25,
                 'contact_scale_cut': 1.75}
      }
@@ -52,5 +67,5 @@ shared_paths = {
     'docking'   : 'glide12',
     'mcss'      : 'mcss14',
     'stats'     : stats['stats6'],
-    'ifp'       : ifp['ifp3']
+    'ifp'       : ifp['raw_ifp4']
 }

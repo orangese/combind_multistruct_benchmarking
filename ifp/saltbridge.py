@@ -32,7 +32,8 @@ class SB_Container:
         all_raw = {}
         for r, sb_list in self.all_sb.items():
             for sb in sb_list:
-                keu = (self.ind[0], r,'')
+                if not sb.score(): continue
+                key = (self.ind[0], r,'')
                 if key not in all_raw: all_raw[key] = []
                 all_raw[key] += [sb.dist]
         return all_raw

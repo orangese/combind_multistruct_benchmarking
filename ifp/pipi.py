@@ -31,6 +31,7 @@ class PiPi_Container:
         all_raw = {}
         for r, pipi_list in self.all_pipi.items():
             for p in pipi_list:
+                if not p.score(): continue
                 key = (self.ind[0], r, '')
                 if key not in all_raw: all_raw[key] = []
                 all_raw[key] += [p.dist]
