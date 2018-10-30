@@ -3,6 +3,39 @@ from schrodinger.structutils.analyze import center_of_mass
 from shared_paths import shared_paths
 params = shared_paths['ifp']
 
+class PiPi_Container:
+    def __init__(self, lig, ind):
+        self.lig = lig
+        self.ind = ind
+        self.all_pipi = {}
+
+    def add_residue(self, resnum, res):
+        self.all_pipi[resnum] = []
+        for i1, r1 in enumerate(res.aro):
+            for i2, r2 in enumerate(self.lig.aro):
+                self.all_pipi[resnum].append(PiPi(r1, (i1, resnum), r2, i2))
+
+    def filter_int(self):
+        pass
+
+    def score(self):
+        all_scores = {}
+        for r, pipi_list in self.all_pipi.items():
+            for p in pipi_list:
+                key = (self.ind[0], r, '')
+                if key not in all_scores: all_scores[key] = 0
+                all_scores[key] += p.score()
+        return all_scores
+
+    def raw(self):
+        all_raw = {}
+        for r, pipi_list in self.all_pipi.items():
+            for p in pipi_list:
+                key = (self.ind[0], r, '')
+                if key not in all_raw: all_raw[key] = []
+                all_raw[key] += [p.dist]
+        return all_raw
+
 class PiPi:
     """
     Assesses the potential for Pi-Pi interaction between the substructures
@@ -47,30 +80,3 @@ class PiPi:
         str2= '+ring 1: \n++{} atoms\n++{} aromatic\n++{} heteroaromatic\n'.format(len(self.r1.atom), self.r1.isAromatic(), self.r1.isHeteroaromatic())
         str3= '+ring 2: \n++{} atoms\n++{} aromatic\n++{} heteroaromatic\n'.format(len(self.r2.atom), self.r2.isAromatic(), self.r2.isHeteroaromatic())
         return str1+str2+str3
-
-class PiPi_Container:
-    def __init__(self, lig, ind):
-        self.lig = lig
-        self.ind = ind
-        self.all_pipi = {}
-
-    def add_residue(self, resnum, res):
-        self.all_pipi[resnum] = []
-        for i1, r1 in enumerate(res.aro):
-            for i2, r2 in enumerate(self.lig.aro):
-                self.all_pipi[resnum].append(PiPi(r1, (i1, resnum), r2, i2))
-
-    def filter_int(self):
-        pass
-
-    def score(self):
-        all_scores = {}
-        for r, pipi_list in self.all_pipi.items():
-            for p in pipi_list:
-                key1 = (self.ind[0], r, '')
-                all_scores[key1] = all_scores.get(key1, 0) + p.score()
-        return all_scores
-
-    def __str__(self):
-        return '\nAll PiPi:\n' + '\n'.join([str(r) + '\n'.join([str(i) for i in self.all_pipi[r]]) for r in sorted(self.all_pipi.keys())])
-

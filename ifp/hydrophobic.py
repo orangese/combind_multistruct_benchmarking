@@ -39,3 +39,6 @@ class Hydrophobic_Container:
 
     def score(self):
         return self.all_scores
+
+    def raw(self):
+        return {}

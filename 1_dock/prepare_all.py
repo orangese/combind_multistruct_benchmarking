@@ -60,7 +60,6 @@ for i, d in enumerate(datasets):
         compute_mcss(lm, compute_rmsds = False) # Computes MCSS, for use in pick_helpers
 
     if 'p' in todo:
-        compute_pdb_mcss(lm)
         dock(lm)
         dock(lm, mode = 'confgen_es1')
         dock(lm, mode = 'confgen_es4')
@@ -68,6 +67,8 @@ for i, d in enumerate(datasets):
         dock(lm, mode = 'mininplace')
         dock(lm, mode = 'XP')
         dock(lm, mode = 'expanded')
+        compute_pdb_mcss(lm)
+        compute_fp(lm, raw = True)
 
     if 'v' in todo:
         verify_mcss(lm)

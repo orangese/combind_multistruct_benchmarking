@@ -2,6 +2,41 @@ from schrodinger.structutils.measure import measure_distance
 from shared_paths import shared_paths
 params = shared_paths['ifp']
 
+class SB_Container:
+    def __init__(self, lig, ind):
+        self.lig = lig
+        self.ind = ind
+        self.all_sb = {}
+
+    def add_residue(self, resnum, res):
+        self.all_sb[resnum] = []
+        for res_atom in res.chrg:
+            for lig_atom in self.lig.chrg:
+                sb = SB(res_atom, lig_atom)
+                if sb.is_valid():
+                    self.all_sb[resnum].append(sb)
+
+    def filter_int(self):
+        pass
+
+    def score(self):
+        all_scores = {}
+        for r, sb_list in self.all_sb.items():
+            for sb in sb_list:
+                k = (self.ind[0], r,'')
+                if k not in all_scores: all_scores[k] = 0
+                all_scores[k] += sb.score()
+        return all_scores
+
+    def raw(self):
+        all_raw = {}
+        for r, sb_list in self.all_sb.items():
+            for sb in sb_list:
+                keu = (self.ind[0], r,'')
+                if key not in all_raw: all_raw[key] = []
+                all_raw[key] += [sb.dist]
+        return all_raw
+
 class SB:
     def __init__(self, res_atom, lig_atom):
         self.res_atom = res_atom
@@ -27,38 +62,3 @@ class SB:
                     / (params['sb_dist_cut'] - params['sb_dist_opt']))
         else:
             return 0
-
-class SB_Container:
-    def __init__(self, lig, indices):
-        self.lig = lig
-        self.indices = indices
-        self.all_sb = {}
-
-    def add_residue(self, resnum, res):
-        self.all_sb[resnum] = []
-        for res_atom in res.chrg:
-            for lig_atom in self.lig.chrg:
-                sb = SB(res_atom, lig_atom)
-                if sb.is_valid():
-                    self.all_sb[resnum].append(sb)
-
-    def filter_int(self):
-        """
-        Previously used to enforce one saltbridge per ligand formal charge,
-        but on second thought, there doesn't seem to be a need to do this.
-        """
-        pass
-
-    def score(self):
-        """
-        Computes final salt bridge fingerprints.
-        """
-        all_scores = {}
-        for r, sb_list in self.all_sb.items():
-            for sb in sb_list:
-                sc = [sb.score()]
-                for i, j in enumerate(self.indices):
-                    k = (j, r,'')
-                    if k not in all_scores: all_scores[k] = 0
-                    all_scores[k] += sc[i]
-        return all_scores

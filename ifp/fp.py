@@ -102,7 +102,7 @@ class FP:
         interactions = {
             'hbond': HBond_Container(lig, [2,3]),
             'saltbridge': SB_Container(lig, [1]),
-            'pipi': PiPi_Container(lig, [5,6]),
+            'pipi': PiPi_Container(lig, [6]),
             'hydrophobic': Hydrophobic_Container(lig, [10,11])
         }
 
@@ -173,7 +173,7 @@ class FP:
                 for sc_key in sorted(ifp.keys()):#.items():
                     i,r,ss = sc_key
                     sc = ifp[sc_key]
-                    if sc >= 0.05: f.write('{}-{}-{}={}\n'.format(i,r,ss, sc))
+                    if sc >= 0: f.write('{}-{}-{}={}\n'.format(i,r,ss, sc))
 
 if __name__ == '__main__':
     FP(sys.argv[:])

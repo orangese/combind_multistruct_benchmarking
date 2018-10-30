@@ -23,7 +23,7 @@ class HBond_Container:
                 self.all_hacc[resnum].extend([HBond(lig_atom, res_atom, n, resnum, False) for n in lig_atom.bonded_atoms if n.element == 'H'])
 
     def filter_int(self):
-        # enforces 1 hbond per h        
+        # enforces 1 hbond per h
         unique_h = {}
         for r in set(list(self.all_hdon.keys()) + list(self.all_hacc.keys())):
             for hb in self.all_hdon.get(r, []) + self.all_hacc.get(r, []):
@@ -45,11 +45,13 @@ class HBond_Container:
         for r, hb_list in self.all_hdon.items():
             for hb in hb_list:
                 key = (self.ind[0], r, '')
-                all_scores[key] = all_scores.get(key, 0) + hb.score()
+                if key not in all_scores: all_scores[key] = 0
+                all_scores[key] += hb.score()
         for r, hb_list in self.all_hacc.items():
             for hb in hb_list:
                 key = (self.ind[1], r, '')
-                all_scores[key] = all_scores.get(key, 0) + hb.score()
+                if key not in all_scores: all_scores[key] = 0
+                all_scores[key] += hb.score()
         return all_scores
 
     def raw(self):
@@ -96,5 +98,5 @@ class HBond:
             return 0
 
     def score(self):
-        return self.dist_score()*self.angle_score()
+        return self.dist_score() * self.angle_score()
 
