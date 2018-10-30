@@ -1,21 +1,37 @@
 from schrodinger.structutils.measure import measure_distance
 from schrodinger.structutils.analyze import center_of_mass
+from shared_paths import shared_paths
+params = shared_paths['ifp']
 
 class PiPi:
+    """
+    Assesses the potential for Pi-Pi interaction between the substructures
+    r1 and r2 identified by i1 and i2 respectively. It is assumed that
+    r1 and r2 each contain 1 or more aromatic rings. The minimum distance
+    between the center of mass of any aromatic ring in r1 and any aromatic
+    ring in r2 is used to determine the distance between the two.
+
+    The input rings are expected to be generated through the AtomGroup.fuse_rings
+    method.
+    """
     def __init__(self, r1, i1, r2, i2): # type = structure
-        self.r1 = r1#[r for r in r1.ring][0] # type = ring
-        self.r2 = r2#[r for r in r2.ring][0]
+        self.r1 = r1
+        self.r2 = r2
 
         self.i1 = i1 # protein ring unique id
         self.i2 = i2 # ligand ring unique id
 
         self.dist = self.get_dist()
-        self.lig_ring = self.r2
 
     def get_dist(self):
-        st1 = self.r1.extractStructure(copy_props=True)
-        st2 = self.r2.extractStructure(copy_props=True)
-        return measure_distance(center_of_mass(st1), center_of_mass(st2))
+        dist = float('inf')
+        for r1 in self.r1.ring:
+            for r2 in self.r2.ring:
+                st1 = r1.extractStructure(copy_props=True)
+                st2 = r2.extractStructure(copy_props=True)
+                dist = min(dist, measure_distance(center_of_mass(st1), center_of_mass(st2)))
+        assert dist != float('inf')
+        return dist
 
     def score(self):
         if self.dist <= params['pipi_dist_opt']:
@@ -42,25 +58,10 @@ class PiPi_Container:
         self.all_pipi[resnum] = []
         for i1, r1 in enumerate(res.aro):
             for i2, r2 in enumerate(self.lig.aro):
-                self.all_pipi[resnum].append(PiPi(r1, (i1,resnum), r2, i2))
+                self.all_pipi[resnum].append(PiPi(r1, (i1, resnum), r2, i2))
 
     def filter_int(self):
-        filtered_pipi = {}
-        for r in self.all_pipi:
-            for pipi in self.all_pipi[r]:
-                filtered_pipi[(r, pipi.i1, pipi.i2)] = pipi
-        ranked_pipi = sorted(filtered_pipi.keys(), key=lambda x: -filtered_pipi[x].score())
-        self.all_pipi = {}
-        used_i1 = set()
-        used_i2 = set()
-        for pipi_key in ranked_pipi:
-            r, i1, i2 = pipi_key
-            if i1 not in used_i1 and i2 not in used_i2 and filtered_pipi[pipi_key].score() > 0:
-                if r not in self.all_pipi:
-                    self.all_pipi[r] = []
-                self.all_pipi[r].append(filtered_pipi[pipi_key])
-                used_i1.add(i1)
-                used_i2.add(i2)
+        pass
 
     def score(self):
         all_scores = {}

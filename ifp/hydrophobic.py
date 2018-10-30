@@ -1,5 +1,5 @@
 from schrodinger.structutils.measure import measure_distance
-import shared_paths as shared_paths
+from shared_paths import shared_paths
 params = shared_paths['ifp']
 
 class Hydrophobic_Container:

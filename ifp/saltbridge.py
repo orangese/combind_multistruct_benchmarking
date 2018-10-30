@@ -1,4 +1,6 @@
 from schrodinger.structutils.measure import measure_distance
+from shared_paths import shared_paths
+params = shared_paths['ifp']
 
 class SB:
     def __init__(self, res_atom, lig_atom):

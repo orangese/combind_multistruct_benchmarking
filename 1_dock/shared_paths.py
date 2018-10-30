@@ -52,5 +52,5 @@ shared_paths = {
     'docking'   : 'glide12',
     'mcss'      : 'mcss14',
     'stats'     : stats['stats6'],
-    'ifp'       : 'ifp3'
+    'ifp'       : ifp['ifp3']
 }

@@ -6,10 +6,10 @@ from shared_paths import shared_paths
 queue = 'owners'
 group_size = 10
 
-pv_cmd = '$SCHRODINGER/run {}/ifp/fp.py -mode pv -input_file {} -output_file {}\n'
+pv_cmd = '$SCHRODINGER/run {}/ifp/fp.py -mode pv -input_file {} -output_file {} -raw {}\n'
 st_cmd = '$SCHRODINGER/run {}/ifp/fp.py -mode st -output_file {}\n'
 
-def get_fp(lm, fp_list):
+def get_fp(lm, fp_list, raw):
     if len(fp_list) > 0:
         print(len(fp_list), 'fp left')
     for i, pairs in enumerate(grouper(group_size, fp_list)):
@@ -19,7 +19,7 @@ def get_fp(lm, fp_list):
                 if p is None: continue
                 input_file = '../../docking/{}/{}/{}_pv.maegz'.format(shared_paths['docking'], p, p)
                 output_file = '{}.fp'.format(p)
-                f.write(pv_cmd.format(shared_paths['code'], input_file, output_file)) 
+                f.write(pv_cmd.format(shared_paths['code'], input_file, output_file, raw)) 
             f.write('wait\n')
         os.system('sbatch --cpus-per-task=1 --time=02:00:00 -p {} {}fp.sh'.format(queue, i))
 
@@ -34,19 +34,20 @@ def structure_fp(lm):
             f.write(st_cmd.format(shared_paths['code'], output_file)) 
         os.system('sbatch --time=00:10:00 -n 1 -p {} {}.sh'.format(queue, pdb))
 
-def compute_fp(lm):
+def compute_fp(lm, raw = False):
     os.system('mkdir -p ifp')
-    os.system('mkdir -p ifp/{}'.format(shared_paths['ifp']))
-
-    unfinished = []    
-    for lig in lm.docked(lm.pdb+lm.chembl()):
-        output_file = 'ifp/{}/{}-to-{}.fp'.format(shared_paths['ifp'], lig, lm.st)
+    os.system('mkdir -p ifp/{}'.format(shared_paths['ifp']['version']))
+    ligands = lm.pdb
+    if not raw: ligands += lm.chembl()
+    unfinished = []
+    for lig in lm.docked(ligands):
+        output_file = 'ifp/{}/{}-to-{}.fp'.format(shared_paths['ifp']['version'], lig, lm.st)
         if os.path.exists(output_file): continue
         unfinished.append('{}-to-{}'.format(lig, lm.st))
        
-    os.chdir('ifp/{}'.format(shared_paths['ifp'])) 
-    structure_fp(lm) # Should move this so it is called by itself.
-    get_fp(lm, unfinished)
+    os.chdir('ifp/{}'.format(shared_paths['ifp']['version'])) 
+    if not raw: structure_fp(lm) # Should move this so it is called by itself.
+    get_fp(lm, unfinished, raw)
     os.chdir('../..')
 
 def parse_fp_file(fp_file):

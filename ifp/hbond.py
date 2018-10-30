@@ -1,6 +1,6 @@
 import math
 from schrodinger.structutils.measure import measure_distance, measure_bond_angle
-import shared_paths as shared_paths
+from shared_paths import shared_paths
 params = shared_paths['ifp']
 
 class HBond_Container:
@@ -51,6 +51,20 @@ class HBond_Container:
                 key = (self.ind[1], r, '')
                 all_scores[key] = all_scores.get(key, 0) + hb.score()
         return all_scores
+
+    def raw(self):
+        all_raw = {}
+        for r, hb_list in self.all_hdon.items():
+            for hb in hb_list:
+                key = (self.ind[0], r, '')
+                if key not in all_raw: all_raw[key] = []
+                all_raw[key] += [(hb.dist, hb.DHA_angle)]
+        for r, hb_list in self.all_hacc.items():
+            for hb in hb_list:
+                key = (self.ind[1], r, '')
+                if key not in all_raw: all_raw[key] = []
+                all_raw[key] += [(hb.dist, hb.DHA_angle)]
+        return all_raw
 
 class HBond:
     def __init__(self, donor, acceptor, h, r_ind, resIsHDonor): # D - H ... A - X
