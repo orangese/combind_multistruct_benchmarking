@@ -20,7 +20,21 @@ stats = {'stats5': {'version'         : 'stats5',
                     'gscore_sd'       : 0.4}
          }
 
-ifp = {'ifp3': {'version'  : 'raw',
+ifp = {'ifp3': {'version'  : 'ifp3',
+                'hbond_dist_opt': 2.5,
+                'hbond_dist_cut': 3.0,
+                'hbond_angle_opt': 60.0,
+                'hbond_angle_cut': 90.0,
+                'sb_dist_opt': 4.0,
+                'sb_dist_cut': 5.0,
+                'pipi_dist_opt': 4.5,
+                'pipi_dist_cut': 6.0,
+                'contact_scale_opt': 1.25,
+                'contact_scale_cut': 1.75}
+     }
+
+# Cutoffs same as in ifp3, but ifp code changed.
+ifp = {'ifp4': {'version'  : 'ifp4',
                 'hbond_dist_opt': 2.5,
                 'hbond_dist_cut': 3.0,
                 'hbond_angle_opt': 60.0,

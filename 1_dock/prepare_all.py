@@ -68,7 +68,7 @@ for i, d in enumerate(datasets):
         dock(lm, mode = 'XP')
         dock(lm, mode = 'expanded')
         compute_pdb_mcss(lm)
-        compute_fp(lm, raw = True)
+        compute_fp(lm, raw = 'raw' in shared_paths['ifp']['version'])
 
     if 'v' in todo:
         verify_mcss(lm)
