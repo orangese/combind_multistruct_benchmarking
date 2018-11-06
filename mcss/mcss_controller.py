@@ -34,7 +34,7 @@ class MCSSController:
     """
 
     INIT_GROUP_SIZE = 1000
-    RMSD_GROUP_SIZE = 5
+    RMSD_GROUP_SIZE = 10
 
     QUEUE = 'owners'
     
@@ -279,6 +279,7 @@ class MCSSController:
         Chembl - Chembl pairs that are specified by "chembl"
         pick_helpers: {pick_helpers_filename: {query_pdb: [chembl, ...]}}
         """
+        print(pick_helpers)
         for fname, queries in pick_helpers.items():
             for query, chembl_ligands in queries.items():
                 for i, l1 in enumerate(chembl_ligands):

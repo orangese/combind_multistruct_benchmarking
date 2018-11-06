@@ -138,7 +138,7 @@ class Docking:
     """
     def __init__(self, root, struct):
         self.dock_dir = '{}/docking/{}'.format(root, shared_paths['docking'])
-        self.ifp_dir = '{}/ifp/{}'.format(root, shared_paths['ifp'])
+        self.ifp_dir = '{}/ifp/{}'.format(root, shared_paths['ifp']['version'])
         self.struct = struct
         self.ligands = {}
         self.num_poses = {}
@@ -162,7 +162,7 @@ class LigandManager:
 
     Parameterized by (protein).
     """
-    def __init__(self, protein, root, struct = None):
+    def __init__(self, protein, root, struct = 'First'):
         """
         root (string): Path to protein's data directory.
         """
@@ -173,14 +173,21 @@ class LigandManager:
         self.chembl_info = load_chembl_proc(self.root)
         self.u_ligs, self.dup_ligs = read_duplicates(self.root)
         self.all_ligs = self.prepped()
-        self.pdb = self.unique(sorted([l for l in self.all_ligs if l[:6] != 'CHEMBL']))
+        self.pdb = self.unique(sorted([l for l in self.all_ligs
+                                      if l[:6] != 'CHEMBL'],
+                                      reverse = struct == 'Last'))
 
         # Set default structure.
         self.st = None
         if not os.path.exists('{}/docking/grids'.format(self.root)): return
         self.grids = sorted([l for l in os.listdir('{}/docking/grids'.format(self.root)) if l[0] != '.'])
         if not self.grids: return
-        self.st = self.grids[0] if struct is None else struct
+        if struct is 'First':
+            self.st = self.grids[0] 
+        elif struct is 'Last':
+            self.st = self.grids[-1]
+        else:
+            assert False
 
         self.mcss = MCSSController(self)
         self.helpers = {}
@@ -244,9 +251,9 @@ class Protein:
     """
     Collection of ligands and docking results for a given protein.
     """
-    def __init__(self, protein):
+    def __init__(self, protein, struct = 'First'):
         self.root = "{}/{}".format(shared_paths['data'], protein)
-        self.lm = LigandManager(protein, self.root, None)
+        self.lm = LigandManager(protein, self.root, struct)
         # Useful to be able to reference this before loading data.
         self.docking = {self.lm.st: Docking(self.root, self.lm.st)}
 

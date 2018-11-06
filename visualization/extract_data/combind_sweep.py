@@ -1,7 +1,7 @@
 import os
 import sys
 
-from containers import Dataset
+from containers import Protein
 from shared_paths import shared_paths
 
 def read_score_file(fname):
@@ -18,6 +18,19 @@ def read_score_file(fname):
                 pose_cluster[tok[0]] = int(tok[1])
     return pose_cluster
 
+def read_score_file(fname):
+    """
+    Returns a dictionary of {lig_name: pose, ...} stored
+    in FNAME.
+    """
+    pose_cluster = {}
+    with open(fname) as fp:
+        for line in fp:
+            tok = line.strip().split(',')
+            if tok[0] == 'max_score': continue
+            pose_cluster[tok[0]] = int(tok[1])
+    return pose_cluster
+
 if __name__ == '__main__':
     scores_version = sys.argv[1]
     base = '/scratch/PI/rondror/combind/bpp_outputs/'+scores_version
@@ -27,7 +40,7 @@ if __name__ == '__main__':
             if protein[0] == '.': continue
             scores_path = "{}/{}/scores/{}/".format(shared_paths['data'], protein, scores_version)
             if not os.path.exists(scores_path): continue
-            data = Dataset(shared_paths, [protein])
+            data = Protein(protein)
             for settings in os.listdir(scores_path):
                 pose_clusters = [read_score_file(scores_path+settings+'/'+fname)
                                  for fname in os.listdir(scores_path+settings) if fname[-3:] == '.sc']
@@ -35,14 +48,14 @@ if __name__ == '__main__':
 
             
                 # print RMSDs
-                struct = data.proteins[protein].lm.st
-                docking =  data.proteins[protein].docking[struct]
+                struct = data.lm.st
+                docking =  data.docking[struct]
             
                 for pose_cluster in pose_clusters:
                     for lig, pose in pose_cluster.items():
                         if 'CHEMBL' in lig: continue
                         if lig  not in docking.ligands:
-                            data.load({protein: [lig]}, load_mcss = False, load_fp = False)
+                            data.load_docking([lig], load_mcss = False, load_fp = False)
                         poses = docking.ligands[lig].poses
                         best_rmsd = min(map(lambda x: x.rmsd, poses[:100]))
                         combind_rmsd = poses[pose].rmsd

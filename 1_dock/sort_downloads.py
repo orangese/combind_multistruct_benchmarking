@@ -415,7 +415,17 @@ def final_processing():
 def sort_downloads():
     """
     Workflow is as follows:
-    (1)
+    (1) Download pdb files + report describing thier contents
+    (2) Run initial processing, which attempts to determine the
+        orthosteric ligand based on simple rules about known names
+        of solvent molecules and the ligand molecular weights.
+        Writes all possible options to initial_files/*
+    (3) Resolve remaining ambiguities manually by inspecting the
+        file initial_pdb_processing.txt and deleting entries for
+        ligands that should not be considered. Write this updated
+        file to final_pdb_processing.pdb.
+    (4) Run final processing, which writes the final structures
+        and ligands to raw_files/*
     """
     if os.path.exists('structures/final_pdb_processing.txt'):
         print('Running final processing')
