@@ -37,7 +37,7 @@ for i, d in enumerate(datasets):
 
     os.chdir(d)
     
-    protein = Protein(d, struct = 'Last')
+    protein = Protein(d, shared_paths['pdb_order'])
     lm = protein.lm
 
     if '0' in todo:
@@ -59,15 +59,15 @@ for i, d in enumerate(datasets):
         compute_mcss(lm, compute_rmsds = False) # Computes MCSS, for use in pick_helpers
 
     if 'p' in todo:
-        #dock(lm)
-        #dock(lm, mode = 'confgen_es1')
+        dock(lm)
+        dock(lm, mode = 'confgen_es1')
         dock(lm, mode = 'confgen_es4')
-        #dock(lm, mode = 'inplace')
-        #dock(lm, mode = 'mininplace')
-        #dock(lm, mode = 'XP')
-        #dock(lm, mode = 'expanded')
-        #compute_pdb_mcss(lm)
-        #compute_fp(lm, raw = 'raw' in shared_paths['ifp']['version'])
+        dock(lm, mode = 'inplace')
+        dock(lm, mode = 'mininplace')
+        dock(lm, mode = 'XP')
+        dock(lm, mode = 'expanded')
+        compute_pdb_mcss(lm)
+        compute_fp(lm, raw = 'raw' in shared_paths['ifp']['version'])
 
     if 'v' in todo:
         verify_mcss(lm)

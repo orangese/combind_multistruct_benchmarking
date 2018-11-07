@@ -1,4 +1,8 @@
 stats = {'stats5': {'version'         : 'stats5',
+                    'ifp_version'     : 'ifp3',
+                    'mcss_version'    : 'mcss14',
+                    'docking_version' : 'glide12',
+                    'pdb_order'       : 'First',
                     'native_thresh'   : 2.0,
                     'n_ligs'          : 20,
                     'max_poses'       : 100,
@@ -9,6 +13,7 @@ stats = {'stats5': {'version'         : 'stats5',
                     'gscore_points'   : 1000,
                     'gscore_sd'       : 0.4},
         'stats6': {'version'         : 'stats6',
+                    'ifp'             : 'ifp3',
                     'native_thresh'   : 2.0,
                     'n_ligs'          : 20,
                     'max_poses'       : 100,
@@ -77,13 +82,13 @@ ifp = {'ifp3': {'version'  : 'ifp3',
      }
 
 feature_defs = {
-    'mcss':[],
-    'hbond':[2,3],
-    'hbond_donor':[2],
-    'hbond_acceptor':[3],
-    'sb2':[1],
-    'pipi':[6],
-    'contact':[11]
+    'mcss'           :[],
+    'sb'             :[1],
+    'hbond'          :[2,3],
+    'hbond_donor'    :[2],
+    'hbond_acceptor' :[3],
+    'pipi'           :[6],
+    'contact'        :[11]
 }
 
 shared_paths = { 
@@ -91,6 +96,12 @@ shared_paths = {
     'data'      : "/scratch/PI/rondror/combind/bpp_data/",
     'docking'   : 'glide12',
     'mcss'      : 'mcss14',
-    'stats'     : stats['stats6'],
-    'ifp'       : ifp['ifp4']
+    'stats'     : stats['stats5'],
+    'ifp'       : ifp['ifp3'],
+    'pdb_order' : 'First'
 }
+
+assert shared_paths['ifp']['version'] == shared_paths['stats']['ifp_version']
+assert shared_paths['docking'] == shared_paths['stats']['docking_version']
+assert shared_paths['mcss'] == shared_paths['stats']['mcss_version']
+assert shared_paths['pdb_order'] == shared_paths['stats']['pdb_order']

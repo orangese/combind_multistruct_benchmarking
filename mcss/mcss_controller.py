@@ -151,7 +151,6 @@ class MCSSController:
         """
         if ligands is not None:
             ligands = set(ligands)
-            print(ligands)
         self.load_mcss()
         for name, mcss in self.MCSSs.items():
             valid_ligands = ligands is None or (mcss.l1 in ligands and mcss.l2 in ligands)
@@ -279,7 +278,6 @@ class MCSSController:
         Chembl - Chembl pairs that are specified by "chembl"
         pick_helpers: {pick_helpers_filename: {query_pdb: [chembl, ...]}}
         """
-        print(pick_helpers)
         for fname, queries in pick_helpers.items():
             for query, chembl_ligands in queries.items():
                 for i, l1 in enumerate(chembl_ligands):
