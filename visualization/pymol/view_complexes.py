@@ -1,26 +1,19 @@
 from pymol import cmd
-
+from glob import glob
 
 def load_complexes(protein):
     cmd.delete('*')
-    with open('bpp_outputs/structs.tsv') as fp:
-        for line in fp:
-            try:
-                prot, grid, lig = line.strip().split('\t')
-                if protein == prot:
-                    cmd.load('bpp_data/{}/structures/proteins/{}_prot.mae'.format(prot, lig))
-                    cmd.load('bpp_data/{}/structures/ligands/{}_lig.mae'.format(prot, lig))
-                    if grid == lig:
-                        cmd.util.cbao("{}_prot".format(lig))
-                        cmd.util.cbay("het and {}_lig".format(lig))
-                        cmd.show('sticks', "het and {}_lig".format(lig))
-                    else:
-                        cmd.util.cbab("{}_prot".format(lig))
-                        cmd.util.cbag("het and {}_lig".format(lig))
-
-                    cmd.show('spheres', 'het and {}_prot and ({}_lig expand 5)'.format(lig, lig))
-            except:
-                print line.strip()
+    for prot in sorted(glob('{}/structures/proteins/*_prot.mae'.format(protein)))[:20]:
+        protein = prot.split('/')[0]
+        pdb = prot.split('/')[-1].split('_')[0]
+        print pdb
+        cmd.load('{}/structures/proteins/{}_prot.mae'.format(protein, pdb))
+        cmd.load('{}/structures/ligands/{}_lig.mae'.format(protein, pdb))
+    cmd.util.cbao("*_prot")
+    cmd.util.cbay("het and *_lig")
+    cmd.show('sticks', "het and *_lig")
+    cmd.hide('lines', 'element h')
+    cmd.show('spheres', 'het and *_prot and (*_lig expand 5)')
 
     cmd.show('cartoon')
     cmd.set('cartoon_oval_length', '0.5')
@@ -28,4 +21,13 @@ def load_complexes(protein):
     cmd.hide('everything', 'element H and not (element N+O extend 1)')
     cmd.hide('everything', 'name H')
 
+def show_prot():
+    cmd.enable('*prot')
+
+def show_lig():
+    cmd.disable('*')
+    cmd.enable('*lig')
+    
 cmd.extend('load_complexes', load_complexes)
+cmd.extend('show_lig', show_lig)
+cmd.extend('show_prot', show_prot)
