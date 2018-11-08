@@ -314,7 +314,8 @@ class MCSS:
             self._merge_halogens(substructure1)
             self._merge_halogens(substructure2)
         calc = ConformerRmsd(substructure1, substructure2)
-        calc.use_heavy_atom_graph = True
+        calc.use_symmetry = True
+        calc.use_heavy_atom_graph = False
         return calc.calculate()
 
     def _merge_halogens(self, structure):
@@ -324,8 +325,8 @@ class MCSS:
         merge halogens.
         """
         for atom in structure.atom:
-            if atom.atomic_number in [17, 35, 53]:
-                atom.atomic_number = 17
+            if atom.atomic_number in [9, 17, 35, 53]:
+                atom.atomic_number = 9
             
 if __name__ == '__main__':
     from schrodinger.structure import StructureReader, StructureWriter
