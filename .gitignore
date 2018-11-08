@@ -1,10 +1,11 @@
 *.log
 */*.pyc
 */*/*.pyc
-mcss/tests/outputs
+*/tests/outputs
 notebooks/*.out
 notebooks/.ipynb_checkpoints/*
 notebooks/*/.ipynb_checkpoints/*
 */.fuse*
 .fuse*
 __pycache__
+*DS_Store

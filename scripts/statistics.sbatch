@@ -15,7 +15,7 @@ echo enter $SLURM_ARRAY_TASK_ID
 data=/scratch/PI/rondror/combind/bpp_data
 end=$((4*SLURM_ARRAY_TASK_ID+4))
 for prot in $(ls $data | head -n $end | tail -n 4); do
-    mkdir -p $data/$prot/stats/stats5
+    mkdir -p $data/$prot/stats/stats6
     python $COMBINDHOME/3_analyze/statistics.py $mode $prot &
 done
 wait

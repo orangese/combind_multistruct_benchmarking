@@ -1,5 +1,7 @@
 import math
 from schrodinger.structutils.measure import measure_distance, measure_bond_angle
+from shared_paths import shared_paths
+params = shared_paths['ifp']
 
 class HBond_Container:
     def __init__(self, lig, ind):
@@ -21,7 +23,7 @@ class HBond_Container:
                 self.all_hacc[resnum].extend([HBond(lig_atom, res_atom, n, resnum, False) for n in lig_atom.bonded_atoms if n.element == 'H'])
 
     def filter_int(self):
-        # enforces 1 hbond per h        
+        # enforces 1 hbond per h
         unique_h = {}
         for r in set(list(self.all_hdon.keys()) + list(self.all_hacc.keys())):
             for hb in self.all_hdon.get(r, []) + self.all_hacc.get(r, []):
@@ -43,12 +45,30 @@ class HBond_Container:
         for r, hb_list in self.all_hdon.items():
             for hb in hb_list:
                 key = (self.ind[0], r, '')
-                all_scores[key] = all_scores.get(key, 0) + hb.score()
+                if key not in all_scores: all_scores[key] = 0
+                all_scores[key] += hb.score()
         for r, hb_list in self.all_hacc.items():
             for hb in hb_list:
                 key = (self.ind[1], r, '')
-                all_scores[key] = all_scores.get(key, 0) + hb.score()
+                if key not in all_scores: all_scores[key] = 0
+                all_scores[key] += hb.score()
         return all_scores
+
+    def raw(self):
+        all_raw = {}
+        for r, hb_list in self.all_hdon.items():
+            for hb in hb_list:
+                if not hb.score(): continue
+                key = (self.ind[0], r, '')
+                if key not in all_raw: all_raw[key] = []
+                all_raw[key] += [(hb.dist, hb.DHA_angle)]
+        for r, hb_list in self.all_hacc.items():
+            for hb in hb_list:
+                if not hb.score(): continue
+                key = (self.ind[1], r, '')
+                if key not in all_raw: all_raw[key] = []
+                all_raw[key] += [(hb.dist, hb.DHA_angle)]
+        return all_raw
 
 class HBond:
     def __init__(self, donor, acceptor, h, r_ind, resIsHDonor): # D - H ... A - X
@@ -62,15 +82,23 @@ class HBond:
         self.DHA_angle = 180 - measure_bond_angle(self.d, self.h, self.a) # degrees
 
     def dist_score(self):
-        if self.dist <= 2.5: return 1
-        elif self.dist <= 3: return (3 - self.dist)/0.5
-        else: return 0
+        if self.dist <= params['hbond_dist_opt']:
+            return 1
+        elif self.dist <= params['hbond_dist_cut']:
+            return ((params['hbond_dist_cut'] - self.dist)
+                    / (params['hbond_dist_cut'] - params['hbond_dist_opt']))
+        else:
+            return 0
 
     def angle_score(self):
-        if self.DHA_angle <= 60: return 1
-        elif self.DHA_angle <= 90: return (90 - self.DHA_angle)/30.0
-        else: return 0
+        if self.DHA_angle <= params['hbond_angle_opt']:
+            return 1
+        elif self.DHA_angle <= params['hbond_angle_cut']:
+            return ((params['hbond_angle_cut'] - self.DHA_angle)
+                    / (params['hbond_angle_cut'] - params['hbond_angle_opt']))
+        else:
+            return 0
 
     def score(self):
-        return self.dist_score()*self.angle_score()
+        return self.dist_score() * self.angle_score()
 

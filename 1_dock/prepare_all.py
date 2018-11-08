@@ -1,7 +1,7 @@
 import os
 import sys
 
-from shared_paths import shared_paths
+from shared_paths import shared_paths, proteins
 from sort_downloads import sort_downloads
 
 from align_structs import align_structs
@@ -16,7 +16,6 @@ from mcss_controller import compute_mcss, verify_mcss, compute_pdb_mcss
 from chembl_sort import get_ligands, proc_ligands
 from chembl_props import write_props
 from pick_helpers import pick_helpers, load_helpers
-from score import score
 
 from verify_docking import check_docked_ligands
 from containers import Protein
@@ -29,15 +28,13 @@ if len(todo) == 0:
 
 datasets = sys.argv[2:]
 if datasets == []:
-    datasets = [d for d in sorted(os.listdir('.')) if d[0] != '.' and d[-3:] != 'old']
+    datasets = proteins
 
 datasets=reversed(datasets)
 for i, d in enumerate(datasets):
     print(d, i)
-
     os.chdir(d)
-    
-    protein = Protein(d)
+    protein = Protein(d, shared_paths['pdb_order'])
     lm = protein.lm
 
     if '0' in todo:
@@ -49,7 +46,6 @@ for i, d in enumerate(datasets):
         align_structs()               # Align and give consistent numbering
         sort_files()                  # Creates ligand, protein, and complex directories
         make_grids()                  # Creates grid for all proteins
-
      
     # 2. prepare ligands
     if '2' in todo:
@@ -60,7 +56,6 @@ for i, d in enumerate(datasets):
         compute_mcss(lm, compute_rmsds = False) # Computes MCSS, for use in pick_helpers
 
     if 'p' in todo:
-        compute_pdb_mcss(lm)
         dock(lm)
         dock(lm, mode = 'confgen_es1')
         dock(lm, mode = 'confgen_es4')
@@ -68,6 +63,8 @@ for i, d in enumerate(datasets):
         dock(lm, mode = 'mininplace')
         dock(lm, mode = 'XP')
         dock(lm, mode = 'expanded')
+        compute_pdb_mcss(lm)
+        compute_fp(lm, raw = 'raw' in shared_paths['ifp']['version'])
 
     if 'v' in todo:
         verify_mcss(lm)

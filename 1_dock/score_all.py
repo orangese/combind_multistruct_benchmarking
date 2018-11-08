@@ -1,10 +1,10 @@
 import os
 import sys
 
-from shared_paths import shared_paths
+from shared_paths import shared_paths, proteins
 from grouper import grouper
 from pick_helpers import load_helpers
-from containers import LigandManager
+from containers import Protein
 
 group_size=30
 cmd = '$SCHRODINGER/run {0:}/3_analyze/scores.py {1:} {1:} {1:}'.format(shared_paths['code'], '{}')
@@ -16,8 +16,7 @@ def write_settings_file(out_path, settings):
             f.write('{}={}\n'.format(varname, var))
 
 def score(lm, helpers, settings, subdir):
-    all_p = [d for d in sorted(os.listdir(shared_paths['data'])) if d[0] != '.' and d[-3:] != 'old']
-    settings['stats_prots'] = [p for p in all_p if p != lm.prot and p != 'D2R']
+    settings['stats_prots'] = [p for p in proteins if p != lm.protein]
     settings['shared_paths'] = shared_paths
     os.system('mkdir -p {}'.format(subdir))
     os.chdir(subdir)
@@ -32,7 +31,7 @@ def score(lm, helpers, settings, subdir):
     for i,group in enumerate(grouper(group_size, unfinished)):
         with open('{}.sh'.format(i),'w') as f:
             f.write('#!/bin/bash\n')
-            f.write(cmd.format(lm.st, lm.prot, ' '.join([q for q in group if q is not None])))
+            f.write(cmd.format(lm.st, lm.protein, ' '.join([q for q in group if q is not None])))
         os.system('sbatch -t 1:00:00 -p owners {}.sh'.format(i))
     os.chdir('..')
 
@@ -42,15 +41,16 @@ output_dir, chembl_file, features, n_ligs = sys.argv[1:5]
 features = features.split(',')
 n_ligs = [int(n) for n in n_ligs.split(',')]
 
-datasets = sys.argv[6:]
+datasets = sys.argv[5:]
 if datasets == []:
-    datasets = [d for d in sorted(os.listdir(shared_paths['data'])) if d[0] != '.' and d[-3:] != 'old']
+    datasets = proteins
 
 os.chdir(shared_paths['data'])
 for i, d in enumerate(datasets):
     print(d, i)
     os.chdir(d)
-    lm = LigandManager(shared_paths, d)
+    prot = Protein(d)
+    lm = prot.lm
 
     helpers = load_helpers()
     self_docked = lm.st+'_lig'
@@ -63,12 +63,12 @@ for i, d in enumerate(datasets):
         subdir = "n={}".format(n)
         settings = {
             'num_pred_chembl' : n,
-            't' : 1 / float(n),
+            't' : 0.8 / float(n),
             'k_list' : features,
             'chembl_file': chembl_file,
-            'num_stats_ligs' : 10,
+            'num_stats_ligs' : 20,
             'num_poses' : 100,
-            'chembl':True
+            'chembl': True
         }
         score(lm, helpers, settings, subdir)
     os.chdir('../../..')

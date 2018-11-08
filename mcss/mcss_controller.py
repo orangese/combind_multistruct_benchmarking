@@ -65,7 +65,7 @@ class MCSSController:
         self.root = "{}/mcss/{}".format(self.lm.root, shared_paths['mcss'])
         self.atom_types = '{}/mcss/custom_types/{}.typ'.format(shared_paths['code'],
                                                                shared_paths['mcss'])
-        self.mcss_file = "{}/{}_mcss.csv".format(self.root, self.lm.protein)
+        self.mcss_file = "{}/mcss.csv".format(self.root)
         self.init_file = "{}/{}.init.csv".format(self.root, '{}')
 
         self.rmsd_file = "{}/{}-{}-{}.csv".format(self.root, '{}',
@@ -151,7 +151,6 @@ class MCSSController:
         """
         if ligands is not None:
             ligands = set(ligands)
-            print(ligands)
         self.load_mcss()
         for name, mcss in self.MCSSs.items():
             valid_ligands = ligands is None or (mcss.l1 in ligands and mcss.l2 in ligands)

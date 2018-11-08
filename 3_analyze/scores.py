@@ -56,16 +56,7 @@ class ScoreContainer:
                     fp.write(str(de)+'\n')
 
     def compute_stats(self):
-        data = {}
-        for protein in self.settings['stats_prots']:
-            lm = Protein(protein).lm
-            ligands = lm.docked(lm.pdb)[:self.settings['num_stats_ligs']+1]
-            self_docked = lm.st+'_lig'
-            if self_docked in ligands:
-                ligands.remove(self_docked)
-            else:
-                ligands.pop(-1)
-            data[protein] = ligands
+        data = {protein: None for protein in self.settings['stats_prots']}
         self.stats = statistics(data, self.settings['k_list'])
 
     def compute_results_chembl(self, query):

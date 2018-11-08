@@ -1,11 +1,12 @@
 import os
 import sys
+from shared_paths import shared_paths
 
 from schrodinger.structure import StructureReader, StructureWriter
 
 out_dir = 'structures/aligned_files'
 queue = 'owners'
-renumber_script = '/scratch/PI/rondror/combind/combind/1_dock/renumber.py'
+renumber_script = '{}/1_dock/renumber.py'.format(shared_paths['code'])
 
 def align_successful(out_dir, struct, verbose=False):
     if struct in ['5IRX','5IS0','3J5Q']: 

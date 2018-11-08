@@ -1,7 +1,7 @@
 import os
 import sys
 
-def pick_helpers(lm, maxnum=20):
+def pick_helpers(lm, maxnum=21):
 
     parent = 'chembl/helpers'
     os.system('mkdir -p {}'.format(parent))
@@ -11,27 +11,24 @@ def pick_helpers(lm, maxnum=20):
     ki_sort = lambda c: lm.chembl_info[c].ki
 
     # filters
-    all_options = {
-        'best_affinity.txt': [],#ki_sort],
-        'best_mcss.txt': []#mcss_sort]
-        #'best_affinity_plus_stereo.txt': [ki_sort, stereo_filter],
-        #'best_mcss_plus_stereo.txt': [mcss_sort, stereo_filter]
-    }
+    all_options = [
+        'best_affinity.txt',
+        'best_mcss.txt',
+    ]
 
     num_chembl = 30
-    for f, filters in all_options.items():
+    for f in all_options:
         fpath = '{}/{}'.format(parent, f)
         if not os.path.exists(fpath):
             print('picking chembl ligands', f)
-            # apply filters
-            chembl_ligs = lm.chembl(filters)
+            chembl_ligs = lm.chembl()
             with open(fpath,'w') as fi:
                 for q in lm.docked(lm.pdb)[:maxnum]:
                     # sort and remove duplicates
                     print(q)
                     if 'mcss' in f:
                         lm.mcss.load_mcss()
-                        sorted_helpers = sorted(chembl_ligs,key=ki_sort)
+                        sorted_helpers = sorted(chembl_ligs ,key=ki_sort)
                         sorted_helpers = lm.mcss.sort_by_mcss(q, sorted_helpers)
                     elif 'affinity' in f:
                         sorted_helpers = sorted(chembl_ligs,key=ki_sort)
@@ -49,7 +46,7 @@ def load_helpers(dirpath=None):
         helpers[fname] = {}
         with open('{}/{}'.format(fpath, fname)) as f:
             for line in f:
-                q,chembl = line.strip().split(':')
+                q, chembl = line.strip().split(':')
                 helpers[fname][q] = chembl.split(',')
 
     return helpers

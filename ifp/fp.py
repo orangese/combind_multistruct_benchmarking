@@ -7,7 +7,6 @@ from schrodinger.structutils.measure import get_shortest_distance
 from hbond import HBond_Container
 from saltbridge import SB_Container
 from pipi import PiPi_Container
-from picat import PiCat_Container
 from hydrophobic import Hydrophobic_Container
 
 nonpolar = {'H': 1.2, 'C':1.7, 'F':1.47, 'Cl':1.75, 'I':1.98, 'Br':1.85}
@@ -32,10 +31,51 @@ class AtomGroup:
         self.hacc = [a for a in st.atom if valid_acceptor(a)]
         self.hdon = [a for a in st.atom if valid_donor(a)]
         self.chrg = [a for a in st.atom if a.formal_charge != 0]
-        self.aro = [ri for ri in st.ring if ri.isAromatic() or ri.isHeteroaromatic()]
+        
         self.cat = [a for a in st.atom if a.formal_charge < 0]
         self.nonpolar1 = set([a for a in st.atom if is_nonpolar(a)])
         self.nonpolar2 = set([a for a in st.atom if is_nonpolar2(a)])
+
+        self.aro = self.fuse_rings(st)
+
+    def fuse_rings(self, st):
+        
+        aro = [ri for ri in st.ring if ri.isAromatic() or ri.isHeteroaromatic()]
+
+        # Identify pairs of rings sharing atoms
+        pairs_to_merge = []
+        for i, ring1 in enumerate(aro):
+            for j, ring2 in enumerate(aro[i+1:]):
+                if any(atom1.xyz == atom2.xyz
+                       for atom1 in ring1.atom
+                       for atom2 in ring2.atom):
+                    pairs_to_merge += [(i, j+i+1)]
+
+        # Merge into groups of disjoint atoms
+        to_merge = [set([a]) for a in range(len(aro))]
+        for (i, j) in pairs_to_merge:
+            group1 = [a for a, group in enumerate(to_merge) if i in group]
+            group2 = [a for a, group in enumerate(to_merge) if j in group]
+
+            if group1 == group2: continue
+            assert len(group1) == 1
+            assert len(group2) == 1
+            group1 = group1[0]
+            group2 = group2[0]
+            if group1 > group2:
+                group1, group2 = group2, group1
+            to_merge += [to_merge[group1].union(to_merge[group2])]
+            to_merge.pop(group2)
+            to_merge.pop(group1)
+
+        # Merge structures of joined rings
+        fused = []
+        for group in to_merge:
+            fused += [aro[group.pop()].extractStructure(copy_props=True)]
+            for i in group:
+                fused[-1].extend(aro[i].extractStructure(copy_props=True))
+        return fused
+
 
 class FP:
     def __init__(self, args):
@@ -43,7 +83,8 @@ class FP:
             'mode': '',
             'input_file': '',
             'output_file': '',
-            'poses': 105
+            'poses': 105,
+            'raw': False
         }
 
         self.set_user_params(args)
@@ -57,11 +98,11 @@ class FP:
 
     def fingerprint(self, lig_st, prot_st, pnum=None):
         lig = AtomGroup(lig_st, 'lig')
+
         interactions = {
             'hbond': HBond_Container(lig, [2,3]),
             'saltbridge': SB_Container(lig, [1]),
-            'pipi': PiPi_Container(lig, [5,6]),
-            'picat': PiCat_Container(lig, [7,8]),
+            'pipi': PiPi_Container(lig, [6]),
             'hydrophobic': Hydrophobic_Container(lig, [10,11])
         }
 
@@ -77,11 +118,14 @@ class FP:
         for i_type in interactions:
             for res_key in active_res:
                 interactions[i_type].add_residue(res_key, self.protein[res_key])
+            
             interactions[i_type].filter_int()
-            i_scores = interactions[i_type].score()
+            if self.params['raw']:
+                i_scores = interactions[i_type].raw()
+            else:
+                i_scores = interactions[i_type].score()
             for sc_key, sc in i_scores.items(): 
                 fp[sc_key] = sc
-
         return fp
 
     def fingerprint_pose_viewer(self):
@@ -105,7 +149,7 @@ class FP:
             prot_st = next(StructureReader('../../structures/proteins/{}_prot.mae'.format(os.listdir('../../docking/grids')[0])))
 
         lig_st = next(StructureReader('../../structures/ligands/{}_lig.mae'.format(pdb)))
-         
+
         return [self.fingerprint(lig_st, prot_st)]
 
     def set_user_params(self, args):
@@ -114,8 +158,12 @@ class FP:
             if item[0] == '-':
                 key = item.replace('-','')
                 assert key in self.params, "Key name {} is invalid".format(key)
-                try: value = int(args[index+1])
-                except ValueError: value = args[index+1]
+                if key == 'poses':
+                    value = int(args[index+1])
+                elif key == 'raw':
+                    value = args[index+1] == 'True'
+                else:
+                    value = args[index+1]
                 self.params[key] = value
 
     def write_fp(self):
@@ -125,7 +173,8 @@ class FP:
                 for sc_key in sorted(ifp.keys()):#.items():
                     i,r,ss = sc_key
                     sc = ifp[sc_key]
-                    if sc >= 0.05: f.write('{}-{}-{}={}\n'.format(i,r,ss, sc))
+                    if self.params['raw'] or sc >= 0:
+                        f.write('{}-{}-{}={}\n'.format(i,r,ss, sc))
 
 if __name__ == '__main__':
     FP(sys.argv[:])
