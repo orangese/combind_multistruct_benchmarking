@@ -1,7 +1,7 @@
 import os
 import sys
 
-from shared_paths import shared_paths
+from shared_paths import shared_paths, proteins
 from sort_downloads import sort_downloads
 
 from align_structs import align_structs
@@ -16,7 +16,6 @@ from mcss_controller import compute_mcss, verify_mcss, compute_pdb_mcss
 from chembl_sort import get_ligands, proc_ligands
 from chembl_props import write_props
 from pick_helpers import pick_helpers, load_helpers
-from score import score
 
 from verify_docking import check_docked_ligands
 from containers import Protein
@@ -29,14 +28,12 @@ if len(todo) == 0:
 
 datasets = sys.argv[2:]
 if datasets == []:
-    datasets = [d for d in sorted(os.listdir('.')) if d[0] != '.' and d[-3:] != 'old']
+    datasets = proteins
 
 datasets=reversed(datasets)
 for i, d in enumerate(datasets):
     print(d, i)
-
     os.chdir(d)
-    
     protein = Protein(d, shared_paths['pdb_order'])
     lm = protein.lm
 

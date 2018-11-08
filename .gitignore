@@ -8,3 +8,4 @@ notebooks/*/.ipynb_checkpoints/*
 */.fuse*
 .fuse*
 __pycache__
+*DS_Store

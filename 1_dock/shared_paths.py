@@ -101,6 +101,10 @@ shared_paths = {
     'pdb_order' : 'First'
 }
 
+import os
+exclude = ['ELANE']
+proteins = [p for p in os.listdir(shared_paths['data']) if p[0] != '.' and p not in exclude]
+
 assert shared_paths['ifp']['version'] == shared_paths['stats']['ifp_version']
 assert shared_paths['docking'] == shared_paths['stats']['docking_version']
 assert shared_paths['mcss'] == shared_paths['stats']['mcss_version']

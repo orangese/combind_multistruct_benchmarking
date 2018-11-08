@@ -1,7 +1,7 @@
 import os
 import sys
 
-from shared_paths import shared_paths
+from shared_paths import shared_paths, proteins
 from grouper import grouper
 from pick_helpers import load_helpers
 from containers import Protein
@@ -16,8 +16,7 @@ def write_settings_file(out_path, settings):
             f.write('{}={}\n'.format(varname, var))
 
 def score(lm, helpers, settings, subdir):
-    all_p = [d for d in sorted(os.listdir(shared_paths['data'])) if d[0] != '.' and d[-3:] != 'old']
-    settings['stats_prots'] = [p for p in all_p if p != lm.protein and p != 'D2R']
+    settings['stats_prots'] = [p for p in proteins if p != lm.protein]
     settings['shared_paths'] = shared_paths
     os.system('mkdir -p {}'.format(subdir))
     os.chdir(subdir)
@@ -44,7 +43,7 @@ n_ligs = [int(n) for n in n_ligs.split(',')]
 
 datasets = sys.argv[5:]
 if datasets == []:
-    datasets = [d for d in sorted(os.listdir(shared_paths['data'])) if d[0] != '.' and d[-3:] != 'old']
+    datasets = proteins
 
 os.chdir(shared_paths['data'])
 for i, d in enumerate(datasets):

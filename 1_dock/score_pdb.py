@@ -1,15 +1,15 @@
 import os
 import sys
-from shared_paths import shared_paths
+from shared_paths import shared_paths, proteins
 from containers import Protein
 
 max_ligands = 20
 
-output_dir = 'scores/pdb_ifp4'
+output_dir = 'scores/pdb_ifp5_crystal'
 cmd = '$SCHRODINGER/run {0:}/3_analyze/scores.py {1:} {1:} {1:}'.format(shared_paths['code'], '{}')
 
 settings = {
-    'k_list' : ['mcss', 'contact', 'sb2', 'hbond', 'hbond', 'pipi'],
+    'k_list' : ['mcss', 'contact', 'sb2', 'hbond', 'pipi'],
     'num_stats_ligs' : shared_paths['stats']['n_ligs'],
     'num_poses' : 100,
     'chembl': False,
@@ -31,8 +31,7 @@ def score_pdb(lm):
     else:
         ligands.pop(-1)
     if len(ligands) == 1: return
-    all_p = [d for d in sorted(os.listdir(shared_paths['data'])) if d[0] != '.' and d[-3:] != 'old' and d != 'ERA']
-    settings['stats_prots'] = [p for p in all_p if p != lm.protein and p != 'D2R']
+    settings['stats_prots'] = [p for p in proteins if p != lm.protein]
     settings['shared_paths'] = shared_paths
     settings['t'] = 0.8 / float(len(ligands))
     write_settings_file('settings.py', settings)
@@ -49,8 +48,7 @@ def score_crystal(lm):
         ligands.remove(self_docked)
     else:
         ligands.pop(-1)
-    all_p = [d for d in sorted(os.listdir(shared_paths['data'])) if d[0] != '.' and d[-3:] != 'old' and d != 'ERA']
-    settings['stats_prots'] = [p for p in all_p if p != lm.protein and p != 'D2R']
+    settings['stats_prots'] = [p for p in proteins if p != lm.protein]
     settings['shared_paths'] = shared_paths
     settings['t'] = 2.0
     write_settings_file('settings.py', settings)
@@ -64,7 +62,7 @@ def score_crystal(lm):
 mode = sys.argv[1]
 datasets = sys.argv[2:]
 if datasets == []:
-    datasets = [d for d in sorted(os.listdir(shared_paths['data'])) if d[0] != '.' and d[-3:] != 'old']
+    datasets = proteins
 
 os.chdir(shared_paths['data'])
 for i, d in enumerate(datasets):
