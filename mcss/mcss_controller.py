@@ -34,7 +34,7 @@ class MCSSController:
     """
 
     INIT_GROUP_SIZE = 1000
-    RMSD_GROUP_SIZE = 10
+    RMSD_GROUP_SIZE = 5
 
     QUEUE = 'owners'
     
@@ -65,7 +65,7 @@ class MCSSController:
         self.root = "{}/mcss/{}".format(self.lm.root, shared_paths['mcss'])
         self.atom_types = '{}/mcss/custom_types/{}.typ'.format(shared_paths['code'],
                                                                shared_paths['mcss'])
-        self.mcss_file = "{}/{}_mcss.csv".format(self.root, self.lm.protein)
+        self.mcss_file = "{}/mcss.csv".format(self.root)
         self.init_file = "{}/{}.init.csv".format(self.root, '{}')
 
         self.rmsd_file = "{}/{}-{}-{}.csv".format(self.root, '{}',

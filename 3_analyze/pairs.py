@@ -1,5 +1,5 @@
 import numpy as np
-from shared_paths import feature_defs
+from shared_paths import shared_paths, feature_defs
 
 class LigPair:
     """
@@ -85,7 +85,8 @@ class PosePair:
         Returns 1 if both poses are at most 2 A RMSD from their
         crystallographic pose.
         """
-        return int(self.pose1.rmsd <= 2 and self.pose2.rmsd <= 2)
+        return int(    self.pose1.rmsd <= shared_paths['stats']['native_thresh']
+                   and self.pose2.rmsd <= shared_paths['stats']['native_thresh'])
 
     def get_feature(self, feature):
         """

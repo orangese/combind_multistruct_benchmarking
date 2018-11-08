@@ -1,3 +1,4 @@
+
 stats = {'stats5': {'version'         : 'stats5',
                     'ifp_version'     : 'ifp3',
                     'mcss_version'    : 'mcss14',
@@ -12,8 +13,14 @@ stats = {'stats5': {'version'         : 'stats5',
                     'gscore_domain'   : (-16, 2),
                     'gscore_points'   : 1000,
                     'gscore_sd'       : 0.4},
-        'stats6': {'version'         : 'stats6',
-                    'ifp'             : 'ifp3',
+         
+         'stats6': {'version'         : 'stats6',
+                    'ifp_version'     : 'ifp4',
+                    'mcss_version'    : 'mcss16',
+                    'docking_version' : 'confgen_es4',
+                    'pdb_order'       : 'First',
+                    'ligands_equal'   : True,
+                    'proteins_equal'  : True,
                     'native_thresh'   : 2.0,
                     'n_ligs'          : 20,
                     'max_poses'       : 100,
@@ -23,7 +30,8 @@ stats = {'stats5': {'version'         : 'stats5',
                     'gscore_domain'   : (-16, 2),
                     'gscore_points'   : 1000,
                     'gscore_sd'       : 0.4},
-        'stats7': {'version'         : 'stats7',
+         
+         'stats7': {'version'         : 'stats7',
                     'native_thresh'   : 2.0,
                     'n_ligs'          : 20,
                     'max_poses'       : 100,
@@ -94,10 +102,10 @@ feature_defs = {
 shared_paths = { 
     'code'      : '~/combind',
     'data'      : "/scratch/PI/rondror/combind/bpp_data/",
-    'docking'   : 'glide12',
-    'mcss'      : 'mcss14',
-    'stats'     : stats['stats5'],
-    'ifp'       : ifp['ifp3'],
+    'docking'   : 'confgen_es4',
+    'mcss'      : 'mcss16',
+    'stats'     : stats['stats6'],
+    'ifp'       : ifp['ifp4'],
     'pdb_order' : 'First'
 }
 
