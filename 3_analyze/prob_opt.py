@@ -3,14 +3,13 @@ import random
 from pairs import LigPair
 
 class PredictStructs:
-    def __init__(self, prot, stats, k_list, max_poses, T):
+    def __init__(self, prot, stats, k_list, max_poses, alpha):
         self.mcss = prot.lm.mcss
         self.docking_st = prot.docking[prot.lm.st]
         self.stats = stats
         self.k_list = k_list
         self.max_poses = max_poses
-        self.T = float(T)
-        assert self.T >= 0
+        self.alpha = float(alpha)
 
         self.ligand_partition_function_cache = {}
         self.log_likelihood_ratio_cache = {}
@@ -139,7 +138,7 @@ class PredictStructs:
         """
         log_prob = 0
         for ligname, pose in pose_cluster.items():
-            log_prob += - self._get_gscore(ligname, pose) / self.T
+            log_prob += - self._get_gscore(ligname, pose) * self.alpha
         
         for i, (ligname1, pose1) in enumerate(pose_cluster.items()):
             for ligname2, pose2 in list(pose_cluster.items())[i+1:]:
@@ -171,7 +170,7 @@ class PredictStructs:
         """
         log_odds = sum(self._log_likelihood_ratio_pair(pose_cluster, query, ligname)
                        for ligname in pose_cluster if ligname != query)
-        log_prior = - self._get_gscore(query, pose_cluster[query]) / self.T
+        log_prior = - self._get_gscore(query, pose_cluster[query]) * self.alpha
         return log_odds + log_prior
 
     def _log_likelihood_ratio_pair(self, pose_cluster, ligname1, ligname2):
@@ -226,22 +225,8 @@ class PredictStructs:
 
         return self.lig_pairs[(l1, l2)].get_feature(fname, p1, p2)
 
-
-    # Methods related to physics scores
-    def _get_prior(self, ligname, pose):
-        return ( np.exp(- self._get_gscore(ligname, pose) / self.T)
-                / self._get_ligand_partition_function(ligname))
-
-    def _get_ligand_partition_function(self, ligname):
-        if ligname not in self.ligand_partition_function_cache:
-            self.ligand_partition_function_cache[ligname] = sum(
-                np.exp(- self._get_gscore(ligname, pose) / self.T)
-                for pose in range(self._num_poses(ligname)))
-        return self.ligand_partition_function_cache[ligname]
-
     def _get_gscore(self, ligand, pose):
         return self.docking_st.ligands[ligand].poses[pose].gscore
-
 
     # Methods to manage poses
     def get_poses(self, cluster):
