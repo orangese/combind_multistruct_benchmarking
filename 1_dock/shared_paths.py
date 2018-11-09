@@ -19,8 +19,8 @@ stats = {'stats5': {'version'         : 'stats5',
                     'mcss_version'    : 'mcss16',
                     'docking_version' : 'confgen_es4',
                     'pdb_order'       : 'First',
-                    'ligands_equal'   : True,
-                    'proteins_equal'  : True,
+                    'poses_equal'     : False,
+                    'ligands_equal'   : False,
                     'native_thresh'   : 2.0,
                     'n_ligs'          : 20,
                     'max_poses'       : 100,
@@ -110,7 +110,7 @@ shared_paths = {
 }
 
 import os
-exclude = ['CHRM3', 'SIGMA1R']
+exclude = ['CHRM3']
 proteins = [p for p in os.listdir(shared_paths['data']) if p[0] != '.' and p not in exclude]
 
 assert shared_paths['ifp']['version'] == shared_paths['stats']['ifp_version']

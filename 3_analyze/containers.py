@@ -259,10 +259,6 @@ class Protein:
 
     def load_docking(self, ligands, load_fp=False, load_crystal = False,
                      load_mcss = False, st = None):
-        """
-        Should eventually phase out the load_crystal keyword and just
-        rely on naming. There is something nice about the redundancy though.
-        """
         if load_crystal:
             assert all('crystal' in ligand for ligand in ligands)
         else:
@@ -276,3 +272,12 @@ class Protein:
 
         if load_mcss:
             self.lm.mcss.load_rmsds(ligands+list(self.docking[st].ligands.keys()), MAX_POSES)
+
+    def get_xdocked_ligands(self, num):
+        ligands = self.lm.docked(self.lm.pdb)[:num+1]
+        self_docked = self.lm.st+'_lig'
+        if self_docked in ligands:
+           ligands.remove(self_docked)
+        else:
+            ligands.pop(-1)
+        return ligands
