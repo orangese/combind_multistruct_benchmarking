@@ -307,16 +307,30 @@ class MCSS:
         
         pose1, pose2: schrodinger.structure
         atom_idx1, atom_idx2: [int, ...]
+        merge_halogens: If true then change the atomic number of all halogens
+                        to 9 (the atomic number of flourine) before computing
+                        rmsds. This allows for MCSS that treat all halogens
+                        the same.
         """
         substructure1 = pose1.extract(atom_idx1)
         substructure2 = pose2.extract(atom_idx2)
         if merge_halogens:
             self._merge_halogens(substructure1)
             self._merge_halogens(substructure2)
-        calc = ConformerRmsd(substructure1, substructure2)
-        calc.use_symmetry = True
-        calc.use_heavy_atom_graph = False
-        return calc.calculate()
+        try:
+            calc = ConformerRmsd(substructure1, substructure2)
+            calc.use_heavy_atom_graph = True
+            rmsd = calc.calculate()
+        except:
+            # This is necessary because there is a bug in the
+            # Schrodinger software that results in incorrect
+            # atom indices being used when the heavy_atom_graph
+            # is used. That being said, the above is more reliable
+            # than the below, so should be tried first.
+            calc = ConformerRmsd(substructure1, substructure2)
+            calc.use_heavy_atom_graph = False
+            rmsd = calc.calculate()
+        return rmsd
 
     def _merge_halogens(self, structure):
         """

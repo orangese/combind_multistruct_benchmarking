@@ -204,16 +204,22 @@ class MCSSController:
         if os.path.exists(self.mcss_file):
             with open(self.mcss_file) as fp:
                 for line in fp:
-                   mcss = MCSS.from_string(line)
-                   assert mcss.name not in self.MCSSs, mcss.name
-                   self.MCSSs[mcss.name] = mcss
+                    try:
+                        mcss = MCSS.from_string(line)
+                    except ValueError:
+                        assert False, line
+                    assert mcss.name not in self.MCSSs, mcss.name
+                    self.MCSSs[mcss.name] = mcss
 
         if temp_init_files is None:
             temp_init_files = glob('{}/*.init.csv'.format(self.root))
         
         for temp in temp_init_files:
             with open(temp) as fp:
-                mcss = MCSS.from_string(fp.readline().strip())
+                try:
+                    mcss = MCSS.from_string(fp.readline().strip())
+                except ValueError:
+                    assert False, temp
                 if mcss is not None:
                     self.MCSSs[mcss.name] = mcss
 
@@ -387,7 +393,7 @@ def compute_pdb_mcss(lm, max_pdb=21, max_poses = 100, compute_rmsds = True):
     controller.execute()
     os.chdir('../..')
 
-def compute_mcss(lm, pick_helpers={}, max_pdb=31, max_poses = 100, compute_rmsds = True):
+def compute_mcss(lm, pick_helpers={}, max_pdb=21, max_poses = 100, compute_rmsds = True):
     """
     Compute unfinished MCSS features. See above class description for more detail.
 
