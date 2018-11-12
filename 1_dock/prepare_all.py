@@ -9,7 +9,7 @@ from process_structs import process_structs
 from sort_files import sort_files
 
 from grids import make_grids
-from dock import dock
+from dock import dock, verify_dock
 from fp_controller import compute_fp
 from mcss_controller import compute_mcss, verify_mcss, compute_pdb_mcss
 
@@ -17,7 +17,6 @@ from chembl_sort import get_ligands, proc_ligands
 from chembl_props import write_props
 from pick_helpers import pick_helpers, load_helpers
 
-from verify_docking import check_docked_ligands
 from containers import Protein
 
 os.chdir(shared_paths['data'])
