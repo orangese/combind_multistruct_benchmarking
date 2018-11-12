@@ -22,15 +22,12 @@ from containers import Protein
 
 os.chdir(shared_paths['data'])
 
-todo = list(sys.argv[1])
-if len(todo) == 0:
-    todo = list('12345')
+todo = sys.argv[1]
 
 datasets = sys.argv[2:]
 if datasets == []:
     datasets = proteins
 
-datasets=reversed(datasets)
 for i, d in enumerate(datasets):
     print(d, i)
     os.chdir(d)
