@@ -11,7 +11,6 @@ from sort_files import sort_files
 from grids import make_grids
 from dock import dock, verify_dock
 from fp_controller import compute_fp
-from mcss_controller import compute_mcss, verify_mcss, compute_pdb_mcss
 
 from chembl_sort import get_ligands, proc_ligands
 from chembl_props import write_props
@@ -49,7 +48,7 @@ for i, d in enumerate(datasets):
        proc_ligands()                 # Runs prepwizard & epik on all ligs
        
     if 'm' in todo:
-        compute_mcss(lm, compute_rmsds = False) # Computes MCSS, for use in pick_helpers
+        lm.mcss.compute_mcss() # Computes MCSS, for use in pick_helpers
 
     if 'p' in todo:
         dock(lm)
@@ -59,7 +58,7 @@ for i, d in enumerate(datasets):
         dock(lm, mode = 'mininplace')
         dock(lm, mode = 'XP')
         dock(lm, mode = 'expanded')
-        compute_pdb_mcss(lm)
+        lm.mcss.compute_mcss(False)
         compute_fp(lm, raw = 'raw' in shared_paths['ifp']['version'])
 
     if 'v' in todo:
@@ -80,6 +79,6 @@ for i, d in enumerate(datasets):
         pick_helpers(lm)                  # Picks chembl ligands for use in scoring for each pdb ligand
         dock(lm, load_helpers())          # Dock chembl ligands to be used for scoring all pdb ligands
         compute_fp(lm)                    # Writeout fingerprints for docked poses and pdb structures
-        compute_mcss(lm, load_helpers())  # Performs all phases of MCSS computation
+        lm.mcss.compute_mcss(load_helpers())  # Performs all phases of MCSS computation
 
     os.chdir('..')

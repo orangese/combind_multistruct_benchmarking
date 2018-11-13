@@ -110,7 +110,7 @@ shared_paths = {
 }
 
 import os
-exclude = ['CHRM3']
+exclude = ['CHRM3', 'SIGMAR1']
 proteins = [p for p in os.listdir(shared_paths['data']) if p[0] != '.' and p not in exclude]
 
 assert shared_paths['ifp']['version'] == shared_paths['stats']['ifp_version']

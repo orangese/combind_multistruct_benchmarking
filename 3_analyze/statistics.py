@@ -134,7 +134,7 @@ def statistics_protein(protein, interactions):
         return stats
     
     print('Computing statistics for:', protein)
-    ligands = Protein(protein).get_xdocked_ligands(shared_paths['stats']['n_ligs'])
+    ligands = Protein(protein).lm.get_xdocked_ligands(shared_paths['stats']['n_ligs'])
     print(ligands)
 
     for j, ligand1 in enumerate(ligands):

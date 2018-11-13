@@ -1,5 +1,7 @@
 import pytest
-from statistics import merge_dicts_of_lists
+import numpy as np
+from density_estimate import DensityEstimate
+from statistics import merge_dicts_of_lists, merge_stats
 
 def test_mismatched():
 	stats1  = {}
@@ -31,3 +33,24 @@ def test_full():
 	merged = merge_dicts_of_lists(stats1, stats2)
 
 	assert merged == {'native': {'pipi': [1, 2]}, 'decoy': {}}
+
+def test_merge_stats():
+	de1 = DensityEstimate(points = 2, domain = (0, 1), n_samples = 1)
+	assert de1.fx.shape == (2,)
+	de1.fx = np.array([0, 0])
+
+	de2 = DensityEstimate(points = 2, domain = (0, 1), n_samples = 2)
+	assert de2.fx.shape == (2,)
+	de2.fx = np.array([1, 1])
+
+	de3 = DensityEstimate(points = 2, domain = (0, 1), n_samples = 5)
+	assert de3.fx.shape == (2,)
+	de3.fx = np.array([2, 2])
+
+	stats = {'native': {'hbond': [de1, de2, de3]}}
+	merged = merge_stats(stats, False)['native']['hbond']
+	assert np.all(merged.fx == np.array([1.5, 1.5]))
+
+	stats = {'native': {'hbond': [de1, de2, de3]}}
+	merged = merge_stats(stats, True)['native']['hbond']
+	assert np.all(merged.fx == np.array([1, 1]))

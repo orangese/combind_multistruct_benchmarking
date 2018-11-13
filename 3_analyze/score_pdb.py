@@ -87,7 +87,7 @@ def run():
         os.system('mkdir -p {}/{}'.format(pdb_root, 'only_crystal'))
 
         protein = Protein(d)
-        ligands = protein.get_xdocked_ligands(20)
+        ligands = protein.lm.get_xdocked_ligands(20)
         stats_prots = [p for p in proteins if p != protein.lm.protein]
 
         # Statistics computation.
