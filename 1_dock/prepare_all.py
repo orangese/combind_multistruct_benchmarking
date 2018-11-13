@@ -63,6 +63,7 @@ for i, d in enumerate(datasets):
 
     if 'v' in todo:
         verify_mcss(lm)
+    
     if 'g' in todo:
         check_docked_ligands(lm)
     # force redo of chembl info (do this if new chembl ligands have been added)
@@ -74,11 +75,11 @@ for i, d in enumerate(datasets):
          os.system('rm chembl/macrocycle.txt') 
          write_props(lm)
 
-    # # 3. decide what ligands to use and prepare them
+    # 3. decide what ligands to use and prepare them
     if '3' in todo:
-        pick_helpers(lm)                  # Picks chembl ligands for use in scoring for each pdb ligand
-        dock(lm, load_helpers())          # Dock chembl ligands to be used for scoring all pdb ligands
-        compute_fp(lm)                    # Writeout fingerprints for docked poses and pdb structures
-        lm.mcss.compute_mcss(load_helpers())  # Performs all phases of MCSS computation
+        pick_helpers(lm)         # Picks chembl ligands for use in scoring
+        dock(lm, load_helpers()) # Dock chembl ligands to be used in scoring
+        compute_fp(lm)           # Fingerprints for docked ligands and pdb structures
+        lm.mcss.compute_mcss(True, load_helpers())
 
     os.chdir('..')

@@ -37,8 +37,8 @@ class MCSSController:
         versus docking performance.
     """
 
-    INIT_GROUP_SIZE = 1000
-    RMSD_GROUP_SIZE = 5
+    INIT_GROUP_SIZE = 500
+    RMSD_GROUP_SIZE = 15
 
     QUEUE = 'owners'
     
@@ -74,9 +74,10 @@ class MCSSController:
 
         self.lig_template = '{0:}/ligands/prepared_ligands/{1:}/{1:}.mae'.format(lm.root, '{0:}')
         self.crystal_template = '{0:}/structures/ligands/{1:}.mae'.format(lm.root, '{0:}')
-        self.pv_template = '{0:}/docking/{1:}/{2:}-to-{3:}/{2:}-to-{3:}_pv.maegz'.format(lm.root,
-                                                                                         shared_paths['docking'], '{0:}', lm.st)
-        self.init_command, self.rmsd_command = self._construct_commands(shared_paths['stats']['max_poses'])
+        self.pv_template = '{0:}/docking/{1:}/{2:}-to-{3:}/{2:}-to-{3:}_pv.maegz'.format(
+                                lm.root, shared_paths['docking'], '{0:}', lm.st)
+        self.init_command, self.rmsd_command = self._construct_commands(
+                                                    shared_paths['stats']['max_poses'])
 
         assert not any('CHEMBL' in ligand for ligand in self.pdb)
 
@@ -174,6 +175,7 @@ class MCSSController:
         query: string, ligand name
         ligands: list(ligands), set of ligands to be sorted
         """
+        self.load_mcss()
         def size(ligand):
             if ligand < query:
                 name = '{}-{}'.format(ligand, query)
@@ -234,15 +236,27 @@ class MCSSController:
         """
         previous_cwd = os.getcwd()
         os.system('mkdir -p {}'.format(self.root))
-        os.chdir('mcss/{}'.format(self.root))
+        os.chdir(self.root)
 
         print("{} PDB ligands, {} CHEMBL ligands".format(len(self.pdb),
                                                          len(self.chembl)))
 
-        print("{} keys in pick_helpers, {} values each".format(len(pick_helpers),
-                                                               len(pick_helpers[0]
-                                                                   if pick_helpers
-                                                                   else 0)))
+        if pick_helpers:
+            num_pdb = [len(v) for v in pick_helpers.values()]
+            num_chembl = [len(v)
+                          for _v in pick_helpers.values()
+                          for v in _v.values()]
+            if min(num_pdb) != max(num_pdb):
+                print("# PDB ranges from {} to {}".format(min(num_pdb), max(num_pdb)))
+            if min(num_chembl) != max(num_chembl):
+                print("# CHEMBL ranges from {} to {}".format(min(num_chembl), max(num_chembl)))
+            num_pdb = num_pdb[0]
+            num_chembl = num_chembl[0]
+        else:
+            num_vals = 0
+        print("{} sort schemes in pick_helpers, "
+              "{} PDB ligands each, "
+              "{} CHEMBL ligands per PDB ligand".format(len(pick_helpers), num_pdb, num_chembl))
 
         self._collate_mcss()
         self._add_pdb_to_pdb()
@@ -266,6 +280,8 @@ class MCSSController:
         self.load_mcss(temp_init_files)
 
         if not temp_init_files: return
+
+        print("Collating {} init files".format(len(temp_init_files)))
 
         # Write to temp and then overwrite original file
         # so that we don't lose anything if job crashes mid-run.

@@ -23,15 +23,15 @@ def pick_helpers(lm, maxnum=21):
             print('picking chembl ligands', f)
             chembl_ligs = lm.chembl()
             with open(fpath,'w') as fi:
-                for q in lm.docked(lm.pdb)[:maxnum]:
+                for q in lm.get_xdocked_ligands(maxnum):
                     # sort and remove duplicates
                     print(q)
                     if 'mcss' in f:
                         lm.mcss.load_mcss()
-                        sorted_helpers = sorted(chembl_ligs ,key=ki_sort)
+                        sorted_helpers = sorted(chembl_ligs, key=ki_sort)
                         sorted_helpers = lm.mcss.sort_by_mcss(q, sorted_helpers)
                     elif 'affinity' in f:
-                        sorted_helpers = sorted(chembl_ligs,key=ki_sort)
+                        sorted_helpers = sorted(chembl_ligs, key=ki_sort)
                     unique = lm.unique([q]+sorted_helpers)
                     fi.write('{}:{}\n'.format(q, ','.join(unique[1:num_chembl+1])))
 
@@ -48,5 +48,4 @@ def load_helpers(dirpath=None):
             for line in f:
                 q, chembl = line.strip().split(':')
                 helpers[fname][q] = chembl.split(',')
-
     return helpers
