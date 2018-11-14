@@ -55,9 +55,10 @@ class Ligand:
     def __init__(self, ligand, dock_dir, fp_dir, struct):
         self.ligand = ligand
         self.glide_path = '{}/{}-to-{}'.format(dock_dir, ligand, struct)
-        self.fp_path = '{}/{}-to-{}.fp'.format(fp_dir, ligand, struct)
-        self.crystal_fp_path = '{}/{}_struct.fp'.format(fp_dir,
-                                                        ligand.replace('_crystal_lig', ''))
+        self.fp_path = '{}/{}-to-{}-{}.fp'.format(fp_dir, ligand, struct,
+                                                  shared_paths['docking'])
+        self.crystal_fp_path = '{}/{}.fp'.format(fp_dir,
+                                                 ligand.replace('_crystal_lig', '_struct'))
 
         self.poses = None
 
