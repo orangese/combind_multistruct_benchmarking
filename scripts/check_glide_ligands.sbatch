@@ -8,4 +8,4 @@
 
 . setup_combind
 
-$SCHRODINGER/run $COMBINDHOME/1_dock/prepare_all.py 'g'
+$SCHRODINGER/run $COMBINDHOME/dock/prepare_all.py 'g'

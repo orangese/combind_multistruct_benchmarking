@@ -1,7 +1,7 @@
 import sys
 import os
-sys.path.append('../../1_dock')
-sys.path.append('../../3_analyze')
+sys.path.append('../../dock')
+sys.path.append('../../score')
 sys.path.append('../../mcss')
 sys.path.append('../../ifp')
 from containers import Protein

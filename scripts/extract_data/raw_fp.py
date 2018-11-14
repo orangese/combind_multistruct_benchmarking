@@ -2,9 +2,9 @@ import numpy as np
 import sys
 import os
 
-sys.path.append('../../1_dock/')
+sys.path.append('../../dock/')
 sys.path.append('../../2_ifp/')
-sys.path.append('../../3_analyze/')
+sys.path.append('../../score/')
 from pairs import LigPair
 from shared_paths import shared_paths
 from containers import Dataset

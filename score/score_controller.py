@@ -29,7 +29,7 @@ features = [['mcss', 'pipi', 'contact', 'hbond', 'sb'],
             ['mcss', 'pipi', 'contact', 'hbond'],
             ]
 
-cmd = '$SCHRODINGER/run {0:}/3_analyze/scores.py {1:} {1:} {1:} {1:}'.format(
+cmd = '$SCHRODINGER/run {0:}/score/scores.py {1:} {1:} {1:} {1:}'.format(
                                                   shared_paths['code'], '{}')
 settings = {
     'num_poses' : 100,
