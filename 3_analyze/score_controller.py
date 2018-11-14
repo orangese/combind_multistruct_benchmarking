@@ -55,9 +55,9 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
         assert chembl is None
     if chembl is not None:
         assert not crystal
-        assert chembl > 0
-        assert type(chembl[0]) == str
-        assert type(chembl[1]) == int
+        assert type(chembl[0]) == str, chembl[0]
+        assert type(chembl[1]) == int, chembl[1]
+        assert chembl[1] > 0
     
     # Setup directory
     if chembl is not None:
@@ -75,7 +75,8 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
     if crystal:
         settings['alpha'] = alpha_factor
     elif chembl is not None:
-        settings['alpha'] = alpha_factor * (chembl - 1)
+        settings['alpha'] = alpha_factor * (chembl[1] - 1)
+        settings['num_pred_chembl'] = chembl[1]
         settings['chembl_file'] = chembl[0] + '.txt'
     else:
         settings['alpha'] = alpha_factor * float(len(ligands)-1)
@@ -174,7 +175,6 @@ def run_chembl(helpers):
         os.system('mkdir -p {}'.format(scores_root))
         os.system('mkdir -p {}/{}'.format(scores_root, 'standard'))
         os.system('mkdir -p {}/{}'.format(scores_root, 'crystal'))
-        os.system('mkdir -p {}/{}'.format(scores_root, 'only_crystal'))
 
         protein = Protein(d)
         ligands = protein.lm.get_xdocked_ligands(20)
@@ -187,7 +187,7 @@ def run_chembl(helpers):
             for alpha_factor in alpha_factors:
                 for feature in features:
                     score(stats_root, protein.lm.st, protein.lm.protein, ligands,
-                          False, alpha_factor, feature, chembl = (helpers, num_ligs))
+                          False, alpha_factor, feature, chembl = (helpers, num_lig))
         os.chdir('..')
 
         # Crystal.
@@ -196,7 +196,7 @@ def run_chembl(helpers):
             for alpha_factor in alpha_factors:
                 for feature in features:
                     score(stats_root, protein.lm.st, protein.lm.protein, ligands,
-                          True, alpha_factor, feature, chembl = (helpers, num_ligs))
+                          True, alpha_factor, feature, chembl = (helpers, num_lig))
         os.chdir('..')
 
 def check(mode):

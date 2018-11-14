@@ -4,7 +4,7 @@ from pairs import LigPair
 
 class PredictStructs:
     def __init__(self, prot, stats, k_list, max_poses, alpha):
-        self.mcss = prot.lm.mcss
+        self.mcss = prot.lm.mcss if 'mcss' in k_list else None
         self.docking_st = prot.docking[prot.lm.st]
         self.stats = stats
         self.k_list = k_list

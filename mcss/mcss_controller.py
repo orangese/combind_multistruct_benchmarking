@@ -256,7 +256,8 @@ class MCSSController:
             num_vals = 0
         print("{} sort schemes in pick_helpers, "
               "{} PDB ligands each, "
-              "{} CHEMBL ligands per PDB ligand".format(len(pick_helpers), num_pdb, num_chembl))
+              "{} CHEMBL ligands per PDB ligand".format(len(pick_helpers),
+                                                        num_pdb, num_chembl))
 
         self._collate_mcss()
         self._add_pdb_to_pdb()
@@ -332,11 +333,13 @@ class MCSSController:
         pick_helpers: {pick_helpers_filename: {query_pdb: [chembl, ...]}}
         """
         compute_rmsds = True
+        crystal_lig = self.st + '_crystal_lig'
         for fname, queries in pick_helpers.items():
             for query, chembl_ligands in queries.items():
                 for i, l1 in enumerate(chembl_ligands):
                     assert l1 != '', pick_helpers # switch to continue if this happens
-                    self._add(query, l1, compute_rmsds)
+                    self._add(query,       l1, compute_rmsds)
+                    self._add(crystal_lig, l1, compute_rmsds)
                     for l2 in chembl_ligands[i+1:]:
                         assert l2 != '', pick_helpers # switch to continue if this happens
                         self._add(l1, l2, compute_rmsds)

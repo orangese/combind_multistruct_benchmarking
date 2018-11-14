@@ -50,7 +50,8 @@ class ScoreContainer:
 
     def compute_results(self, queries):
 
-        self.predict_data.load_docking(queries, load_fp = True, load_mcss = True,
+        self.predict_data.load_docking(queries, load_fp = True,
+                                       load_mcss = 'mcss' in self.settings['k_list'],
                                        st = self.struct)
 
         if 'use_crystal_pose' in self.settings and self.settings['use_crystal_pose']:
@@ -58,7 +59,7 @@ class ScoreContainer:
             if crystal_lig not in queries: queries += [crystal_lig]
             self.predict_data.load_docking([crystal_lig], load_crystal = True,
                                            load_fp = True,
-                                           load_mcss = True,
+                                           load_mcss = 'mcss' in self.settings['k_list'],
                                            st = self.struct)
 
         best_cluster, _, _ = self.ps.max_posterior(queries, restart=15, sampling=3)
