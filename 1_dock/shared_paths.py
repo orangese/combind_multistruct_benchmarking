@@ -13,37 +13,26 @@ stats = {'stats5': {'version'         : 'stats5',
                     'gscore_domain'   : (-16, 2),
                     'gscore_points'   : 1000,
                     'gscore_sd'       : 0.4},
-         
+
          'stats6': {'version'         : 'stats6',
                     'ifp_version'     : 'ifp4',
                     'mcss_version'    : 'mcss16',
                     'docking_version' : 'confgen_es4',
                     'pdb_order'       : 'First',
-                    'ligands_equal'   : True,
-                    'proteins_equal'  : True,
+                    'poses_equal'     : False,
+                    'ligands_equal'   : False,
                     'native_thresh'   : 2.0,
                     'n_ligs'          : 20,
                     'max_poses'       : 100,
-                    'weighting'       : 'unweighted',
                     'stats_sd'        : 0.07,
                     'stats_points'    : 100,
-                    'gscore_domain'   : (-16, 2),
-                    'gscore_points'   : 1000,
-                    'gscore_sd'       : 0.4},
-         
-         'stats7': {'version'         : 'stats7',
-                    'native_thresh'   : 2.0,
-                    'n_ligs'          : 20,
-                    'max_poses'       : 100,
                     'weighting'       : 'unweighted',
-                    'stats_sd'        : 0.07,
-                    'stats_points'    : 100,
                     'gscore_domain'   : (-16, 2),
                     'gscore_points'   : 1000,
-                    'gscore_sd'       : 0.4},
+                    'gscore_sd'       : 0.4}
          }
 
-ifp = {'ifp3': {'version'  : 'ifp3',
+ifp = {'ifp3': {'version': 'ifp3',
                 'hbond_dist_opt': 2.5,
                 'hbond_dist_cut': 3.0,
                 'hbond_angle_opt': 60.0,
@@ -54,6 +43,7 @@ ifp = {'ifp3': {'version'  : 'ifp3',
                 'pipi_dist_cut': 6.0,
                 'contact_scale_opt': 1.25,
                 'contact_scale_cut': 1.75},
+
        'ifp4': {'version'  : 'ifp4', # Cutoffs same as in ifp3, but ifp code changed.
                 'hbond_dist_opt': 2.5,
                 'hbond_dist_cut': 3.0,
@@ -65,17 +55,7 @@ ifp = {'ifp3': {'version'  : 'ifp3',
                 'pipi_dist_cut': 6.0,
                 'contact_scale_opt': 1.25,
                 'contact_scale_cut': 1.75},
-       'raw_ifp4': {'version'  : 'raw', # Increased cut distance so close interactions are written
-                'hbond_dist_opt': 2.5,
-                'hbond_dist_cut': 5.0,
-                'hbond_angle_opt': 60.0,
-                'hbond_angle_cut': 90.0,
-                'sb_dist_opt': 4.0,
-                'sb_dist_cut': 6.0,
-                'pipi_dist_opt': 4.5,
-                'pipi_dist_cut': 9.0,
-                'contact_scale_opt': 1.25,
-                'contact_scale_cut': 1.75},
+
        'ifp5': {'version'  : 'ifp5',
                 'hbond_dist_opt': 2.75,
                 'hbond_dist_cut': 5.0,
@@ -110,7 +90,7 @@ shared_paths = {
 }
 
 import os
-exclude = ['CHRM3', 'SIGMA1R']
+exclude = ['CHRM3', 'SIGMAR1']
 proteins = [p for p in os.listdir(shared_paths['data']) if p[0] != '.' and p not in exclude]
 
 assert shared_paths['ifp']['version'] == shared_paths['stats']['ifp_version']

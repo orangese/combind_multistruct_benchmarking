@@ -13,9 +13,10 @@ In addition to being used as a feature, the MCSSs are also used to determine whi
 
 ## Code structure
 
-1. The MCSS class represents an individual MCSS and RMSDs. This class handles all of the actual computations and is designed to be a standalone object.
+1. The MCSS class represents an individual MCSS and RMSDs. This class handles all of the actual computations and is designed to stand alone object.
 
-2. The MCSSController class handles decisions about which MCSSs to compute and specifying file paths. This class is therefore specific to the directory structure
+2. The MCSSController class handles decisions about which MCSSs to compute and specifying file paths. This class is therefore specific to the directory structure. This class should only ever
+be initialized by the LigandManager class.
 
 ## Complications
 

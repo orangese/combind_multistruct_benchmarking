@@ -24,6 +24,19 @@ Inside the code global constants are stored in shared_paths.py.k
 You should never pass the shared_paths dictionary
 as an argument, as this is unncessary and confusing.
 
+## Testing
+
+Tests are located in each directory. They largely fall into two categories
+(1) tests of logic of python code and (2) tests of behaviour of schrodinger
+code. The former can be run by executing "pytest" from $COMBINDHOME or by
+"pytest /path/to/test.py" to run an individual test suite. The latter need
+to be run individually and largely do not have automated checking i.e. you
+need to manually inspect the output to see if it is what you expect.
+
+Any time you notice that a ligand was not given the right protonation state,
+a fingerprint is wrong, proteins are not properly aligned, etc., you should add it
+as a test case.
+
 ## Workflow Overview
 
 0. Protein and Ligand Curation and Processing

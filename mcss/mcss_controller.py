@@ -1,6 +1,6 @@
 import os
-import sys
 from glob import glob
+
 from grouper import grouper
 from shared_paths import shared_paths
 from mcss import MCSS
@@ -24,17 +24,21 @@ class MCSSController:
     on order of # PDB * # CHEMBL files!
 
     lm: LigandManager
-    max_pdb: int, maximum number of pdb ligands to consider
-    max_poses: int, maximum number of poses to consider for RMSD calculations
 
     MCSSs: {ligand-pair-string: MCSS instance, ...}
+    pdb: PDB x-docked pdb ligands
+    chembl: all chembl ligands
     docked: set(string), Set of ligands with docking results
     no_mcss: set(string), Ligands with no init MCSS
     no_rmsd: set(string), Ligands with no MCSS RMSD
+    no_mcss_small: set(string), Ligands that are small enough that the
+        normal lower bound on MCSS size could not be met while a significant
+        overlap exists. Mostly for use in making a plot of ligand similarity
+        versus docking performance.
     """
 
-    INIT_GROUP_SIZE = 1000
-    RMSD_GROUP_SIZE = 5
+    INIT_GROUP_SIZE = 500
+    RMSD_GROUP_SIZE = 15
 
     QUEUE = 'owners'
     
@@ -47,35 +51,35 @@ class MCSSController:
                 ).format(QUEUE, '{}')
 
 
-    def __init__(self, lm, max_pdb=31, max_poses=100):
-        self.lm = lm
-        self.max_pdb = max_pdb
+    def __init__(self, lm):
+        self.st = lm.st
+        self.pdb = lm.get_xdocked_ligands(shared_paths['stats']['n_ligs'])
+        self.chembl = lm.chembl()
+        self.docked  = set(lm.docked(self.pdb+self.chembl))
 
         self.MCSSs = {}
-        
-        self.pdb = self.lm.docked(self.lm.pdb)[:self.max_pdb]
-        self.docked  = set(lm.docked(lm.pdb+lm.chembl()))
-        
-        # Incomplete pairs
         self.no_mcss = set([])
         self.no_rmsd = set([])
         self.no_mcss_small = set([])
 
         # File paths. Remaining '{}' is ligand pair name.
-        self.root = "{}/mcss/{}".format(self.lm.root, shared_paths['mcss'])
+        self.root = "{}/mcss/{}".format(lm.root, shared_paths['mcss'])
         self.atom_types = '{}/mcss/custom_types/{}.typ'.format(shared_paths['code'],
                                                                shared_paths['mcss'])
         self.mcss_file = "{}/mcss.csv".format(self.root)
         self.init_file = "{}/{}.init.csv".format(self.root, '{}')
 
         self.rmsd_file = "{}/{}-{}-{}.csv".format(self.root, '{}',
-                                                  self.lm.st, shared_paths['docking'])
+                                                  self.st, shared_paths['docking'])
 
-        self.lig_template = '{0:}/ligands/prepared_ligands/{1:}/{1:}.mae'.format(self.lm.root, '{0:}')
-        self.crystal_template = '{0:}/structures/ligands/{1:}.mae'.format(self.lm.root, '{0:}')
-        self.pv_template = '{0:}/docking/{1:}/{2:}-to-{3:}/{2:}-to-{3:}_pv.maegz'.format(self.lm.root,
-                                                                                         shared_paths['docking'], '{0:}', self.lm.st)
-        self.init_command, self.rmsd_command = self._construct_commands(max_poses)
+        self.lig_template = '{0:}/ligands/prepared_ligands/{1:}/{1:}.mae'.format(lm.root, '{0:}')
+        self.crystal_template = '{0:}/structures/ligands/{1:}.mae'.format(lm.root, '{0:}')
+        self.pv_template = '{0:}/docking/{1:}/{2:}-to-{3:}/{2:}-to-{3:}_pv.maegz'.format(
+                                lm.root, shared_paths['docking'], '{0:}', lm.st)
+        self.init_command, self.rmsd_command = self._construct_commands(
+                                                    shared_paths['stats']['max_poses'])
+
+        assert not any('CHEMBL' in ligand for ligand in self.pdb)
 
     def _construct_commands(self, max_poses):
         """
@@ -137,7 +141,7 @@ class MCSSController:
                     self.MCSSs[name].load_rmsds(self.rmsd_file.format(name),
                                                 poseviewer_paths, max_poses)
 
-    def verify_rmsds(self, ligands, max_poses):
+    def verify_rmsds(self):
         """
         Check that all existing RMSD files are valid
         and contain entries for at least max_poses poses
@@ -149,13 +153,10 @@ class MCSSController:
         max_poses: int
         ligands: iterable
         """
-        if ligands is not None:
-            ligands = set(ligands)
         self.load_mcss()
         for name, mcss in self.MCSSs.items():
-            valid_ligands = ligands is None or (mcss.l1 in ligands and mcss.l2 in ligands)
             rmsd_file_exists = os.path.exists(self.rmsd_file.format(name))
-            if valid_ligands and rmsd_file_exists and mcss.is_valid():
+            if rmsd_file_exists and mcss.is_valid():
                 poseviewer_paths = {mcss.l1: self.pv_template.format(mcss.l1),
                                     mcss.l2: self.pv_template.format(mcss.l2)}
                 if not self.MCSSs[name].verify_rmsds(self.rmsd_file.format(name),
@@ -174,6 +175,7 @@ class MCSSController:
         query: string, ligand name
         ligands: list(ligands), set of ligands to be sorted
         """
+        self.load_mcss()
         def size(ligand):
             if ligand < query:
                 name = '{}-{}'.format(ligand, query)
@@ -204,21 +206,69 @@ class MCSSController:
         if os.path.exists(self.mcss_file):
             with open(self.mcss_file) as fp:
                 for line in fp:
-                   mcss = MCSS.from_string(line)
-                   assert mcss.name not in self.MCSSs, mcss.name
-                   self.MCSSs[mcss.name] = mcss
+                    try:
+                        mcss = MCSS.from_string(line)
+                    except ValueError:
+                        assert False, line
+                    assert mcss.name not in self.MCSSs, mcss.name
+                    self.MCSSs[mcss.name] = mcss
 
         if temp_init_files is None:
             temp_init_files = glob('{}/*.init.csv'.format(self.root))
         
         for temp in temp_init_files:
             with open(temp) as fp:
-                mcss = MCSS.from_string(fp.readline().strip())
+                try:
+                    mcss = MCSS.from_string(fp.readline().strip())
+                except ValueError:
+                    assert False, temp
                 if mcss is not None:
                     self.MCSSs[mcss.name] = mcss
 
     # All of below are relevant for computation only
-    def collate_mcss(self):
+    def compute_mcss(self, chembl = True, pick_helpers={}):
+        """
+        Compute unfinished MCSS features. See above class description for more detail.
+
+        chembl (bool): if True compute MCSS for PDB + CHEMBL ligand pairs,
+                       else only consider PDB ligand pairs.
+        pick_helpers: {pick_helpers_filename: {query_pdb: [chembl, ...]}}
+        """
+        previous_cwd = os.getcwd()
+        os.system('mkdir -p {}'.format(self.root))
+        os.chdir(self.root)
+
+        print("{} PDB ligands, {} CHEMBL ligands".format(len(self.pdb),
+                                                         len(self.chembl)))
+
+        if pick_helpers:
+            num_pdb = [len(v) for v in pick_helpers.values()]
+            num_chembl = [len(v)
+                          for _v in pick_helpers.values()
+                          for v in _v.values()]
+            if min(num_pdb) != max(num_pdb):
+                print("# PDB ranges from {} to {}".format(min(num_pdb), max(num_pdb)))
+            if min(num_chembl) != max(num_chembl):
+                print("# CHEMBL ranges from {} to {}".format(min(num_chembl), max(num_chembl)))
+            num_pdb = num_pdb[0]
+            num_chembl = num_chembl[0]
+        else:
+            num_vals = 0
+        print("{} sort schemes in pick_helpers, "
+              "{} PDB ligands each, "
+              "{} CHEMBL ligands per PDB ligand".format(len(pick_helpers),
+                                                        num_pdb, num_chembl))
+
+        self._collate_mcss()
+        self._add_pdb_to_pdb()
+        self._add_crystal()
+        if chembl:
+            self._add_pdb_to_allchembl()
+            self._add_pick_helpers(pick_helpers)
+        self._execute()
+        os.chdir(previous_cwd)
+    
+    def _collate_mcss(self):
         """
         Collate MCSS init results into a single file. This also loads
         the data and should be used as the load function during the
@@ -232,6 +282,8 @@ class MCSSController:
 
         if not temp_init_files: return
 
+        print("Collating {} init files".format(len(temp_init_files)))
+
         # Write to temp and then overwrite original file
         # so that we don't lose anything if job crashes mid-run.
         with open('mcss_temp.csv', 'w') as fp:
@@ -244,21 +296,23 @@ class MCSSController:
             os.system('rm {}'.format(temp))
 
     # Methods to add ligand pairs
-    def add_pdb_to_pdb(self, compute_rmsds):
+    def _add_pdb_to_pdb(self):
         """
         Add all pdb to pdb ligand pairs
         """
+        compute_rmsds = True
         for i, l1 in enumerate(self.pdb):
             for l2 in self.pdb[i+1:]:
                 self._add(l1, l2, compute_rmsds, compute_small = True)
 
-    def add_crystal(self):
-        crystal_lig = self.lm.st + '_crystal_lig'
+    def _add_crystal(self):
+        compute_rmsds = True
+        crystal_lig = self.st + '_crystal_lig'
         for ligand in self.pdb:
-            if ligand == self.lm.st + '_lig': continue 
-            self._add(crystal_lig, ligand, True)
+            if ligand == self.st + '_lig': continue 
+            self._add(crystal_lig, ligand, compute_rmsds)
 
-    def add_pdb_to_allchembl(self):
+    def _add_pdb_to_allchembl(self):
         """
         Add all pdb - chembl ligand pairs.
         Most of these are only used for deciding which chembl ligands to use
@@ -266,10 +320,10 @@ class MCSSController:
         """
         compute_rmsds = False
         for l1 in self.pdb:
-            for l2 in self.lm.chembl():
+            for l2 in self.chembl:
                 self._add(l1,l2, compute_rmsds)
 
-    def add_pick_helpers(self, pick_helpers, compute_rmsds):
+    def _add_pick_helpers(self, pick_helpers):
         """
         Adds pairs of pdb to chembl ligands and chembl to chembl ligands
         that will be jointly used in a score computation as specified
@@ -278,13 +332,16 @@ class MCSSController:
         Chembl - Chembl pairs that are specified by "chembl"
         pick_helpers: {pick_helpers_filename: {query_pdb: [chembl, ...]}}
         """
+        compute_rmsds = True
+        crystal_lig = self.st + '_crystal_lig'
         for fname, queries in pick_helpers.items():
             for query, chembl_ligands in queries.items():
                 for i, l1 in enumerate(chembl_ligands):
-                    assert l1 != '' # switch to continue if this happens
-                    self._add(query, l1, compute_rmsds)
+                    assert l1 != '', pick_helpers # switch to continue if this happens
+                    self._add(query,       l1, compute_rmsds)
+                    self._add(crystal_lig, l1, compute_rmsds)
                     for l2 in chembl_ligands[i+1:]:
-                        assert l2 != '' # switch to continue if this happens
+                        assert l2 != '', pick_helpers # switch to continue if this happens
                         self._add(l1, l2, compute_rmsds)
 
     def _add(self, l1, l2, compute_rmsd, compute_small = False):
@@ -312,7 +369,7 @@ class MCSSController:
             self.no_mcss_small.add((l1, l2))
 
     # Methods to execute computation
-    def execute(self):
+    def _execute(self):
         """
         Execute all incomplete computations.
         """
@@ -358,54 +415,3 @@ class MCSSController:
             with open(script, 'w') as f:
                 f.write(self.TEMPLATE.format(contents))
             os.system('sbatch {}'.format(script))
-
-def verify_mcss(lm, max_pdb=31, max_poses = 100):
-    """
-    Verify that all MCSS RMSD files are valid. 
-    """
-    controller = MCSSController(lm, max_pdb, max_poses)
-    controller.verify_rmsds(None, max_poses)
-
-def compute_pdb_mcss(lm, max_pdb=21, max_poses = 100, compute_rmsds = True):
-    """
-    Compute unfinished MCSS features. See above class description for more detail.
-
-    * This should be called from the root of a protein directory *
-
-    lm: LigandManager instance
-    pick_helpers: {pick_helpers_filename: {query_pdb: [chembl, ...]}}
-    max_pdb: int, maximum number of pdb ligands to consider
-    max_poses: int, maximum number of poses for which to compute rmsds
-    """
-    os.system('mkdir -p mcss/{}'.format(shared_paths['mcss']))
-    os.chdir('mcss/{}'.format(shared_paths['mcss']))
-    
-    controller = MCSSController(lm, max_pdb, max_poses)
-    controller.collate_mcss()
-    controller.add_pdb_to_pdb(compute_rmsds)
-    controller.add_crystal()
-    controller.execute()
-    os.chdir('../..')
-
-def compute_mcss(lm, pick_helpers={}, max_pdb=31, max_poses = 100, compute_rmsds = True):
-    """
-    Compute unfinished MCSS features. See above class description for more detail.
-
-    * This should be called from the root of a protein directory *
-
-    lm: LigandManager instance
-    pick_helpers: {pick_helpers_filename: {query_pdb: [chembl, ...]}}
-    max_pdb: int, maximum number of pdb ligands to consider
-    max_poses: int, maximum number of poses for which to compute rmsds
-    """
-    os.system('mkdir -p mcss/{}'.format(shared_paths['mcss']))
-    os.chdir('mcss/{}'.format(shared_paths['mcss']))
-    
-    controller = MCSSController(lm, max_pdb, max_poses)
-    controller.collate_mcss()
-    controller.add_pdb_to_pdb(compute_rmsds)
-    controller.add_crystal()
-    controller.add_pdb_to_allchembl()
-    controller.add_pick_helpers(pick_helpers, compute_rmsds)
-    controller.execute()
-    os.chdir('../..')

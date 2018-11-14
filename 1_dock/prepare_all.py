@@ -9,28 +9,23 @@ from process_structs import process_structs
 from sort_files import sort_files
 
 from grids import make_grids
-from dock import dock
+from dock import dock, verify_dock
 from fp_controller import compute_fp
-from mcss_controller import compute_mcss, verify_mcss, compute_pdb_mcss
 
 from chembl_sort import get_ligands, proc_ligands
 from chembl_props import write_props
 from pick_helpers import pick_helpers, load_helpers
 
-from verify_docking import check_docked_ligands
 from containers import Protein
 
 os.chdir(shared_paths['data'])
 
-todo = list(sys.argv[1])
-if len(todo) == 0:
-    todo = list('12345')
+todo = sys.argv[1]
 
 datasets = sys.argv[2:]
 if datasets == []:
     datasets = proteins
 
-datasets=reversed(datasets)
 for i, d in enumerate(datasets):
     print(d, i)
     os.chdir(d)
@@ -53,7 +48,7 @@ for i, d in enumerate(datasets):
        proc_ligands()                 # Runs prepwizard & epik on all ligs
        
     if 'm' in todo:
-        compute_mcss(lm, compute_rmsds = False) # Computes MCSS, for use in pick_helpers
+        lm.mcss.compute_mcss() # Computes MCSS, for use in pick_helpers
 
     if 'p' in todo:
         dock(lm)
@@ -63,11 +58,12 @@ for i, d in enumerate(datasets):
         dock(lm, mode = 'mininplace')
         dock(lm, mode = 'XP')
         dock(lm, mode = 'expanded')
-        compute_pdb_mcss(lm)
+        lm.mcss.compute_mcss(False)
         compute_fp(lm, raw = 'raw' in shared_paths['ifp']['version'])
 
     if 'v' in todo:
         verify_mcss(lm)
+    
     if 'g' in todo:
         check_docked_ligands(lm)
     # force redo of chembl info (do this if new chembl ligands have been added)
@@ -79,11 +75,11 @@ for i, d in enumerate(datasets):
          os.system('rm chembl/macrocycle.txt') 
          write_props(lm)
 
-    # # 3. decide what ligands to use and prepare them
+    # 3. decide what ligands to use and prepare them
     if '3' in todo:
-        pick_helpers(lm)                  # Picks chembl ligands for use in scoring for each pdb ligand
-        dock(lm, load_helpers())          # Dock chembl ligands to be used for scoring all pdb ligands
-        compute_fp(lm)                    # Writeout fingerprints for docked poses and pdb structures
-        compute_mcss(lm, load_helpers())  # Performs all phases of MCSS computation
+        pick_helpers(lm)         # Picks chembl ligands for use in scoring
+        dock(lm, load_helpers()) # Dock chembl ligands to be used in scoring
+        compute_fp(lm)           # Fingerprints for docked ligands and pdb structures
+        lm.mcss.compute_mcss(True, load_helpers())
 
     os.chdir('..')

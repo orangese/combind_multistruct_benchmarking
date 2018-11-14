@@ -177,7 +177,7 @@ class DensityEstimate:
         if not prob: de.fx *= self.n_samples / float(other.n_samples)
         return de
 
-    def average(self, other, weight = True):
+    def _average(self, other):
         '''
         Returns a new function representing the average of the self and other
         functions. The domain of the new function covers the domain of both
@@ -199,11 +199,8 @@ class DensityEstimate:
 
         self_fx  = np.array([ self(x) for x in de.x])
         other_fx = np.array([other(x) for x in de.x])
-        if weight:
-            de.fx = ((self_fx * self.n_samples + other_fx * other.n_samples)
-                     / (self.n_samples+other.n_samples))
-        else:
-            de.fx = (self_fx + other_fx) / 2.0
+        de.fx = ((self_fx * self.n_samples + other_fx * other.n_samples)
+                 / (self.n_samples+other.n_samples))
         return de
 
     def copy(self):
@@ -216,3 +213,14 @@ class DensityEstimate:
         de.domain = self.domain
         de.x = np.copy(self.x)
         de.fx = np.copy(self.fx)
+
+    @classmethod
+    def merge(cls, des, weight_equally = True):
+        if weight_equally:
+            for de in des:
+                if de.n_samples:
+                    de.n_samples = 1
+        out = des[0]
+        for de in des[1:]:
+            out = out._average(de)
+        return out

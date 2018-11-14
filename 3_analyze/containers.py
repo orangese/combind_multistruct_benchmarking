@@ -26,9 +26,6 @@ from pick_helpers import load_helpers
 from chembl_props import read_duplicates
 from mcss_controller import MCSSController
 
-
-MAX_POSES = 100 # TODO: add this as a param in shared_paths
-
 class Pose:
     """
     Represents a single pose of a ligand.
@@ -58,9 +55,10 @@ class Ligand:
     def __init__(self, ligand, dock_dir, fp_dir, struct):
         self.ligand = ligand
         self.glide_path = '{}/{}-to-{}'.format(dock_dir, ligand, struct)
-        self.fp_path = '{}/{}-to-{}.fp'.format(fp_dir, ligand, struct)
-        self.crystal_fp_path = '{}/{}_struct.fp'.format(fp_dir,
-                                                        ligand.replace('_crystal_lig', ''))
+        self.fp_path = '{}/{}-to-{}-{}.fp'.format(fp_dir, ligand, struct,
+                                                  shared_paths['docking'])
+        self.crystal_fp_path = '{}/{}.fp'.format(fp_dir,
+                                                 ligand.replace('_crystal_lig', '_struct'))
 
         self.poses = None
 
@@ -70,7 +68,7 @@ class Ligand:
         fps = {}
         if load_fp:  
             fps = parse_fp_file(self.fp_path)
-            assert len(fps) >= min(MAX_POSES, len(rmsds)), \
+            assert len(fps) >= min(shared_paths['stats']['max_poses'], len(rmsds)), \
                    ('missing for {}'.format(self.fp_path))
  
         assert len(gscores) == len(rmsds) == len(emodels), \
@@ -192,6 +190,15 @@ class LigandManager:
         self.mcss = MCSSController(self)
         self.helpers = {}
 
+    def get_xdocked_ligands(self, num):
+        ligands = self.docked(self.pdb)[:num+1]
+        self_docked = self.st+'_lig'
+        if self_docked in ligands:
+           ligands.remove(self_docked)
+        else:
+            ligands.pop(-1)
+        return ligands
+
     def docked(self, ligands, st=None):
         if st == None: st = self.st
         return [ligand for ligand in ligands
@@ -259,10 +266,6 @@ class Protein:
 
     def load_docking(self, ligands, load_fp=False, load_crystal = False,
                      load_mcss = False, st = None):
-        """
-        Should eventually phase out the load_crystal keyword and just
-        rely on naming. There is something nice about the redundancy though.
-        """
         if load_crystal:
             assert all('crystal' in ligand for ligand in ligands)
         else:
@@ -275,4 +278,5 @@ class Protein:
         self.docking[st].load(ligands, load_fp, load_crystal)
 
         if load_mcss:
-            self.lm.mcss.load_rmsds(ligands+list(self.docking[st].ligands.keys()), MAX_POSES)
+            self.lm.mcss.load_rmsds(ligands+list(self.docking[st].ligands.keys()),
+                                    shared_paths['stats']['max_poses'])

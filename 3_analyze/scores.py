@@ -10,7 +10,7 @@ class ScoreContainer:
     """
     Manages execution of ComBind for a given protein and settings.
     """
-    def __init__(self, root, prot, struct):
+    def __init__(self, root, stats_root, prot, struct):
         self.prot = prot
         self.struct = struct
         self.root = root
@@ -18,12 +18,12 @@ class ScoreContainer:
         self.settings = self.read_settings()
         self.sp = self.settings['shared_paths']
 
-        self.init_stats()
+        self.read_stats(stats_root)
  
         self.predict_data = Protein(prot)
         self.ps = PredictStructs(self.predict_data, self.stats, 
                                  self.settings['k_list'], self.settings['num_poses'],
-                                 self.settings['t'])
+                                 self.settings['alpha'])
 
     def read_settings(self):
         tr = {}
@@ -33,31 +33,13 @@ class ScoreContainer:
                 tr[var] = eval(val)
         return tr
 
-    def init_stats(self):
-        self.read_stats()
-        if self.stats is None:
-            self.compute_stats()
-            self.write_stats()
-
-    def read_stats(self):
+    def read_stats(self, stats_root):
         self.stats = {'native':{}, 'reference':{}}
         for dist in self.stats:
             for interaction in self.settings['k_list']:
-                fname = '{}/{}_{}.txt'.format(self.root, dist, interaction)
-                if not os.path.exists(fname):
-                    self.stats = None
-                    return
+                fname = '{}/{}_{}.txt'.format(stats_root, dist, interaction)
+                assert os.path.exists(fname), fname
                 self.stats[dist][interaction] = DensityEstimate.read(fname)
-
-    def write_stats(self):
-        for dist, interactions in self.stats.items():
-            for interaction, de in interactions.items():
-                with open('{}/{}_{}.txt'.format(self.root, dist, interaction), 'w') as fp:
-                    fp.write(str(de)+'\n')
-
-    def compute_stats(self):
-        data = {protein: None for protein in self.settings['stats_prots']}
-        self.stats = statistics(data, self.settings['k_list'])
 
     def compute_results_chembl(self, query):
         assert self.settings['chembl']
@@ -68,7 +50,8 @@ class ScoreContainer:
 
     def compute_results(self, queries):
 
-        self.predict_data.load_docking(queries, load_fp = True, load_mcss = True,
+        self.predict_data.load_docking(queries, load_fp = True,
+                                       load_mcss = 'mcss' in self.settings['k_list'],
                                        st = self.struct)
 
         if 'use_crystal_pose' in self.settings and self.settings['use_crystal_pose']:
@@ -76,7 +59,7 @@ class ScoreContainer:
             if crystal_lig not in queries: queries += [crystal_lig]
             self.predict_data.load_docking([crystal_lig], load_crystal = True,
                                            load_fp = True,
-                                           load_mcss = True,
+                                           load_mcss = 'mcss' in self.settings['k_list'],
                                            st = self.struct)
 
         best_cluster, _, _ = self.ps.max_posterior(queries, restart=15, sampling=3)
@@ -109,9 +92,9 @@ class ScoreContainer:
                                         sc.ps.log_posterior(best_cluster) if len(best_cluster) == len(cluster) else 0))
 
 if __name__ == '__main__':
-    struct, protein = sys.argv[1:3]
-    queries = sys.argv[3:]
-    sc = ScoreContainer(os.getcwd(), protein, struct)
+    stats_root, struct, protein = sys.argv[1:4]
+    queries = sys.argv[4:]
+    sc = ScoreContainer(os.getcwd(), stats_root, protein, struct)
 
     if sc.settings['chembl']:
         for query in queries:
