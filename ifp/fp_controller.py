@@ -16,7 +16,7 @@ def get_fp(lm, fp_list, raw):
         with open('{}fp.sh'.format(i), 'w') as f:
             f.write('#!/bin/bash\n')
             for name in names:
-                if p is None: continue
+                if name is None: continue
                 input_file = '../../docking/{}/{}/{}_pv.maegz'.format(shared_paths['docking'],
                                                                       name, name)
                 output_file = '{}-{}.fp'.format(name, shared_paths['docking'])
@@ -47,7 +47,7 @@ def compute_fp(lm, raw = False):
                                                name, shared_paths['docking'])
         if not os.path.exists(output_file):
             unfinished.append(name)
-       
+    
     os.chdir('ifp/{}'.format(shared_paths['ifp']['version'])) 
     if not raw: structure_fp(lm)
     get_fp(lm, unfinished, raw)
