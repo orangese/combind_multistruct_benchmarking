@@ -70,16 +70,16 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
         return
     os.mkdir(subdir)
     os.chdir(subdir)
-    
+
     # Run specific settings.
     if crystal:
         settings['alpha'] = alpha_factor
     elif chembl is not None:
-        settings['alpha'] = alpha_factor * (chembl[1] - 1)
+        settings['alpha'] = alpha_factor * (chembl[1] + use_crystal_pose)
         settings['num_pred_chembl'] = chembl[1]
         settings['chembl_file'] = chembl[0] + '.txt'
     else:
-        settings['alpha'] = alpha_factor * float(len(ligands)-1)
+        settings['alpha'] = alpha_factor * float(len(ligands) - 1 + use_crystal_pose)
     settings['use_crystal_pose'] = use_crystal_pose
     settings['k_list'] = features
     settings['chembl'] = chembl is not None
@@ -96,13 +96,18 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
                 f.write(cmd.format(stats_root, struct, protein, ligand)+'\n')
         else:
             f.write(cmd.format(stats_root, struct, protein, ' '.join(ligands))+'\n')
-    os.system('sbatch -t 02:00:00 -p owners run.sh')
+    os.system('sbatch -t 03:00:00 -p owners run.sh')
     os.chdir('..')
 
-print('There are {} total jobs.'.format(  len(alpha_factors)
-                                        * len(features)
-                                        * len(proteins)
-                                        * 3))
+print('There are {} total PDB jobs.'.format(  len(alpha_factors)
+                                            * len(features)
+                                            * len(proteins)
+                                            * 3))
+print('There are {} total CHEMBL jobs.'.format(  len(alpha_factors)
+                                               * len(num_ligs)
+                                               * 1 #len(features)
+                                               * len(proteins)
+                                               * 2))
 
 def compute_stats(protein, stats_root):
     stats_prots = [p for p in proteins if p != protein.lm.protein]
@@ -232,14 +237,15 @@ def merge(mode):
                                                      mode)
     total = 0
     with open(out_fname, 'w') as out:
-        out.write('\t'.join(['mode', 'protein', 'ligand', 'alpha', 'features',
+        out.write('\t'.join(['mode', 'protein', 'ligand', 'n_ligs', 'alpha', 'features',
                              'combind_rank', 'combind_rmsd',
                              'glide_rank',   'glide_rmsd',
                              'best_rank',    'best_rmsd']) + '\n')
         for fname in glob(template):
             protein, _, version, pdb, params, settings, name = fname.split('/')[-7:]
             settings = settings.split('-')
-            assert len(settings) == 2
+            if len(settings) == 2:
+                settings =['0'] + settings
             assert mode == mode
             assert version == shared_paths['stats']['version']
             with open(fname) as fp:
@@ -261,6 +267,7 @@ def merge(mode):
                                             lig,
                                             settings[0],
                                             settings[1],
+                                            settings[2],
                                             combind_rank, combind_rmsd,
                                             glide_rank, glide_rmsd,
                                             best_rank, best_rmsd
