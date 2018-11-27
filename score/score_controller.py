@@ -18,15 +18,14 @@ from containers import Protein
 from statistics import statistics
 from glob import glob
 
-helpers = ['best_mcss.txt', 'best_affinity.txt']
-num_ligs = [1, 3, 10, 30]
-alpha_factors = [0.5, 1.0, 1.5, 2.0, 2.5]
+num_ligs = [1, 3, 10, 20, 30]
+alpha_factors = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 10.0]
 features = [['mcss', 'pipi', 'contact', 'hbond', 'sb'],
-            ['mcss', 'contact', 'hbond', 'sb'],
+            #['mcss', 'contact', 'hbond', 'sb'],
             ['pipi', 'contact', 'hbond', 'sb'],
-            ['mcss', 'pipi', 'contact', 'sb'],
-            ['mcss', 'pipi', 'hbond', 'sb'],
-            ['mcss', 'pipi', 'contact', 'hbond'],
+            #['mcss', 'pipi', 'contact', 'sb'],
+            #['mcss', 'pipi', 'hbond', 'sb'],
+            #['mcss', 'pipi', 'contact', 'hbond'],
             ]
 
 cmd = '$SCHRODINGER/run {0:}/score/scores.py {1:} {1:} {1:} {1:}'.format(
@@ -96,7 +95,7 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
                 f.write(cmd.format(stats_root, struct, protein, ligand)+'\n')
         else:
             f.write(cmd.format(stats_root, struct, protein, ' '.join(ligands))+'\n')
-    os.system('sbatch -t 03:00:00 -p owners run.sh')
+    os.system('sbatch -t 05:00:00 -p owners run.sh')
     os.chdir('..')
 
 print('There are {} total PDB jobs.'.format(  len(alpha_factors)
@@ -105,7 +104,7 @@ print('There are {} total PDB jobs.'.format(  len(alpha_factors)
                                             * 3))
 print('There are {} total CHEMBL jobs.'.format(  len(alpha_factors)
                                                * len(num_ligs)
-                                               * 1 #len(features)
+                                               * len(features)
                                                * len(proteins)
                                                * 2))
 
@@ -184,7 +183,6 @@ def run_chembl(helpers):
         protein = Protein(d)
         ligands = protein.lm.get_xdocked_ligands(20)
         compute_stats(protein, stats_root)
-        features = [['pipi', 'contact', 'hbond', 'sb']]
         # Standard.
         os.chdir(scores_root)
         os.chdir('standard')
@@ -215,7 +213,8 @@ def check(mode):
     for fname in glob(template+'slurm*'):
         with open(fname) as fp:
             text = fp.read()
-            if 'Error' in text or 'Exception' in text or 'error' in text:
+            if (('Error' in text or 'Exception' in text or 'error' in text)
+                and 'PREEMPTION' not in text):
                 if len(errors) < 10:
                     # Don't write too many error messages
                     print(fname)

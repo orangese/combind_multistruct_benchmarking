@@ -16,11 +16,13 @@ class HBond_Container:
 
         for res_atom in res_st.hdon:
             for lig_atom in self.lig.hacc:
-                self.all_hdon[resnum].extend([HBond(res_atom, lig_atom, n, resnum, True) for n in res_atom.bonded_atoms if n.element == 'H'])
+                self.all_hdon[resnum].extend([HBond(res_atom, lig_atom, n, resnum, True)
+                                             for n in res_atom.bonded_atoms if n.element == 'H'])
 
         for res_atom in res_st.hacc:
             for lig_atom in self.lig.hdon:
-                self.all_hacc[resnum].extend([HBond(lig_atom, res_atom, n, resnum, False) for n in lig_atom.bonded_atoms if n.element == 'H'])
+                self.all_hacc[resnum].extend([HBond(lig_atom, res_atom, n, resnum, False)
+                                             for n in lig_atom.bonded_atoms if n.element == 'H'])
 
     def filter_int(self):
         # enforces 1 hbond per h
@@ -52,6 +54,7 @@ class HBond_Container:
                 key = (self.ind[1], r, '')
                 if key not in all_scores: all_scores[key] = 0
                 all_scores[key] += hb.score()
+                
         return all_scores
 
     def raw(self):

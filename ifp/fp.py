@@ -170,7 +170,7 @@ class FP:
         with open(self.params['output_file'], 'w') as f:
             for i, ifp in enumerate(self.fp):
                 f.write('Pose {}\n'.format(i))
-                for sc_key in sorted(ifp.keys()):#.items():
+                for sc_key in sorted(ifp.keys()):
                     i,r,ss = sc_key
                     sc = ifp[sc_key]
                     if self.params['raw'] or sc >= 0:
