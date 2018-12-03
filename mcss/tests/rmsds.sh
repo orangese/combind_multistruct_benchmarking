@@ -1,6 +1,8 @@
 
-echo MCSS RMSD with atomic weight specified
-echo TODO
+echo Segfault
+$SCHRODINGER/run ~/combind/mcss/mcss.py RMSD CHEMBL3289024_lig CHEMBL3289026_lig inputs/CHEMBL3289024_lig-to-1C5X_pv.maegz inputs/CHEMBL3289026_lig-to-1C5X_pv.maegz outputs/CHEMBL3289024_lig-CHEMBL3289026_lig.init.csv ~/combind/mcss/custom_types/mcss16.typ outputs/CHEMBL3289024_lig-CHEMBL3289026_lig-1C5X-confgen_es4.csv 2  "CHEMBL3289024_lig,CHEMBL3289026_lig,37,40,32,0,NC(=[N+])c1ccc(cc1)Oc2cc(C(=O)NCCC)cc(c2)Oc3ccc(C(N)=[N+])cc3,NC(=[N+])c1ccc(cc1)Oc2cc(C(=O)NCCC)cc(c2)Oc3ccc(C(N)=[N+])cc3,False"
+
+exit
 
 echo MCSS size decreases mcss14 fails
 $SCHRODINGER/run ~/combind/mcss/mcss.py RMSD CHEMBL186288_lig CHEMBL187750_lig inputs/CHEMBL186288_lig-to-1AQ1_pv.maegz inputs/CHEMBL187750_lig-to-1AQ1_pv.maegz outputs/CHEMBL186288_lig-CHEMBL187750_lig.init.csv ~/combind/mcss/custom_types/mcss14.typ outputs/CHEMBL186288_lig-CHEMBL187750_lig-1AQ1-glide12.csv 10  "CHEMBL186288_lig,CHEMBL187750_lig,27,27,23,26,c1ccccc1Nc2nccc(n2)-c(cn3)c(n34)ccc(O)n4,c1ccccc1Nc2nccc(n2)-c(cn3)c(n34)ccc([O-])n4"
@@ -22,7 +24,6 @@ diff expected/3AUQ_lig-CHEMBL3264162_lig-1DB1-glide12.csv outputs/3AUQ_lig-CHEMB
 echo Tautomers differ between prepared ligands and glide poses
 $SCHRODINGER/run ~/combind/mcss/mcss.py RMSD CHEMBL210836_lig CHEMBL424880_lig inputs/CHEMBL210836_lig-to-1BZC_pv.maegz inputs/CHEMBL424880_lig-to-1BZC_pv.maegz outputs/CHEMBL210836_lig-CHEMBL424880_lig.csv ~/combind/mcss/custom_types/mcss14.typ outputs/CHEMBL210836_lig-CHEMBL424880_lig-1BZC-glide12.csv 10  "CHEMBL210836_lig,CHEMBL424880_lig,35,36,35,39,c1ccccc1S(=O)(=O)NC(c(n2)nc(c23)cccc3)Cc4ccc(cc4)C(S5(=O)=O)CC(=N5)[O-],c1ccccc1S(=O)(=O)NC(c(n2)nc(c23)cccc3)Cc4ccc(cc4)C(S5(=O)=O)CC(=N5)[O-]"
 diff expected/CHEMBL210836_lig-CHEMBL424880_lig-1BZC-glide12.csv outputs/CHEMBL210836_lig-CHEMBL424880_lig-1BZC-glide12.csv
-
 
 echo Ketone Oxygen to oxyanion conversion mcss14
 $SCHRODINGER/run ~/combind/mcss/mcss.py RMSD CHEMBL2385551_lig CHEMBL2385552_lig inputs/CHEMBL2385551_lig-to-1KV1_pv.maegz inputs/CHEMBL2385552_lig-to-1KV1_pv.maegz outputs/CHEMBL2385551_lig-CHEMBL2385552_lig.init.csv ~/combind/mcss/custom_types/mcss14.typ outputs/CHEMBL2385551_lig-CHEMBL2385552_lig-1KV1-glide12.csv 10  "CHEMBL2385551_lig,CHEMBL2385552_lig,27,27,24,26,CSc1ccc(cc1)-c2nc(-c(cc)cc)c(n2)-c3ccccc3,C[S+]c1ccc(cc1)-c2nc(C(=CC)CC)c(n2)-c3ccccc3"

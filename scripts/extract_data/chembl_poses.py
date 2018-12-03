@@ -1,8 +1,8 @@
 import os
 import sys
-sys.path.append('../../1_dock')
+sys.path.append('../../dock')
 sys.path.append('../../2_ifp')
-sys.path.append('../../3_analyze')
+sys.path.append('../../score')
 
 from containers import Dataset
 from shared_paths import shared_paths

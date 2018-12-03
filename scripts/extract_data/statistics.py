@@ -2,7 +2,7 @@ import sys
 from containers import LigandManager
 from statistics import Statistics
 
-sys.path.append('../1_dock')
+sys.path.append('../dock')
 from shared_paths import shared_paths
 
 name, proteins, features, num_ligs = sys.argv[1:]

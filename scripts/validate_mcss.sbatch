@@ -15,6 +15,6 @@ mode=$1
 data=/scratch/PI/rondror/combind/bpp_data
 end=$((4*SLURM_ARRAY_TASK_ID+4))
 for prot in $(ls $data | head -n $end | tail -n 4); do
-    $SCHRODINGER/run $COMBINDHOME/1_dock/prepare_all.py 'v' $prot &
+    $SCHRODINGER/run $COMBINDHOME/dock/prepare_all.py 'v' $prot &
 done
 wait

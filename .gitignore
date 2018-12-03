@@ -10,3 +10,4 @@ notebooks/*/.ipynb_checkpoints/*
 .fuse*
 __pycache__
 *DS_Store
+*.cache

@@ -2,7 +2,7 @@ import os
 import sys
 from containers import LigandManager
 from statistics import gscore_statistics
-sys.path.append('../1_dock/')
+sys.path.append('../dock/')
 from shared_paths import shared_paths
 
 n_ligs = 20
