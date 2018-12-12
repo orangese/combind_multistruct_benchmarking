@@ -3,50 +3,37 @@ import random
 from pairs import LigPair
 
 class PredictStructs:
-    def __init__(self, prot, stats, k_list, max_poses, alpha):
-        self.mcss = prot.lm.mcss if 'mcss' in k_list else None
-        self.docking_st = prot.docking[prot.lm.st]
-        self.stats = stats
-        self.k_list = k_list
+    def __init__(self, prot, stats, features, max_poses, alpha):
+        self.mcss      = prot.lm.mcss if 'mcss' in features else None
+        self.docking   = prot.docking[prot.lm.st].ligands
+        self.stats     = stats
+        self.features  = features
         self.max_poses = max_poses
-        self.alpha = float(alpha)
+        self.alpha     = float(alpha)
 
-        self.ligand_partition_function_cache = {}
         self.log_likelihood_ratio_cache = {}
         self.lig_pairs = {}
 
-    def max_posterior(self, ligands, verbose=False, sampling=3, mode='MAX',
-                      restart=15, en_landscape=False):
-
-        opt = self._optimize_cluster
-        if mode == 'ANNEAL':
-            opt = self._anneal_cluster
-
-        initial_cluster = {l:0 for l in ligands}
-        max_sc, best_cluster, all_scores, all_rmsds = opt(initial_cluster, sampling=sampling,
-                                                          en_landscape=en_landscape)
-
-        if verbose:
-            print('cluster -1, score {}'.format(max_sc))
+    def max_posterior(self, ligands, sampling = 10, restart = 15):
+        best_score, best_cluster = self._optimize_cluster({l:0 for l in ligands},
+                                                          sampling=sampling)
+        print(best_cluster)
+        print('cluster -1, score {}'.format(best_score))
 
         for i in range(restart):
-            rand_cluster = {}
-            for l in ligands:
-                rand_cluster[l] = np.random.randint(self._num_poses(l))
+            score, cluster = self._optimize_cluster({l: np.random.randint(self._num_poses(l))
+                                                     for l in ligands},
+                                                    sampling=sampling)
+            if score > best_score:
+                best_score = score
+                best_cluster = cluster
+           
+            print(cluster)
+            print('cluster {}, score {}'.format(i, score))
 
-            new_sc, new_cluster, scores, rmsds = opt(rand_cluster,sampling=sampling,
-                                                     en_landscape=en_landscape)
-            all_scores.extend(scores)
-            all_rmsds.extend(rmsds)
+        return best_cluster
 
-            if new_sc > max_sc:
-                max_sc, best_cluster = new_sc, new_cluster
-            if verbose:
-                print('cluster {}, score {}'.format(i,new_sc))
-
-        return best_cluster, all_scores, all_rmsds
-
-    def _optimize_cluster(self, pose_cluster, sampling, en_landscape):
+    def _optimize_cluster(self, pose_cluster, sampling):
         """
         Maximizes
             log P(L = l1 .. ln) = C + (\sum - glide / T) + (\sum log_odds)
@@ -59,74 +46,21 @@ class PredictStructs:
         pose_cluster: dict of  ligand_name -> current pose number
         sampling: int sample sampling*len(init_cluster)**2 times
         """
-        log_posteriors, rmsds = [], []
-
         time_since_update = 0
         while time_since_update < sampling * len(list(pose_cluster.keys()))**2:
             time_since_update += 1
-
             query = np.random.choice(list(pose_cluster.keys()))
-            best_sc = self._partial_log_posterior(pose_cluster, query)
-            best_p = pose_cluster[query]
-            for p in range(self._num_poses(query)):
-                pose_cluster[query] = p
-                new_score = self._partial_log_posterior(pose_cluster, query)
-                if new_score > best_sc:
-                    best_sc, best_p = new_score, p
+            best_score = self._partial_log_posterior(pose_cluster, query)
+            best_pose  = pose_cluster[query]
+            for pose in range(self._num_poses(query)):
+                pose_cluster[query] = pose
+                score = self._partial_log_posterior(pose_cluster, query)
+                if score > best_score:
+                    best_score, best_pose = score, pose
                     time_since_update = 0
-            pose_cluster[query] = best_p
+            pose_cluster[query] = best_pose
 
-            if en_landscape:
-                log_posteriors += [self.log_posterior(pose_cluster)]
-                rmsds += [self.get_rmsd(pose_cluster)]
-
-        return self.log_posterior(pose_cluster), pose_cluster, log_posteriors, rmsds
-
-    def _anneal_cluster(self, pose_cluster, sampling, en_landscape):
-        """
-        Optimize pose cluster using simulated annealing.
-
-        This method has been tested, but I haven't put any effort
-        into tuning the cooling schedule. It isn't immediately way better.
-
-        Keeps track of the score of the current pose cluster by
-        summing the difference in partial score at each switch.
-        Should verify that this doesn't lead to numerical issues,
-        but I really doubt it.
-        """
-        
-        log_likelihood = 0 # confusing to call this energy because we are maximizing it
-        best_log_likelihood = 0
-        best_cluster = {k:v for k, v in pose_cluster.items()}
-        
-        # Linear cooling schedule
-        T_START = 2
-        COOLING = 0.5
-        CHAIN_LENGTH = sampling*self.max_poses*len(pose_cluster)
-        T = lambda i: float(T_START - COOLING*int(i/CHAIN_LENGTH))
-
-        for i in range(CHAIN_LENGTH*int(T_START/COOLING) + 1):
-
-            query = np.random.choice(list(pose_cluster.keys()))
-            current_pose  = pose_cluster[query]
-            proposed_pose = random.randint(0, self._num_poses(query)-1)
-
-            current_partial  = self._partial_log_posterior(pose_cluster, query)
-            pose_cluster[query] = proposed_pose
-            proposed_partial = self._partial_log_posterior(pose_cluster, query)
-        
-            if (proposed_partial > current_partial
-                or T(i) > 0 and random.random() < np.exp((proposed_partial - current_partial) / T(i))):
-                pose_cluster[query] = proposed_pose
-                log_likelihood += proposed_partial - current_partial
-            else:
-                pose_cluster[query] = current_pose
-                
-            if log_likelihood > best_log_likelihood:
-                best_log_likelihood = log_likelihood
-                best_cluster = {k:v for k, v in pose_cluster.items()}
-
-        return self.log_posterior(pose_cluster), best_cluster, [], []
+        return self.log_posterior(pose_cluster), pose_cluster
 
     # Methods to score sets of ligands
     def log_posterior(self, pose_cluster):
@@ -138,30 +72,13 @@ class PredictStructs:
         """
         log_prob = 0
         for ligname, pose in pose_cluster.items():
-            log_prob += - self._get_gscore(ligname, pose) * self.alpha
+            log_prob -= self._get_gscore(ligname, pose) * self.alpha
         
-        for i, (ligname1, pose1) in enumerate(pose_cluster.items()):
-            for ligname2, pose2 in list(pose_cluster.items())[i+1:]:
+        ligands = list(pose_cluster.keys())
+        for i, ligname1 in enumerate(ligands):
+            for ligname2 in ligands[i+1:]:
                 log_prob += self._log_likelihood_ratio_pair(pose_cluster, ligname1, ligname2)
         return log_prob
-
-    def likelihood_and_feature_matrix(self, pose_cluster, k, lig_order):
-        """
-        Returns the feature values and likelihood ratios, P(X|l)/P(X)
-        for feature 'fname' for poses in 'pose_cluster'
-        as len(pose_cluster) x len(pose_cluster) numpy arrays.
-        """
-        x                    = np.zeros((len(pose_cluster), len(pose_cluster)))
-        log_likelihood_ratio = np.zeros((len(pose_cluster), len(pose_cluster)))
-
-        for i, ligname1 in enumerate(lig_order):
-            for j, ligname2 in enumerate(lig_order):
-                if j <= i: continue
-                x_k, p_x_native, p_x = self._likelihoods_for_pair_and_single_feature(k, pose_cluster,
-                                                                                   ligname1, ligname2)
-                x[i, j] = x_k
-                log_likelihood_ratio[i, j] = np.log(p_x_native) - np.log(p_x)
-        return x, log_likelihood_ratio
 
     def _partial_log_posterior(self, pose_cluster, query):
         """
@@ -190,13 +107,14 @@ class PredictStructs:
         
         if pair_key not in self.log_likelihood_ratio_cache:
             log_likelihood = 0
-            for k in self.k_list:
-                _, p_x_native, p_x = self._likelihoods_for_pair_and_single_feature(k, pose_cluster,
-                                                                                   ligname1, ligname2)
+            for feature in self.features:
+                _, p_x_native, p_x = self._likelihoods_for_pair_and_single_feature(feature,
+                                                                                   pose_cluster,
+                                                                                   ligname1,
+                                                                                   ligname2)
                 log_likelihood += np.log(p_x_native) - np.log(p_x)
             self.log_likelihood_ratio_cache[pair_key] = log_likelihood
         return self.log_likelihood_ratio_cache[pair_key]
-
 
     def _likelihoods_for_pair_and_single_feature(self, k, pose_cluster,
                                                  ligname1, ligname2):
@@ -214,27 +132,49 @@ class PredictStructs:
 
         return x_k, p_x_native, p_x
 
-    def _get_feature(self, fname, l1, l2, p1, p2):
-        if l1 > l2:
-            l1, l2 = l2, l1
-            p1, p2 = p2, p1
+    def _get_feature(self, feature, ligname1, ligname2, pose1, pose2):
+        if ligname1 > ligname2:
+            ligname1, ligname2 = ligname2, ligname1
+            pose1, pose2 = pose2, pose1
 
-        if (l1, l2) not in self.lig_pairs:
-            self.lig_pairs[(l1, l2)] = LigPair(self.docking_st.ligands[l1], self.docking_st.ligands[l2],
-                                               self.k_list, self.mcss, self.max_poses)
+        if (ligname1, ligname2) not in self.lig_pairs:
+            self.lig_pairs[(ligname1, ligname2)] = LigPair(self.docking[ligname1],
+                                                           self.docking[ligname2],
+                                                           self.features, self.mcss,
+                                                           self.max_poses)
 
-        return self.lig_pairs[(l1, l2)].get_feature(fname, p1, p2)
+        return self.lig_pairs[(ligname1, ligname2)].get_feature(feature, pose1, pose2)
 
     def _get_gscore(self, ligand, pose):
-        return self.docking_st.ligands[ligand].poses[pose].gscore
-
-    # Methods to manage poses
-    def get_poses(self, cluster):
-        return {l:self.docking_st.ligands[l].poses[p] for l,p in cluster.items()}
-
-    def get_rmsd(self, cluster):
-        tmp = [self.docking_st.ligands[l].poses[p].rmsd for l,p in cluster.items()]
-        return np.mean([r for r in tmp if r is not None])
+        return self.docking[ligand].poses[pose].gscore
 
     def _num_poses(self, ligname):
-        return min(self.max_poses, len(self.docking_st.ligands[ligname].poses))
+        return min(self.max_poses, len(self.docking[ligname].poses))
+
+    ####################################################################################
+    # Methods important for figure making, but not execution
+    def likelihood_and_feature_matrix(self, pose_cluster, k, lig_order):
+        """
+        Returns the feature values and likelihood ratios, P(X|l)/P(X)
+        for feature 'fname' for poses in 'pose_cluster'
+        as len(pose_cluster) x len(pose_cluster) numpy arrays.
+        """
+        x                    = np.zeros((len(pose_cluster), len(pose_cluster)))
+        log_likelihood_ratio = np.zeros((len(pose_cluster), len(pose_cluster)))
+
+        for i, ligname1 in enumerate(lig_order):
+            for j, ligname2 in enumerate(lig_order):
+                if j <= i: continue
+                x_k, p_x_native, p_x = self._likelihoods_for_pair_and_single_feature(k, pose_cluster,
+                                                                                   ligname1, ligname2)
+                x[i, j] = x_k
+                log_likelihood_ratio[i, j] = np.log(p_x_native) - np.log(p_x)
+        return x, log_likelihood_ratio
+    
+    def get_poses(self, cluster):
+        return {l:self.docking[l].poses[p] for l,p in cluster.items()}
+
+    def get_rmsd(self, cluster):
+        tmp = [self.docking[l].poses[p].rmsd for l,p in cluster.items()]
+        return np.mean([r for r in tmp if r is not None])
+    
