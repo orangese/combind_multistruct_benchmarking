@@ -21,7 +21,7 @@ class ScoreContainer:
         self.read_stats(stats_root)
  
         self.predict_data = Protein(prot)
-        self.ps = PredictStructs(self.predict_data, self.stats, 
+        self.ps = PredictStructs(self.predict_data, self.stats,
                                  self.settings['k_list'], self.settings['num_poses'],
                                  self.settings['alpha'])
 
@@ -49,7 +49,6 @@ class ScoreContainer:
         return self.compute_results([query]+chembl_ligs)
 
     def compute_results(self, queries):
-
         self.predict_data.load_docking(queries, load_fp = True,
                                        load_mcss = 'mcss' in self.settings['k_list'],
                                        st = self.struct)
@@ -62,7 +61,7 @@ class ScoreContainer:
                                            load_mcss = 'mcss' in self.settings['k_list'],
                                            st = self.struct)
 
-        best_cluster, _, _ = self.ps.max_posterior(queries, restart=15, sampling=3)
+        best_cluster = self.ps.max_posterior(queries, restart=1000, sampling=5)
         return best_cluster
 
     def write_results(self, cluster, fname):
@@ -87,9 +86,9 @@ class ScoreContainer:
                                            0, poses[0].rmsd,
                                            best_cluster[lig] if lig in best_cluster else None, best_rmsd]))+'\n')
             f.write('combind={},glide={},best={}\n'.format(
-                                        sc.ps.log_posterior(cluster),
-                                        sc.ps.log_posterior({k:0 for k in cluster.keys()}),
-                                        sc.ps.log_posterior(best_cluster) if len(best_cluster) == len(cluster) else 0))
+                    sc.ps.log_posterior(cluster),
+                    sc.ps.log_posterior({k:0 for k in cluster.keys()}),
+                    sc.ps.log_posterior(best_cluster) if len(best_cluster) == len(cluster) else 0))
 
 if __name__ == '__main__':
     stats_root, struct, protein = sys.argv[1:4]

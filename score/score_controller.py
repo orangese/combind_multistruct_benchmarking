@@ -10,6 +10,10 @@ stats_version/
               best_affinity/
                             standard/num-alpha-feat1_feat2_feat3
                             crystal/
+              summary/
+                  pdb.txt
+                  best_mcss.txt
+                  best_affinity.txt
 """
 
 import os
@@ -18,18 +22,18 @@ from containers import Protein
 from statistics import statistics
 from glob import glob
 
-num_ligs = [1, 3, 10, 20, 30]
-alpha_factors = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 10.0]
-features = [['mcss', 'pipi', 'contact', 'hbond', 'sb'],
-            #['mcss', 'contact', 'hbond', 'sb'],
-            ['pipi', 'contact', 'hbond', 'sb'],
+num_ligs = [1, 3, 10, 20]
+alpha_factors = [1.0]#, 1.5, 2.0, 2.5, 3.0, 3.5, 10.0]
+features = [#['mcss', 'pipi', 'contact', 'hbond', 'sb'],
+            ['mcss', 'contact', 'hbond', 'sb'],
+            #['pipi', 'contact', 'hbond', 'sb'],
             #['mcss', 'pipi', 'contact', 'sb'],
             #['mcss', 'pipi', 'hbond', 'sb'],
             #['mcss', 'pipi', 'contact', 'hbond'],
             ]
 
-cmd = '$SCHRODINGER/run {0:}/score/scores.py {1:} {1:} {1:} {1:}'.format(
-                                                  shared_paths['code'], '{}')
+cmd = 'python {0:}/score/scores.py {1:} {1:} {1:} {1:}'.format(
+                                shared_paths['code'], '{}')
 settings = {
     'num_poses' : 100,
     'shared_paths': shared_paths
@@ -226,53 +230,83 @@ def check(mode):
     print('{} scoring scripts'.format(len(glob(template+'run.sh'))))
     print(' '.join(errors))
 
-def merge(mode):
-    template = '{}/*/scores/{}/{}/*/*/*.sc'.format(shared_paths['data'],
-                                                   shared_paths['stats']['version'],
-                                                   mode)
+def merge_protein(mode, protein):
+    """
+    Unlike the other functions here merge acts on only one protein.
+    Doing all proteins at once simply takes too long.
+    """
+    template = '{}/{}/scores/{}/{}/*/*/*.sc'.format(shared_paths['data'],
+                                                    protein,
+                                                    shared_paths['stats']['version'],
+                                                    mode)
 
-    out_fname = '{}/../bpp_outputs/{}_{}.tsv'.format(shared_paths['data'],
-                                                     shared_paths['stats']['version'],
-                                                     mode)
-    total = 0
+    print(template)
+
+    out_fname = '{}/{}/scores/{}/summary/{}.tsv'.format(shared_paths['data'],
+                                                        protein,
+                                                        shared_paths['stats']['version'],
+                                                        mode)
+    
     with open(out_fname, 'w') as out:
         out.write('\t'.join(['mode', 'protein', 'ligand', 'n_ligs', 'alpha', 'features',
                              'combind_rank', 'combind_rmsd',
                              'glide_rank',   'glide_rmsd',
                              'best_rank',    'best_rmsd']) + '\n')
         for fname in glob(template):
-            protein, _, version, pdb, params, settings, name = fname.split('/')[-7:]
+            _protein, _, version, pdb, params, settings, name = fname.split('/')[-7:]
             settings = settings.split('-')
             if len(settings) == 2:
                 settings =['0'] + settings
-            assert mode == mode
+            assert _protein == protein
             assert version == shared_paths['stats']['version']
+                
             with open(fname) as fp:
                 fp.readline()
                 for line in fp:
                     tok = line.strip().split(',')
-                    if len(tok) == 3:
-                        continue
-                    else:
-                        (lig,
-                         combind_rank, combind_rmsd,
-                         glide_rank,   glide_rmsd,
-                         best_rank,    best_rmsd) = tok
-                        if combind_rmsd == '0': continue
-                        if 'CHEMBL' in lig: continue
-                        out.write('\t'.join([
-                                            params,
-                                            protein,
-                                            lig,
-                                            settings[0],
-                                            settings[1],
-                                            settings[2],
-                                            combind_rank, combind_rmsd,
-                                            glide_rank, glide_rmsd,
-                                            best_rank, best_rmsd
-                                            ]) + '\n')
-                        total += 1
-    print('Processed a total of {} entries.'.format(total))
+                    if len(tok) == 3: continue
+                    (lig,
+                     combind_rank, combind_rmsd,
+                     glide_rank,   glide_rmsd,
+                     best_rank,    best_rmsd) = tok
+
+                    if combind_rmsd == '0': continue
+                    if 'CHEMBL' in lig: continue
+                    out.write('\t'.join([
+                                         params,
+                                         protein,
+                                         lig,
+                                         settings[0],
+                                         settings[1],
+                                         settings[2],
+                                         combind_rank, combind_rmsd,
+                                         glide_rank, glide_rmsd,
+                                         best_rank, best_rmsd
+                                        ]) + '\n')
+
+def merge(mode, inline):
+    for protein in proteins:
+        directory = '{}/{}/scores/{}/summary'.format(shared_paths['data'],
+                                                     protein,
+                                                     shared_paths['stats']['version'],
+                                                     mode)
+        log = '{}/{}.log'.format(directory, mode)
+        print(protein)
+        if os.path.exists(log):
+            print('{} exists:'.format(log))
+            with open(log) as fp:
+                print(fp.read())
+            continue
+        print('executing:')
+        os.system('mkdir -p {}'.format(directory))
+        if inline:
+            merge_protein(mode, protein)
+            with open(log, 'w') as fp:
+                pass
+        else:
+            os.system('sbatch -p owners -t 01:00:00 --out={} '
+                      '--wrap="python {}/score/score_controller.py '
+                      'merge_protein {} {}"'.format(log, shared_paths['code'], mode, protein))
 
 def archive(mode):
     template = '{}/*/scores/{}/{}'.format(shared_paths['data'],
@@ -302,8 +336,9 @@ def inflate(mode):
         if os.path.exists(path.replace('.tar.gz', '')):
             print(path)
             continue
-        os.system('tar -xzf {}.tar.gz'.format(path))
+        os.system('tar -xzf {}'.format(path))
         os.system('rm {}'.format(path))
+
 
 if __name__ ==  '__main__':
     import sys
@@ -314,7 +349,9 @@ if __name__ ==  '__main__':
     elif sys.argv[1] == 'check':
         check(sys.argv[2])
     elif sys.argv[1] == 'merge':
-        merge(sys.argv[2])
+        merge(sys.argv[2], len(sys.argv) == 4 and sys.argv[3] == 'inline')
+    elif sys.argv[1] == 'merge_protein':
+        merge_protein(sys.argv[2], sys.argv[3])
     elif sys.argv[1] == 'archive':
         archive(sys.argv[2])
     elif sys.argv[1] == 'inflate':

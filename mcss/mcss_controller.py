@@ -130,9 +130,12 @@ class MCSSController:
         """
         self.load_mcss()
         ligands = list(set(ligands))
-        for i, l1 in enumerate(ligands):
-            for l2 in ligands[i+1:]:
-                if l1 > l2: l1, l2 = l2, l1
+        for i, _l1 in enumerate(ligands):
+            for _l2 in ligands[i+1:]:
+                if _l1 > _l2:
+                    l1, l2 = _l2, _l1
+                else:
+                    l1, l2 = _l1, _l2
                 name = "{}-{}".format(l1, l2)
                 assert name in self.MCSSs, name
                 if self.MCSSs[name].is_valid():

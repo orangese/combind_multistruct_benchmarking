@@ -49,11 +49,13 @@ class LigPair:
         for rank1 in range(min(len(self.l1.poses), self.max_poses)):
             for rank2 in range(min(len(self.l2.poses), self.max_poses)):
                 if self.mcss:
-                    mcss_score = self.mcss.get_rmsd(self.l1.ligand, self.l2.ligand, rank1, rank2)
+                    mcss_score = self.mcss.get_rmsd(self.l1.ligand, self.l2.ligand,
+                                                    rank1, rank2)
                 else:
                     mcss_score = None
-                pose1, pose2 = self.l1.poses[rank1], self.l2.poses[rank2]
-                pairs[(rank1,rank2)] = PosePair(pose1, pose2, mcss_score)
+                pairs[(rank1, rank2)] = PosePair(self.l1.poses[rank1],
+                                                 self.l2.poses[rank2],
+                                                 mcss_score)
         return pairs
 
     def _init_feat_map(self):
@@ -62,10 +64,11 @@ class LigPair:
         """
         feat_map = {feature: (float('inf'), -float('inf')) for feature in self.features}
         for key, pose_pair in self.pose_pairs.items():
-            for f, (minval, maxval) in feat_map.items():
-                pp_x = pose_pair.get_feature(f)
+            for feature in self.features:
+                pp_x = pose_pair.get_feature(feature)
                 if pp_x is None: continue
-                feat_map[f] = (min(minval, pp_x), max(maxval, pp_x))
+                feat_map[feature] = (min(feat_map[feature][0], pp_x),
+                                     max(feat_map[feature][1], pp_x))
         return feat_map
 
 class PosePair:
