@@ -13,38 +13,45 @@ sys.path.append('../../ifp')
 sys.path.append('../../mcss')
 sys.path.append('../../score')
 from containers import Protein
+from shared_paths import proteins, shared_paths
 
-
-def load_pdb(fname):
+def load_pdb(stats, helpers = 'pdb'):
     data = {}
-    with open(fname) as fp:
-        fp.readline()
-        for line in fp:
-            (mode, protein, ligand, alpha, features, _, combind_rmsd,
-             _, glide_rmsd, _, best_rmsd) = line.strip().split('\t')
-            alpha, combind_rmsd,glide_rmsd, best_rmsd = float(alpha), float(combind_rmsd),float(glide_rmsd), float(best_rmsd)
-            if mode not in data: data[mode] = {}
-            if (alpha, features) not in data[mode]: data[mode][(alpha, features)] = {}
-            if protein not in data[mode][(alpha, features)]: data[mode][(alpha, features)][protein] = {}
-            data[mode][(alpha, features)][protein][ligand] = (float(combind_rmsd), float(glide_rmsd), float(best_rmsd))
-    return data
+    for protein in proteins:
+        print(protein)
+        fname = '{}/{}/scores/{}/summary/{}.tsv'.format(shared_paths['data'], protein, stats, helpers)
+        with open(fname) as fp:
+            fp.readline()
+            for line in fp:
+                print line.strip().split('\t')
+                (mode, protein, ligand, alpha, features, _, combind_rmsd,
+                 _, glide_rmsd, _, best_rmsd) = line.strip().split('\t')
+                alpha, combind_rmsd,glide_rmsd, best_rmsd = float(alpha), float(combind_rmsd),float(glide_rmsd), float(best_rmsd)
+                if mode not in data: data[mode] = {}
+                if (alpha, features) not in data[mode]: data[mode][(alpha, features)] = {}
+                if protein not in data[mode][(alpha, features)]: data[mode][(alpha, features)][protein] = {}
+                data[mode][(alpha, features)][protein][ligand] = (float(combind_rmsd), float(glide_rmsd), float(best_rmsd))
+        return data
 
-def load_chembl(fname):
+def load_chembl(stats, helpers):
     data = {}
-    with open(fname) as fp:
-        fp.readline()
-        for line in fp:
-            if 'None' in line: continue
-            (mode, protein, ligand, num_ligs, alpha, features, _, combind_rmsd,
-             _, glide_rmsd, _, best_rmsd) = line.strip().split('\t')
-            alpha, combind_rmsd,glide_rmsd, best_rmsd = float(alpha), float(combind_rmsd),float(glide_rmsd), float(best_rmsd)
-            num_ligs = int(num_ligs)
-            if alpha == 0.5: continue
-            if mode not in data: data[mode] = {}
-            k = (num_ligs, alpha, features)
-            if k not in data[mode]: data[mode][k] = {}
-            if protein not in data[mode][k]: data[mode][k][protein] = {}
-            data[mode][k][protein][ligand] = (float(combind_rmsd), float(glide_rmsd), float(best_rmsd))
+    for protein in proteins:
+        print(protein)
+        fname = '{}/{}/scores/{}/summary/{}.tsv'.format(shared_paths['data'], protein, stats, helpers)
+        with open(fname) as fp:
+            fp.readline()
+            for line in fp:
+                if 'None' in line: continue
+                (mode, protein, ligand, num_ligs, alpha, features, _, combind_rmsd,
+                 _, glide_rmsd, _, best_rmsd) = line.strip().split('\t')
+                alpha, combind_rmsd,glide_rmsd, best_rmsd = float(alpha), float(combind_rmsd),float(glide_rmsd), float(best_rmsd)
+                num_ligs = int(num_ligs)
+                if alpha == 0.5: continue
+                if mode not in data: data[mode] = {}
+                k = (num_ligs, alpha, features)
+                if k not in data[mode]: data[mode][k] = {}
+                if protein not in data[mode][k]: data[mode][k][protein] = {}
+                data[mode][k][protein][ligand] = (float(combind_rmsd), float(glide_rmsd), float(best_rmsd))
     return data
 
 def get_mcss_sizes(results):
@@ -86,12 +93,12 @@ class Marker:
         for fam, prots in self.family.items():
             if protein in prots:
                 return fam
-        assert False, protein
+        return 'Other'
 
     def __call__(self, protein):
         fam = self.get_family(protein)
         out = self.next[fam]
-        self.next[fam] = (out[0], out[1] + 1)
+        self.next[fam] = (out[0], (out[1] + 1) % len(self.markers))
         return out[0], self.markers[out[1]]
 
 def ligand_level_performance(results):
