@@ -118,6 +118,9 @@ enable 2HVC_lig-to-1E3G_pv.2HVC_lig_03
 enable 2HVC_lig-to-1E3G_pv.2HVC_lig_38
 enable 2HVC_lig-to-1E3G_pv.2HVC_lig_41
 enable 2HVC_lig-to-1E3G_pv.2HVC_lig_56
+enable 2HVC_lig-to-1E3G_pv.2HVC_lig_73
+enable 2HVC_lig-to-1E3G_pv.2HVC_lig_97
+enable 2HVC_lig-to-1E3G_pv.2HVC_lig_99
 
 color magenta, element c and 2HVC_lig-to-1E3G_pv.2HVC_lig
 color cyan, element c and 2HVC_lig-to-1E3G_pv.2HVC_lig_02
@@ -125,6 +128,9 @@ color orange, element c and 2HVC_lig-to-1E3G_pv.2HVC_lig_03
 color salmon, element c and 2HVC_lig-to-1E3G_pv.2HVC_lig_38
 color slate, element c and 2HVC_lig-to-1E3G_pv.2HVC_lig_41
 color green, element c and 2HVC_lig-to-1E3G_pv.2HVC_lig_56
+color yellow, element c and 2HVC_lig-to-1E3G_pv.2HVC_lig_73
+color hotpink, element c and 2HVC_lig-to-1E3G_pv.2HVC_lig_97
+color lightblue, element c and 2HVC_lig-to-1E3G_pv.2HVC_lig_99
 
 
 # Surface
