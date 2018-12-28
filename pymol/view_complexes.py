@@ -87,6 +87,8 @@ def load_results(protein, scores):
     cmd.set('cartoon_oval_length', '0.5')
     cmd.set('cartoon_transparency', '0.5')
 
+###############################################################
+
 def parse_fp_file(fp_file):
     ifps = {}
     try:

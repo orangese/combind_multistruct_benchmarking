@@ -1,0 +1,80 @@
+
+# Load Data
+results TRPV1/scores/stats6/best_affinity/standard/10-1.0-mcss_contact_hbond_sb/5IRX_lig-to-3J5Q.sc, TRPV1, 3J5Q, confgen_es4
+load TRPV1/structures/ligands/5IRX_lig.mae
+
+set_view (\
+     0.582322478,   -0.742308199,    0.331368685,\
+     0.592325032,    0.108266495,   -0.798367560,\
+     0.556770802,    0.661197782,    0.502747953,\
+     0.001412497,    0.002811188,  -79.050498962,\
+    15.180379868,  -30.430660248,  -35.535305023,\
+    70.249336243,   88.116615295,  -20.000000000 )
+
+show sticks, resid 557+550+570
+color cyan, element c and 5IRX_lig
+color magenta, element c and glide*
+color magenta, element c and combind*
+hide cartoon, resid 508-525
+as sticks, het
+
+
+# Crystal
+delete dist*
+dist 5IRX_lig and name OAD, grid* and chain B and 550/og1
+dist 5IRX_lig and name OAI, grid* and chain B and 557/nh2
+dist 5IRX_lig and name OAI, grid* and chain B and 570/oe1
+hide labels
+
+# ComBind
+delete dist*
+dist combind_5IRX_lig and name OAD, grid* and chain B and 550/og1
+dist combind_5IRX_lig and name OAI, grid* and chain B and 557/nh2
+dist combind_5IRX_lig and name OAI, grid* and chain B and 570/oe1
+hide labels
+
+# Xtal
+delete dist*
+dist glide_5IRX_lig and name OAI, grid* and chain B and 570/oe1
+hide labels
+
+# CHEMBL2385223
+delete dist*
+dist combind_CHEMBL2385223_lig and element n and (grid* and chain B and 570/oe1 expand 4), grid* and chain B and 570/oe1
+dist combind_CHEMBL2385223_lig and element o and (grid* and chain B and 557/nh2 expand 4), grid* and chain B and 557/nh2
+hide labels
+
+delete dist*
+
+
+# CHEMBL3407765
+
+delete dist*
+dist combind_CHEMBL3407765_lig and element n and (grid* and chain B and 570/oe1 expand 4), grid* and chain B and 570/oe1
+dist combind_CHEMBL3407765_lig and element o and (grid* and chain B and 557/nh2 expand 4), grid* and chain B and 557/nh2
+dist combind_CHEMBL3407765_lig and element n and (grid* and chain B and 550/og1 expand 4), grid* and chain B and 550/og1
+hide labels
+
+delete dist*
+dist glide_CHEMBL3407765_lig and element n and (grid* and chain B and 570/oe1 expand 4), grid* and chain B and 570/oe1
+dist glide_CHEMBL3407765_lig and element o and (grid* and chain B and 557/nh2 expand 4), grid* and chain B and 557/nh2
+hide labels
+
+# CHEMBL3627723
+
+dist combind_CHEMBL3627723_lig and element n and (grid* and chain B and 570/oe1 expand 4), grid* and chain B and 570/oe1
+dist combind_CHEMBL3627723_lig and element o and (grid* and chain B and 557/nh2 expand 4), grid* and chain B and 557/nh2
+dist combind_CHEMBL3627723_lig and element n and (grid* and chain B and 550/og1 expand 4), grid* and chain B and 550/og1
+hide labels
+
+delete dist*
+dist glide_CHEMBL3627723_lig and element n and (grid* and chain B and 570/oe1 expand 4), grid* and chain B and 570/oe1
+dist glide_CHEMBL3627723_lig and element o and (grid* and chain B and 557/nh2 expand 4), grid* and chain B and 557/nh2
+hide labels
+
+# CHEMBL3393837
+
+delete dist*
+dist combind_CHEMBL3393837_lig and element n and (grid* and chain B and 550/og1 expand 4), grid* and chain B and 550/og1
+hide labels
+
