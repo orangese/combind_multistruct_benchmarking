@@ -23,8 +23,8 @@ from statistics import statistics
 from glob import glob
 from grouper import grouper
 
-group_size = 4
-num_ligs = [10, 20]
+group_size = 5
+num_ligs = [10] #[1, 3, 10, 20]
 alpha_factors = [1.0] # [0.1, 1.0, 1.5, 2.0]
 features = [#['mcss', 'pipi', 'contact', 'hbond', 'sb'],
             ['mcss', 'contact', 'hbond', 'sb'],
@@ -111,7 +111,7 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
                 f.write('#!/bin/bash\n')
                 for ligand in group:
                     f.write(cmd.format(stats_root, struct, protein, ligand)+'\n')
-            os.system('sbatch -t 09:00:00 -p owners run{}.sh'.format(i))
+            os.system('sbatch -t 05:00:00 -p owners run{}.sh'.format(i))
     else:
         with open('run.sh','w') as f:
             f.write('#!/bin/bash\n')
@@ -235,7 +235,7 @@ def check(mode):
         total += 1
     
     print('{} slurm files'.format(total))
-    print('{} scoring scripts'.format(len(glob(template+'run*.sh'))))
+    print('{} scoring scripts'.format(len(glob(template+'run.sh'))))
     print(' '.join(errors))
 
 def merge_protein(mode, protein):
@@ -256,7 +256,8 @@ def merge_protein(mode, protein):
                                                         mode)
     
     with open(out_fname, 'w') as out:
-        out.write('\t'.join(['mode', 'protein', 'ligand', 'n_ligs', 'alpha', 'features',
+        out.write('\t'.join(['mode', 'protein', 'ligand',
+                             'n_ligs', 'alpha', 'features',
                              'combind_rank', 'combind_rmsd',
                              'glide_rank',   'glide_rmsd',
                              'best_rank',    'best_rmsd']) + '\n')
@@ -314,7 +315,8 @@ def merge(mode, inline):
         else:
             os.system('sbatch -p owners -t 01:00:00 --out={} '
                       '--wrap="python {}/score/score_controller.py '
-                      'merge_protein {} {}"'.format(log, shared_paths['code'], mode, protein))
+                      'merge_protein {} {}"'.format(log, shared_paths['code'],
+                                                    mode, protein))
 
 def archive(mode):
     template = '{}/*/scores/{}/{}'.format(shared_paths['data'],

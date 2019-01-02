@@ -61,7 +61,7 @@ class ScoreContainer:
                                            load_mcss = 'mcss' in self.settings['k_list'],
                                            st = self.struct)
 
-        best_cluster = self.ps.max_posterior(queries, restart=1000, sampling=5)
+        best_cluster = self.ps.max_posterior(queries, restart=50, sampling=3)
         return best_cluster
 
     def write_results(self, cluster, fname):
