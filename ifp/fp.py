@@ -4,10 +4,10 @@ import sys
 from schrodinger.structure import StructureReader
 from schrodinger.structutils.measure import get_shortest_distance
 
-from hbond import HBond_Container
-from saltbridge import SB_Container
-from pipi import PiPi_Container
-from hydrophobic import Hydrophobic_Container
+from ifp.hbond import HBond_Container
+from ifp.saltbridge import SB_Container
+from ifp.pipi import PiPi_Container
+from ifp.hydrophobic import Hydrophobic_Container
 
 nonpolar = {'H': 1.2, 'C':1.7, 'F':1.47, 'Cl':1.75, 'I':1.98, 'Br':1.85}
 def valid_donor(atom):
@@ -175,7 +175,3 @@ class FP:
                     sc = ifp[sc_key]
                     if self.params['raw'] or sc >= 0:
                         f.write('{}-{}-{}={}\n'.format(i,r,ss, sc))
-
-if __name__ == '__main__':
-    FP(sys.argv[:])
-

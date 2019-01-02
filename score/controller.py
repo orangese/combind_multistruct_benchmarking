@@ -19,7 +19,7 @@ stats_version/
 import os
 from shared_paths import shared_paths, proteins, feature_defs
 from containers import Protein
-from statistics import statistics
+from score.statistics import statistics
 from glob import glob
 from grouper import grouper
 
@@ -35,22 +35,12 @@ features = [#['mcss', 'pipi', 'contact', 'hbond', 'sb'],
             #['mcss', 'pipi', 'contact', 'hbond'],
             ]
 
-cmd = 'python {0:}/score/scores.py {1:} {1:} {1:} {1:}'.format(
-                                shared_paths['code'], '{}')
+cmd = '$SCHRODINGER/run {0:}/main.py score {1:} {1:} {1:} {1:}'.format(
+                                   shared_paths['code'], '{}')
 settings = {
     'num_poses' : 100,
     'shared_paths': shared_paths
 }
-
-print('There are {} total PDB jobs.'.format(  len(alpha_factors)
-                                            * len(features)
-                                            * len(proteins)
-                                            * 3))
-print('There are {} total CHEMBL jobs.'.format(  len(alpha_factors)
-                                               * len(num_ligs)
-                                               * len(features)
-                                               * len(proteins)
-                                               * 2))
 
 def score(stats_root, struct, protein, ligands, use_crystal_pose,
           alpha_factor, features, crystal = False, chembl = None):
@@ -347,22 +337,29 @@ def inflate(mode):
         os.system('tar -xzf {}'.format(path))
         os.system('rm {}'.format(path))
 
-
-if __name__ ==  '__main__':
-    import sys
-    if   sys.argv[1] == 'run_pdb':
+def main(args):
+    print('There are {} total PDB jobs.'.format(  len(alpha_factors)
+                                                * len(features)
+                                                * len(proteins)
+                                                * 3))
+    print('There are {} total CHEMBL jobs.'.format(  len(alpha_factors)
+                                                   * len(num_ligs)
+                                                   * len(features)
+                                                   * len(proteins)
+                                                   * 2))
+    if   args[1] == 'run_pdb':
         run_pdb()
-    elif sys.argv[1] == 'run_chembl':
-        run_chembl(sys.argv[2])
-    elif sys.argv[1] == 'check':
-        check(sys.argv[2])
-    elif sys.argv[1] == 'merge':
-        merge(sys.argv[2], len(sys.argv) == 4 and sys.argv[3] == 'inline')
-    elif sys.argv[1] == 'merge_protein':
-        merge_protein(sys.argv[2], sys.argv[3])
-    elif sys.argv[1] == 'archive':
-        archive(sys.argv[2])
-    elif sys.argv[1] == 'inflate':
-        inflate(sys.argv[2])
+    elif args[1] == 'run_chembl':
+        run_chembl(args[2])
+    elif args[1] == 'check':
+        check(args[2])
+    elif args[1] == 'merge':
+        merge(args[2], len(args) == 4 and args[3] == 'inline')
+    elif args[1] == 'merge_protein':
+        merge_protein(args[2], args[3])
+    elif args[1] == 'archive':
+        archive(args[2])
+    elif args[1] == 'inflate':
+        inflate(args[2])
     else:
         assert False

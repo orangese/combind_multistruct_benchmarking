@@ -2,9 +2,9 @@ import os
 import sys
 
 from containers import Protein
-from statistics import statistics
-from prob_opt import PredictStructs
-from density_estimate import DensityEstimate
+from score.statistics import statistics
+from score.prob_opt import PredictStructs
+from score.density_estimate import DensityEstimate
 
 class ScoreContainer:
     """
@@ -71,7 +71,7 @@ class ScoreContainer:
         Part 2:
         combind score, glide score, best score (if all pdb, else 0)
         """
-        with open(fpath, 'w') as f:
+        with open(fname, 'w') as f:
             f.write('lig,combind_rank,combind_rmsd,glide_rank,glide_rmsd,best_rank,best_rmsd\n')
             best_cluster = {}
             for lig, combind_pose in sorted(cluster.items()):
@@ -86,22 +86,22 @@ class ScoreContainer:
                                            0, poses[0].rmsd,
                                            best_cluster[lig] if lig in best_cluster else None, best_rmsd]))+'\n')
             f.write('combind={},glide={},best={}\n'.format(
-                    sc.ps.log_posterior(cluster),
-                    sc.ps.log_posterior({k:0 for k in cluster.keys()}),
-                    sc.ps.log_posterior(best_cluster) if len(best_cluster) == len(cluster) else 0))
+                    self.ps.log_posterior(cluster),
+                    self.ps.log_posterior({k:0 for k in cluster.keys()}),
+                    self.ps.log_posterior(best_cluster) if len(best_cluster) == len(cluster) else 0))
 
-if __name__ == '__main__':
-    stats_root, struct, protein = sys.argv[1:4]
-    queries = sys.argv[4:]
+def main(args):
+    stats_root, struct, protein = args[1:4]
+    queries = args[4:]
     sc = ScoreContainer(os.getcwd(), stats_root, protein, struct)
 
     if sc.settings['chembl']:
         for query in queries:
             combind_cluster = sc.compute_results_chembl(query)
-            fpath = '{}/{}-to-{}.sc'.format(sc.root, query, struct)
-            sc.write_results(combind_cluster, fpath)
+            fname = '{}/{}-to-{}.sc'.format(sc.root, query, struct)
+            sc.write_results(combind_cluster, fname)
     else:
         # This needs to be before compute results as therein queries is mutated
-        fpath = '{}/{}.sc'.format(sc.root, 'pdb' if len(queries) > 1 else queries[0])
+        fname = '{}/{}.sc'.format(sc.root, 'pdb' if len(queries) > 1 else queries[0])
         combind_cluster = sc.compute_results(queries)
-        sc.write_results(combind_cluster, fpath)
+        sc.write_results(combind_cluster, fname)

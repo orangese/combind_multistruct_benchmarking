@@ -1,12 +1,12 @@
 import os
 import sys
-from shared_paths import shared_paths
-
 from schrodinger.structure import StructureReader, StructureWriter
+
+from shared_paths import shared_paths
+from dock.renumber import renumber
 
 out_dir = 'structures/aligned_files'
 queue = 'owners'
-renumber_script = '{}/dock/renumber.py'.format(shared_paths['code'])
 
 def align_successful(out_dir, struct, verbose=False):
     if struct in ['5IRX','5IS0','3J5Q']: 
@@ -67,10 +67,7 @@ def align_structs(verbose=False):
             if not os.path.exists('{}/{}/{}_out.mae'.format(out_dir, struct, struct)):
                 print('renumber', struct)
                 os.chdir('{}/{}'.format(out_dir, struct))
-                with open('renumber_in.sh', 'w') as f:
-                    f.write('#!/bin/bash\n')
-                    f.write('$SCHRODINGER/run {}'.format(renumber_script))
-                os.system('sbatch -p {} -t 00:10:00 -o renumber.out renumber_in.sh'.format(queue))
+                renumber()
                 os.chdir('../../..')
             
             continue

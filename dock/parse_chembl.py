@@ -1,7 +1,7 @@
 import os
 import sys
 
-from chembl_props import *
+from dock.chembl_props import *
 
 def desalt(st):
     lig = None

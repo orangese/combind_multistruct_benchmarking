@@ -3,7 +3,7 @@ from glob import glob
 
 from grouper import grouper
 from shared_paths import shared_paths
-from mcss import MCSS
+from mcss.mcss import MCSS
 
 class MCSSController:
     """
@@ -89,13 +89,13 @@ class MCSSController:
             '{0:},{1:}' ligand1,ligand2, '{2:},{3:}' poses1,poses2 '{4:}' str(MCSS).
         """
         
-        init_command =  '$SCHRODINGER/run {0:}/mcss/mcss.py INIT '.format(shared_paths['code'])
+        init_command =  '$SCHRODINGER/run {0:}/main.py mcss INIT '.format(shared_paths['code'])
         init_command += '{0:} {1:} {2:} {3:} ' # ligand names
         init_command += self.init_file.format('{0:}-{1:}') + ' '
         init_command += self.atom_types + ' '
         init_command += '\n'
         
-        rmsd_command = '$SCHRODINGER/run {0:}/mcss/mcss.py RMSD '.format(shared_paths['code'])
+        rmsd_command = '$SCHRODINGER/run {0:}/main.py mcss RMSD '.format(shared_paths['code'])
         rmsd_command += '{0:} {1:} {2:} {3:} '
         rmsd_command += self.init_file.format('{0:}-{1:}') + ' '
         rmsd_command += self.atom_types + ' '

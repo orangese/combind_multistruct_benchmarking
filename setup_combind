@@ -8,5 +8,4 @@ unset PYTHONHOME
 PYTHON=~/miniconda3/bin
 [ ":$PATH:" == *":$PYTHON:"* ] || PATH="$PYTHON:$PATH"
 export COMBINDHOME=`pwd`
-PYTHONPATH=$COMBINDHOME/dock:$COMBINDHOME/ifp:$COMBINDHOME/mcss:$COMBINDHOME/score
-export PYTHONPATH
+
