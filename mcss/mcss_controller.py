@@ -255,12 +255,10 @@ class MCSSController:
                 print("# CHEMBL ranges from {} to {}".format(min(num_chembl), max(num_chembl)))
             num_pdb = num_pdb[0]
             num_chembl = num_chembl[0]
-        else:
-            num_vals = 0
-        print("{} sort schemes in pick_helpers, "
-              "{} PDB ligands each, "
-              "{} CHEMBL ligands per PDB ligand".format(len(pick_helpers),
-                                                        num_pdb, num_chembl))
+            print("{} sort schemes in pick_helpers, "
+                  "{} PDB ligands each, "
+                  "{} CHEMBL ligands per PDB ligand".format(len(pick_helpers),
+                                                            num_pdb, num_chembl))
 
         self._collate_mcss()
         self._add_pdb_to_pdb()

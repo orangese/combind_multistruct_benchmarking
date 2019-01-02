@@ -58,11 +58,11 @@ def align_structs(verbose=False):
         print('template not processed', template_path)
         return
 
-    for struct in all_prot:# os.listdir('structures/processed_files'):
+    for struct in all_prot:
         query_path = 'structures/processed_files/{}/{}_out.mae'.format(struct, struct)
         if not os.path.exists(query_path):
             continue
-        if align_successful(out_dir, struct, verbose):#
+        if align_successful(out_dir, struct, verbose):
 
             if not os.path.exists('{}/{}/{}_out.mae'.format(out_dir, struct, struct)):
                 print('renumber', struct)
@@ -74,7 +74,7 @@ def align_structs(verbose=False):
                 os.chdir('../../..')
             
             continue
-        #redo(struct) 
+
         os.system('rm -rf {}/{}'.format(out_dir, struct))
         os.system('mkdir -p {}/{}'.format(out_dir, struct))
 
@@ -83,16 +83,14 @@ def align_structs(verbose=False):
         
         os.chdir('{}/{}'.format(out_dir, struct))
         print('align', struct)
-        schro = '$SCHRODINGER/utilities/structalign'
-        asl = '-asl "(not chain.name L and not atom.element H) '#and not res.sec strand'
-        
-        if os.path.exists('../../../structures/raw_files/{}_lig.mae'.format(struct)):
-            asl += ' and (fillres within 15.0 chain. L)"'# and (not res.sec loop)"'
-        else:
-            asl += '"'
-        
+                
         with open('align_in.sh', 'w') as f:
-            f.write('#!/bin/bash\n')
-            f.write('{} {} {}_template.mae {}_query.mae\n'.format(schro, asl, template, struct))
+            f.write('#!/bin/bash\n'
+                    '$SCHRODINGER/utilities/structalign \\\n'
+                    '  -asl        "(not chain. L and not atom.element H) '
+                                'and (fillres within 15.0 chain. L)" \\\n'
+                    '  -asl_mobile "(not chain. L and not atom.element H) '
+                                'and (fillres within 15.0 chain. L)" \\\n'
+                    '  {}_template.mae {}_query.mae\n'.format(template, struct))
         os.system('sbatch -p {} -t 00:10:00 -o align.out align_in.sh'.format(queue))
         os.chdir('../../..')
