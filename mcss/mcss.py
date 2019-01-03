@@ -1,6 +1,4 @@
 import os
-import sys
-import tempfile
 
 class MCSS:
     """
@@ -342,12 +340,12 @@ class MCSS:
             if atom.atomic_number in [9, 17, 35, 53]:
                 atom.atomic_number = 9
             
-if __name__ == '__main__':
+def main(args):
     from schrodinger.structure import StructureReader, StructureWriter
-    mode = sys.argv[1]
+    mode = args[1]
     if mode == 'INIT':
-        l1, l2, l1_path, l2_path, init_file, mcss_types_file = sys.argv[2:8]
-        small = len(sys.argv) == 9
+        l1, l2, l1_path, l2_path, init_file, mcss_types_file = args[2:8]
+        small = len(args) == 9
 
         mcss = MCSS(l1, l2)
         with StructureReader(l1_path) as ligand1, StructureReader(l2_path) as ligand2:
@@ -357,7 +355,7 @@ if __name__ == '__main__':
         from schrodinger.structutils.analyze import evaluate_smarts_canvas
         from schrodinger.structutils.rmsd import ConformerRmsd
         (l1, l2, pv1_path, pv2_path, init_file, mcss_types_file,
-         rmsd_file, max_poses, mcss_string_rep) = sys.argv[2:]
+         rmsd_file, max_poses, mcss_string_rep) = args[2:]
         max_poses = int(max_poses)
         poseviewer_paths = {l1:pv1_path, l2:pv2_path}
         mcss = MCSS.from_string(mcss_string_rep)

@@ -3,12 +3,7 @@ import sys
 
 from schrodinger.structure import StructureReader, StructureWriter
 
-#command1 = '$SCHRODINGER/utilities/prepwizard -WAIT -epik_pHt 2.0 -f 3 -samplewater -keepfarwat -watdist 0 {}_in.mae {}_out.mae'
-#command2 = '$SCHRODINGER/utilities/prepwizard -WAIT -nopropka -watdist 0 {}_in.mae {}_out.mae'
-#command3 = '$SCHRODINGER/utilities/prepwizard -WAIT {}_in.mae {}_out.mae'
-
 command = '$SCHRODINGER/utilities/prepwizard -WAIT -rehtreat -watdist 0 {}_in.mae {}_out.mae'
-
 queue = 'owners'
 
 def load_complex(pdb_id):

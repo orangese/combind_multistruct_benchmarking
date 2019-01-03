@@ -1,6 +1,6 @@
 import numpy as np
 import random
-from pairs import LigPair
+from score.pairs import LigPair
 
 class PredictStructs:
     def __init__(self, prot, stats, features, max_poses, alpha):

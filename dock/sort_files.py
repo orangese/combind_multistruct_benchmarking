@@ -9,8 +9,7 @@ def check_h(st):
            'Hg':[-2], 'Cl':[1], 'K':[-1], 'Br':[1], 
            'Na':[-1], 'Ca':[-2], 'I':[1]}
     for a in st.atom:
-        if a.element not in val: 
-            #printa.element
+        if a.element not in val:
             continue
         bonds = sum([b.order for b in a.bond])
         if bonds - a.formal_charge not in val[a.element]:
@@ -31,7 +30,7 @@ def split_complex(st, pdb_id):
         lig_st = st.extract([a.index for a in st.atom if a.chain == 'L'])
         lig_st.title = '{}_lig'.format(pdb_id)
 
-        if not check_h(lig_st):# or not check_w(lig_st):
+        if not check_h(lig_st):
             print('lig error', pdb_id) 
         else:
             lig_wr = StructureWriter(lig_path)
@@ -43,10 +42,10 @@ def split_complex(st, pdb_id):
         prot_wr.append(prot_st)
         prot_wr.close()
 
-def sort_files():#output_dir, prot):
+def sort_files():
     os.system('mkdir -p structures/proteins structures/ligands structures/complexes')
 
-    for pdb_id in os.listdir('structures/aligned_files'):#uniprot.pdbs.items():
+    for pdb_id in os.listdir('structures/aligned_files'):
         opt_complex = 'structures/aligned_files/{}/{}_out.mae'.format(pdb_id, pdb_id)
 
         if os.path.exists(opt_complex):

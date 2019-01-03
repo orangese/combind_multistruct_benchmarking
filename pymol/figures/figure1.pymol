@@ -11,22 +11,6 @@ load_complexes AR, 20
 load AR/docking/confgen_es4/2HVC_lig-to-1E3G/2HVC_lig-to-1E3G_pv.maegz
 
 
-# General.
-bg_color white
-set cartoon_transparency, 0
-set cartoon_oval_length, 1
-set opaque_background, 0
-set cartoon_color, white
-set ray_trace_mode, 1
-set ray_shadow, 0
-set dash_width, 4
-set surface_cavity_mode, 2
-hide lines
-util.cbaw
-color cyan, element c and *crystal*
-color neon, element c and *prot*
-hide labels
-
 # Protein Zoom Out
 set_view (\
      0.716844857,    0.440551609,   -0.540400803,\
@@ -41,12 +25,6 @@ set cartoon_transparency, 0.1
 as cartoon
 show surface, br. crystal* expand 3
 show sticks, resid 705+752+877 and not name o+c+n and not element h
-ray
-
-# Protein Zoom Out Outline
-
-set surface_cavity_mode, 0
-set ray_trace_mode, 2 # Remember to undo this after!
 ray
 
 # Ligand and protein

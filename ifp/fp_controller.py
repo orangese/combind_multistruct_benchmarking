@@ -6,8 +6,8 @@ from shared_paths import shared_paths
 queue = 'owners'
 group_size = 10
 
-pv_cmd = '$SCHRODINGER/run {}/ifp/fp.py -mode pv -input_file {} -output_file {} -raw {}\n'
-st_cmd = '$SCHRODINGER/run {}/ifp/fp.py -mode st -output_file {}\n'
+pv_cmd = '$SCHRODINGER/run {}/main.py ifp -mode pv -input_file {} -output_file {} -raw {}\n'
+st_cmd = '$SCHRODINGER/run {}/main.py ifp -mode st -output_file {}\n'
 
 def get_fp(lm, fp_list, raw):
     if len(fp_list) > 0:

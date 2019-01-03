@@ -20,11 +20,11 @@ import sys
 import numpy as np
 
 from shared_paths import shared_paths
-from fp_controller import parse_fp_file
-from parse_chembl import load_chembl_proc
-from pick_helpers import load_helpers
-from chembl_props import read_duplicates
-from mcss_controller import MCSSController
+from ifp.fp_controller import parse_fp_file
+from dock.parse_chembl import load_chembl_proc
+from dock.pick_helpers import load_helpers
+from dock.chembl_props import read_duplicates
+from mcss.mcss_controller import MCSSController
 
 class Pose:
     """

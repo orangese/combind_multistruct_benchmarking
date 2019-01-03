@@ -19,21 +19,24 @@ stats_version/
 import os
 from shared_paths import shared_paths, proteins, feature_defs
 from containers import Protein
-from statistics import statistics
+from score.statistics import statistics
 from glob import glob
+from grouper import grouper
 
-num_ligs = [1, 3, 10, 20]
-alpha_factors = [1.0]#, 1.5, 2.0, 2.5, 3.0, 3.5, 10.0]
+group_size = 4
+num_ligs = [10, 20]
+alpha_factors = [1.0] # [0.1, 1.0, 1.5, 2.0]
 features = [#['mcss', 'pipi', 'contact', 'hbond', 'sb'],
             ['mcss', 'contact', 'hbond', 'sb'],
+            #['mcss', 'hbond', 'sb'],
             #['pipi', 'contact', 'hbond', 'sb'],
             #['mcss', 'pipi', 'contact', 'sb'],
             #['mcss', 'pipi', 'hbond', 'sb'],
             #['mcss', 'pipi', 'contact', 'hbond'],
             ]
 
-cmd = 'python {0:}/score/scores.py {1:} {1:} {1:} {1:}'.format(
-                                shared_paths['code'], '{}')
+cmd = '$SCHRODINGER/run {0:}/main.py score {1:} {1:} {1:} {1:}'.format(
+                                   shared_paths['code'], '{}')
 settings = {
     'num_poses' : 100,
     'shared_paths': shared_paths
@@ -92,25 +95,20 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
             if type(var) is str: var = '"{}"'.format(var)
             f.write('{}={}\n'.format(varname, var))
 
-    with open('run.sh','w') as f:
-        f.write('#!/bin/bash\n')
-        if crystal or chembl is not None:
-            for ligand in ligands:
-                f.write(cmd.format(stats_root, struct, protein, ligand)+'\n')
-        else:
+    if crystal or chembl is not None:
+        for i, group in enumerate(grouper(group_size, ligands)):
+            with open('run{}.sh'.format(i),'w') as f:
+                f.write('#!/bin/bash\n')
+                for ligand in group:
+                    f.write(cmd.format(stats_root, struct, protein, ligand)+'\n')
+            os.system('sbatch -t 09:00:00 -p owners run{}.sh'.format(i))
+    else:
+        with open('run.sh','w') as f:
+            f.write('#!/bin/bash\n')
             f.write(cmd.format(stats_root, struct, protein, ' '.join(ligands))+'\n')
-    os.system('sbatch -t 05:00:00 -p owners run.sh')
+    
+        os.system('sbatch -t 05:00:00 -p owners run.sh')
     os.chdir('..')
-
-print('There are {} total PDB jobs.'.format(  len(alpha_factors)
-                                            * len(features)
-                                            * len(proteins)
-                                            * 3))
-print('There are {} total CHEMBL jobs.'.format(  len(alpha_factors)
-                                               * len(num_ligs)
-                                               * len(features)
-                                               * len(proteins)
-                                               * 2))
 
 def compute_stats(protein, stats_root):
     stats_prots = [p for p in proteins if p != protein.lm.protein]
@@ -128,7 +126,7 @@ def run_pdb():
         os.chdir('{}/{}'.format(shared_paths['data'], d))
         os.system('mkdir -p {}'.format('scores'))
         root = '{}/{}/{}/{}'.format(shared_paths['data'], d, 'scores',
-                                 shared_paths['stats']['version'])
+                                    shared_paths['stats']['version'])
         stats_root = '{}/{}'.format(root, 'stats')
         scores_root = '{}/{}'.format(root, 'pdb')
 
@@ -222,12 +220,12 @@ def check(mode):
                 if len(errors) < 10:
                     # Don't write too many error messages
                     print(fname)
-                    print(text)
+                    print('\n'.join(text.split('\n')[-10:]))
                 errors += ['/'.join(fname.split('/')[:-1])]
         total += 1
     
     print('{} slurm files'.format(total))
-    print('{} scoring scripts'.format(len(glob(template+'run.sh'))))
+    print('{} scoring scripts'.format(len(glob(template+'run*.sh'))))
     print(' '.join(errors))
 
 def merge_protein(mode, protein):
@@ -339,22 +337,29 @@ def inflate(mode):
         os.system('tar -xzf {}'.format(path))
         os.system('rm {}'.format(path))
 
-
-if __name__ ==  '__main__':
-    import sys
-    if   sys.argv[1] == 'run_pdb':
+def main(args):
+    print('There are {} total PDB jobs.'.format(  len(alpha_factors)
+                                                * len(features)
+                                                * len(proteins)
+                                                * 3))
+    print('There are {} total CHEMBL jobs.'.format(  len(alpha_factors)
+                                                   * len(num_ligs)
+                                                   * len(features)
+                                                   * len(proteins)
+                                                   * 2))
+    if   args[1] == 'run_pdb':
         run_pdb()
-    elif sys.argv[1] == 'run_chembl':
-        run_chembl(sys.argv[2])
-    elif sys.argv[1] == 'check':
-        check(sys.argv[2])
-    elif sys.argv[1] == 'merge':
-        merge(sys.argv[2], len(sys.argv) == 4 and sys.argv[3] == 'inline')
-    elif sys.argv[1] == 'merge_protein':
-        merge_protein(sys.argv[2], sys.argv[3])
-    elif sys.argv[1] == 'archive':
-        archive(sys.argv[2])
-    elif sys.argv[1] == 'inflate':
-        inflate(sys.argv[2])
+    elif args[1] == 'run_chembl':
+        run_chembl(args[2])
+    elif args[1] == 'check':
+        check(args[2])
+    elif args[1] == 'merge':
+        merge(args[2], len(args) == 4 and args[3] == 'inline')
+    elif args[1] == 'merge_protein':
+        merge_protein(args[2], args[3])
+    elif args[1] == 'archive':
+        archive(args[2])
+    elif args[1] == 'inflate':
+        inflate(args[2])
     else:
         assert False

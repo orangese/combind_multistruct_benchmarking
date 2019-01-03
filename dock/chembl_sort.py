@@ -4,7 +4,7 @@ from grouper import grouper
 
 from schrodinger.structure import StructureReader, StructureWriter
 
-from parse_chembl import load_chembl_raw, load_chembl_proc
+from dock.parse_chembl import load_chembl_raw, load_chembl_proc
 
 queue = 'owners'
 group_size = 10

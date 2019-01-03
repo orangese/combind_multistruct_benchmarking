@@ -1,6 +1,6 @@
 import numpy as np
-from density_estimate import DensityEstimate
-from pairs import LigPair
+from score.density_estimate import DensityEstimate
+from score.pairs import LigPair
 from containers import Protein
 from shared_paths import shared_paths, feature_defs
 
@@ -163,7 +163,6 @@ def statistics(data, interactions):
         stats = merge_dicts_of_lists(stats, protein_stats)
     return merge_stats(stats, shared_paths['stats']['ligands_equal'])
 
-if __name__ == '__main__':
-    import sys
-    protein = sys.argv[1]
-    statistics([protein], feature_defs.keys())
+def main(args):
+    assert len(args) == 2
+    statistics([args[1]], feature_defs.keys())
