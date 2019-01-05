@@ -1,7 +1,11 @@
 import pytest
 import numpy as np
-from density_estimate import DensityEstimate
-from statistics import merge_dicts_of_lists, merge_stats
+import os
+import sys
+
+sys.path.insert(0, os.environ['COMBINDHOME'])
+from score.density_estimate import DensityEstimate
+from score.statistics import merge_dicts_of_lists, merge_stats
 
 def test_mismatched():
 	stats1  = {}

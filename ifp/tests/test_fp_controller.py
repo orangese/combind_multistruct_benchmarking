@@ -1,7 +1,11 @@
 import pytest
-from shared_paths import shared_paths
-from fp_controller import compute_fp, structure_fp, get_fp
 import os
+import sys
+sys.path.insert(0, os.environ['COMBINDHOME'])
+from shared_paths import shared_paths
+
+from ifp.fp_controller import compute_fp, structure_fp, get_fp
+
 
 class MockLigandManager:
 	def __init__(self):

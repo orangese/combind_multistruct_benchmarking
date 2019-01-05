@@ -16,21 +16,28 @@ class HBond_Container:
 
         for res_atom in res_st.hdon:
             for lig_atom in self.lig.hacc:
-                self.all_hdon[resnum].extend([HBond(res_atom, lig_atom, n, resnum, True)
-                                             for n in res_atom.bonded_atoms if n.element == 'H'])
+                for hydrogen in res_atom.bonded_atoms:
+                    if hydrogen.element != 'H': continue
+                    hbond = HBond(res_atom, lig_atom, hydrogen, resnum, True)
+                    if hbond.score():
+                        self.all_hdon[resnum] += [hbond]
 
         for res_atom in res_st.hacc:
             for lig_atom in self.lig.hdon:
-                self.all_hacc[resnum].extend([HBond(lig_atom, res_atom, n, resnum, False)
-                                             for n in lig_atom.bonded_atoms if n.element == 'H'])
+                for hydrogen in lig_atom.bonded_atoms:
+                    if hydrogen.element != 'H': continue
+                    hbond = HBond(lig_atom, res_atom, hydrogen, resnum, False)
+                    if hbond.score():
+                        self.all_hacc[resnum] += [hbond]
 
     def filter_int(self):
         # enforces 1 hbond per h
         unique_h = {}
-        for r in set(list(self.all_hdon.keys()) + list(self.all_hacc.keys())):
-            for hb in self.all_hdon.get(r, []) + self.all_hacc.get(r, []):
-                if hb.h.index not in unique_h or unique_h[hb.h.index].score() < hb.score():
-                    unique_h[hb.h.index] = hb
+        for resnum in set(list(self.all_hdon.keys()) + list(self.all_hacc.keys())):
+            for hb in self.all_hdon.get(resnum, []) + self.all_hacc.get(resnum, []):
+                key = (hb.h.resnum, hb.h.index, hb.d.index)
+                if key not in unique_h or unique_h[key].score() < hb.score():
+                    unique_h[key] = hb
 
         self.all_hdon = {}
         self.all_hacc = {}
@@ -104,4 +111,9 @@ class HBond:
 
     def score(self):
         return self.dist_score() * self.angle_score()
+
+    def __str__(self):
+        return 'Donor: {}:{}, Acceptor: {}:{}, Score: {}'.format(self.d.resnum, self.d.pdbname,
+                                                                 self.a.resnum, self.a.pdbname,
+                                                                 self.score())
 
