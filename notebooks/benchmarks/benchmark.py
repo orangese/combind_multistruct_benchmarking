@@ -8,10 +8,7 @@ from scipy.stats import ttest_rel
 import matplotlib.pyplot as plt
 
 import sys
-sys.path.append('../../dock')
-sys.path.append('../../ifp')
-sys.path.append('../../mcss')
-sys.path.append('../../score')
+sys.path.insert(0, '/Users/jpaggi/Documents/combind/combind')
 from containers import Protein
 from shared_paths import proteins, shared_paths
 
@@ -23,7 +20,7 @@ def load_pdb(stats, helpers = 'pdb'):
         with open(fname) as fp:
             fp.readline()
             for line in fp:
-                print line.strip().split('\t')
+                print(line.strip().split('\t'))
                 (mode, protein, ligand, alpha, features, _, combind_rmsd,
                  _, glide_rmsd, _, best_rmsd) = line.strip().split('\t')
                 alpha, combind_rmsd,glide_rmsd, best_rmsd = float(alpha), float(combind_rmsd),float(glide_rmsd), float(best_rmsd)
@@ -41,7 +38,9 @@ def load_chembl(stats, helpers):
         with open(fname) as fp:
             fp.readline()
             for line in fp:
+                #if '\x00' in line: continue
                 if 'None' in line: continue
+                if len(line.split('\t')) != 12: print(line.split('\t'))
                 (mode, protein, ligand, num_ligs, alpha, features, _, combind_rmsd,
                  _, glide_rmsd, _, best_rmsd) = line.strip().split('\t')
                 alpha, combind_rmsd,glide_rmsd, best_rmsd = float(alpha), float(combind_rmsd),float(glide_rmsd), float(best_rmsd)
@@ -57,7 +56,7 @@ def load_chembl(stats, helpers):
 def get_mcss_sizes(results):
     mcss_sizes = {}
     for protein_name, ligands in results.items():
-        print protein_name
+        print(protein_name)
         protein = Protein(protein_name)
         lm = protein.lm
         lm.mcss.load_mcss()
@@ -87,7 +86,7 @@ class Marker:
 
     def get_index(self, protein):
         fam = self.get_family(protein)
-        return self.family.keys().index(fam)
+        return list(self.family.keys()).index(fam)
 
     def get_family(self, protein):
         for fam, prots in self.family.items():
@@ -131,13 +130,13 @@ def target_level_performance(results, valid_lig = lambda x, y: True, thresh = No
 ##################################################################
 
 def ligand_level_plot(title, xlabel, ylabel, x, y, thresh):
-    print ttest_rel(x, y)
-    print '{} improves pose for {} of {} ligands'.format(ylabel,
+    print(ttest_rel(x, y))
+    print('{} improves pose for {} of {} ligands'.format(ylabel,
                                                          np.sum(np.array(x) > np.array(y)+.5),
-                                                         len(x))
-    print '{} degrades pose for {} of {} ligands'.format(ylabel,
+                                                         len(x)))
+    print('{} degrades pose for {} of {} ligands'.format(ylabel,
                                                          np.sum(np.array(x)+.5 < np.array(y)),
-                                                         len(x))
+                                                         len(x)))
 
     f, ax = plt.subplots()
     plt.scatter(x, y, alpha = 0.5, s = 10)
@@ -146,12 +145,12 @@ def ligand_level_plot(title, xlabel, ylabel, x, y, thresh):
     plt.title(title, fontsize = 20)
     plt.plot(range(int(math.ceil(max(x+y)))+1), linestyle='--', c = 'k')
     ax.set_aspect('equal', 'box')
-    print '{} {}: {}, {}'.format(title, xlabel,
+    print('{} {}: {}, {}'.format(title, xlabel,
                                  sum(x) / float(len(x)),
-                                 sum(np.array(x) <= thresh) /  float(len(x)))
-    print '{} {}: {}, {}'.format(title, ylabel,
+                                 sum(np.array(x) <= thresh) /  float(len(x))))
+    print('{} {}: {}, {}'.format(title, ylabel,
                                  sum(y) / float(len(y)),
-                                 sum(np.array(y) <= thresh) /  float(len(y)))
+                                 sum(np.array(y) <= thresh) /  float(len(y))))
     plt.show()
 
 def target_level_plot(title, xlabel, ylabel, x, y, label):
@@ -165,8 +164,8 @@ def target_level_plot(title, xlabel, ylabel, x, y, label):
     plt.title(title, fontsize = 20)
     plt.plot(range(int(math.ceil(max(x+y)))+1), linestyle='--', c = 'k')
     ax.set_aspect('equal', 'box')
-    print '{} {}: {}'.format(title, xlabel, sum(x) / float(len(x)))
-    print '{} {}: {}'.format(title, ylabel, sum(y) / float(len(y)))
+    print('{} {}: {}'.format(title, xlabel, sum(x) / float(len(x))))
+    print('{} {}: {}'.format(title, ylabel, sum(y) / float(len(y))))
     handles, labels = ax.get_legend_handles_labels()
     labels, handles = zip(*sorted(zip(labels, handles),
                                       key=lambda t: m.get_index(t[0])))
@@ -200,9 +199,9 @@ def benchmark(results, thresh = 2.0, correct_only = False, families = None,
 
         return overlap() and correct_exists() and family()
     
-    print '{} valid ligands'.format(sum(valid_lig(prot, lig)
+    print('{} valid ligands'.format(sum(valid_lig(prot, lig)
                                         for prot, ligs in results.items()
-                                        for lig in ligs))
+                                        for lig in ligs)))
 
     # All ligands separately
     x, y = [], []
