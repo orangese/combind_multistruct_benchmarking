@@ -1,7 +1,11 @@
 import pytest
+import os
+import sys
 import numpy as np
-from density_estimate import DensityEstimate
-from statistics import merge_dicts_of_lists
+
+sys.path.insert(0, os.environ['COMBINDHOME'])
+from score.density_estimate import DensityEstimate
+from score.statistics import merge_dicts_of_lists
 
 def test_average():
 	de1 = DensityEstimate(points = 3, domain = (0, 2), n_samples = 5)
