@@ -1,0 +1,52 @@
+
+#load_complexes A2AR, 20
+load A2AR/docking/confgen_es4/3EML_lig-to-2YDO/3EML_lig-to-2YDO_pv.maegz
+load A2AR/docking/confgen_es4/4UHR_lig-to-2YDO/4UHR_lig-to-2YDO_pv.maegz
+
+set_view (\
+     0.296490192,   -0.104729645,    0.949271142,\
+     0.275718540,    0.961029410,    0.019910989,\
+    -0.914366126,    0.255829573,    0.313810468,\
+    -0.000153530,   -0.000016991,  -47.932552338,\
+   -30.465457916,    5.377783298,  -22.136383057,\
+    42.710041046,   53.334465027,  -20.000000000 )
+
+bg_color white
+set cartoon_transparency, 0
+set cartoon_oval_length, 1.0
+set opaque_background, 0
+set cartoon_color, white
+set ray_trace_mode, 1
+set ray_shadow, 0
+set dash_width, 10
+set surface_cavity_mode, 2
+hide lines
+util.cbaw
+
+hide sticks
+show sticks, het
+hide sticks, element H and not (element N+O extend 1)
+
+color cyan,    3EML_lig-to-2YDO_pv.3EML_lig and element c
+color magenta, 4UHR_lig-to-2YDO_pv.4UHR_lig and element c
+color cyan,    3EML_lig-to-2YDO_pv.3EML_lig_63 and element c
+color magenta, 4UHR_lig-to-2YDO_pv.4UHR_lig_01 and element c
+
+select 3EML_mcss, 3EML_lig-to-2YDO_pv.* and name C9+HN10+N10+N19+C18+N12+C11+N13+H152+H151+N15+C14+N16+N17+C20+C1+C2+C3+C4+C5+C6+C7+C8
+select 4UHR_mcss, 4UHR_lig-to-2YDO_pv.* and name C13+C12+HN6+N6+H4+N4+C10+N5+C11+N7+C23+C9+N3+C8+N2+"H4 2"+"H4 1"+C21+C17+C16+C15+C22+C14
+
+set stick_radius, 0.15
+set stick_radius, 0.25, 4UHR_mcss or 3EML_mcss
+
+set stick_transparency, 0.5
+set stick_transparency, 0, 4UHR_mcss or 3EML_mcss
+
+
+disable *; enable 3EML_lig-to-2YDO_pv or 4UHR_lig-to-2YDO_pv or 3EML_lig-to-2YDO_pv.3EML_lig or 4UHR_lig-to-2YDO_pv.4UHR_lig
+ray
+png ~/Downloads/combind_code/pymol/figures/fig2_panels/mcss_ref.png
+
+disable *; enable 3EML_lig-to-2YDO_pv or 4UHR_lig-to-2YDO_pv or 3EML_lig-to-2YDO_pv.3EML_lig_63 or 4UHR_lig-to-2YDO_pv.4UHR_lig_01
+ray
+png ~/Downloads/combind_code/pymol/figures/fig2_panels/mcss_nat.png
+
