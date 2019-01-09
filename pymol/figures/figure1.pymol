@@ -12,7 +12,7 @@ set opaque_background, 0
 set cartoon_color, white
 set ray_trace_mode, 1
 set ray_shadow, 0
-set dash_width, 4
+set dash_width, 10
 set surface_cavity_mode, 2
 hide lines
 util.cbaw

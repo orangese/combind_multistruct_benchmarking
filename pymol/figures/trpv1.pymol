@@ -12,13 +12,11 @@ set opaque_background, 0
 set cartoon_color, white
 set ray_trace_mode, 1
 set ray_shadow, 0
-set dash_width, 4
+set dash_width, 10
 set surface_cavity_mode, 2
 hide lines
 util.cbaw
 
-color neon, element c and *prot*
-color cyan, element c and het
 
 hide sticks, element H and not (element N+O extend 1)
 hide sticks, name o+n+c
@@ -32,7 +30,7 @@ set_view (\
     68.681015015,   86.548294067,  -20.000000000 )
 
 show sticks, resid 557+550+570
-color cyan, element c and 5IRX_lig
+color grey, element c and 5IRX_lig
 color hotpink, element c and glide*
 color chartreuse, element c and combind*
 color manganese, element c and grid*
