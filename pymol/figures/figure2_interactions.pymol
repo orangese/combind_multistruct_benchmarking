@@ -1,0 +1,82 @@
+
+load_complexes PLK1, 20
+load PLK1/docking/confgen_es4/2YAC_lig-to-2OWB/2YAC_lig-to-2OWB_pv.maegz
+load PLK1/docking/confgen_es4/3THB_lig-to-2OWB/3THB_lig-to-2OWB_pv.maegz
+
+
+bg_color white
+set cartoon_transparency, 0
+set cartoon_oval_length, 1.0
+set opaque_background, 0
+set cartoon_color, white
+set ray_trace_mode, 1
+set ray_shadow, 0
+set dash_width, 10
+set surface_cavity_mode, 2
+hide lines
+util.cbaw
+
+set stick_transparency, 0.5, crystal*
+
+
+color grey, crystal* and element c
+color manganese, prot* and element c
+color cyan, 3THB_lig-to-2OWB_pv.3THB_lig_09 and element c
+color magenta, 2YAC_lig-to-2OWB_pv.2YAC_lig and element c
+color cyan, 3THB_lig-to-2OWB_pv.3THB_lig_04 and element c
+color magenta, 2YAC_lig-to-2OWB_pv.2YAC_lig_11 and element c
+
+
+as cartoon
+hide cartoon, resid -128
+hide sticks
+show sticks, het
+show sticks, resid 140+133
+hide sticks, element H and not (element N+O extend 1)
+
+set_view (\
+    -0.662457287,   -0.651827514,    0.369081378,\
+    -0.464637190,   -0.028896645,   -0.885000050,\
+     0.587551713,   -0.757778466,   -0.283712804,\
+    -0.001710700,    0.003489427,  -40.013114929,\
+    -2.737388611,   25.870780945,   68.614334106,\
+    31.451366425,   49.475791931,  -20.000000000 )
+
+# All the poses...
+enable 2YAC_lig-to-2OWB_pv or 2YAC_lig-to-2OWB_pv.2YAC_lig or 2YAC_lig-to-2OWB_pv.2YAC_lig_11 or prot_2OWB or crystal_2YAC or 3THB_lig-to-2OWB_pv or 3THB_lig-to-2OWB_pv.3THB_lig_09 or 3THB_lig-to-2OWB_pv.2YAC_lig_04
+
+# Reference Poses
+disable *; enable 2YAC_lig-to-2OWB_pv or 2YAC_lig-to-2OWB_pv.2YAC_lig    or prot_2OWB or crystal_2YAC
+delete dist*
+dist prot_2OWB and 133/n, 2YAC_lig-to-2OWB_pv.2YAC_lig and element n and (133/n expand 4)
+dist prot_2OWB and 133/o, 2YAC_lig-to-2OWB_pv.2YAC_lig and element n and (133/o expand 3.1)
+hide labels
+ray
+png ~/Downloads/combind_code/pymol/figures/fig2_panels/2YAC_ref.png
+
+
+disable *; enable 3THB_lig-to-2OWB_pv or 3THB_lig-to-2OWB_pv.3THB_lig_09 or prot_2OWB or crystal_3THB
+ray
+png ~/Downloads/combind_code/pymol/figures/fig2_panels/3THB_ref.png
+
+
+# Near-Native Poses
+
+disable *; enable 2YAC_lig-to-2OWB_pv or 2YAC_lig-to-2OWB_pv.2YAC_lig_11 or prot_2OWB or crystal_2YAC
+delete dist*
+dist prot_2OWB and 133/n, 2YAC_lig-to-2OWB_pv.2YAC_lig_11 and element n and (133/n expand 4)
+dist prot_2OWB and 133/o, 2YAC_lig-to-2OWB_pv.2YAC_lig_11 and name N14
+dist prot_2OWB and 140/oe2, 2YAC_lig-to-2OWB_pv.2YAC_lig_11 and element n and (140/oe2 expand 3.1)
+hide labels
+ray
+png ~/Downloads/combind_code/pymol/figures/fig2_panels/2HVC_nat.png
+
+# 133 140
+disable *; enable 3THB_lig-to-2OWB_pv or 3THB_lig-to-2OWB_pv.3THB_lig_04 or prot_2OWB or crystal_3THB
+delete dist*
+dist prot_2OWB and 133/n, 3THB_lig-to-2OWB_pv.3THB_lig_04 and element n and (133/n expand 4)
+dist prot_2OWB and 133/o, 3THB_lig-to-2OWB_pv.3THB_lig_04 and element n and (133/o expand 3.5)
+dist prot_2OWB and 140/oe2, 3THB_lig-to-2OWB_pv.3THB_lig_04 and element n and (140/oe2 expand 3.1)
+hide labels
+ray
+png ~/Downloads/combind_code/pymol/figures/fig2_panels/3THB_nat.png
