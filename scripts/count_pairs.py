@@ -1,6 +1,10 @@
 from glob import glob
+import sys
+import os
+
+sys.path.append(os.getenv('COMBINDHOME'))
 from shared_paths import shared_paths
-from density_estimate import DensityEstimate
+from score.density_estimate import DensityEstimate
 
 
 total, mcss = 0, 0
