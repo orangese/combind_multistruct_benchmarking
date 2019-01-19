@@ -4,7 +4,7 @@ from grouper import grouper
 
 from schrodinger.structure import StructureReader, StructureWriter
 
-from dock.parse_chembl import load_chembl_raw, load_chembl_proc
+from dock.parse_chembl import load_chembl_raw, load_chembl_proc, load_dude_raw
 
 queue = 'owners'
 group_size = 10
@@ -51,8 +51,10 @@ def get_ligands():
     """
     os.system('mkdir -p ligands/raw_files')
     copy_pdb_ligs()
-    ligs = load_chembl_raw() # Read files downloaded from chembl at chembl/*.xls
+    ligs = []
+    # ligs = load_chembl_raw() # Read files downloaded from chembl at chembl/*.xls
                              # into dict mapping ligand names to CHEMBL class instance
+    ligs += load_dude_raw()
     if len(ligs) == 0: return
     written_ligs = load_chembl_proc()
     write_unprocessed_chembl_ligs(ligs, written_ligs)

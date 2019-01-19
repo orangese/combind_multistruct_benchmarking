@@ -110,3 +110,56 @@ def load_chembl_raw(dir_path=None):
                     ligs[cid] = CHEMBL(cid, smi, ki, l_list[unit_ind], 
                                        l_list[t_id_ind], l_list[type_ind])
     return ligs
+
+def load_dude_raw(dir_path=None):
+    """
+    This functions very similarly to load_chembl_raw, and is meant for use with the DUD.E ligands. It
+    is assumed that the ligands are packaged in .ism files in the prot/dude directory. Because the dude
+    data only includes a smiles string, name, and uniprot ID (if active; decoys do not have uniprot ids),
+    dummy data that does not interfere with other functions down the line is input into the CHEMBL objects.
+    
+    Currently, this function loads all of the avaliable actives and 100 of the decoys; this is because the
+    decoy files contain thousands of ligands, but the actives may have as few as 89 (most have between 100-200).
+    """
+
+    ligs = {}
+    dude_path = 'dude'
+    if dir_path is not None:
+        dude_path = '{}/dude'.format(dir_path)
+    if not os.path.exists(dude_path): return ligs       
+    
+    #set dummy variables; dude data does not include these
+    ki_dummy = 0.0
+    unit_dummy = 'nM'
+    prot_id_dummy = 12345
+
+    for d_file in os.listdir(dude_path):
+        #tagging assumes format of actives_final.ism, decoys_final.ism
+        if d_file[0] == '.' or d_file.split('.')[-1] not in ['ism']:
+            continue
+        
+
+        #the active dude files are in the form [smiles string] [uniprot id] [chembl name]
+        #decoys take the form [smiles string] [ID]
+        tag = 'active' if d_file.split('_')[0][0] == 'a' else 'decoy'              
+        smi_ind = 0
+        prot_id_ind = 1
+        c_id_ind = 2
+        if tag == 'decoy':
+            c_id_ind = 1
+
+        with open('{}/{}'.format(dude_path, d_file)) as f:
+            #the dude files are in the form [smiles string] [uniprot id] [chembl name]
+            for i, line in enumerate(f):
+                info = line.strip().split(' ')
+                smi = info[smi_ind]
+                prot_id = info[prot_id_ind] if tag == 'active' else prot_id_dummy 
+                cid = tag + info[c_id_ind]
+
+                if smi == '': continue
+
+                if cid not in ligs:
+                    ligs[cid] = CHEMBL(cid, smi, ki_dummy, unit_dummy, prot_id)
+                if i == 99 and tag == 'decoy': break #FOR TESTING ONLY; load 100 decoys, load all actives
+
+    return ligs

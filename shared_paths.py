@@ -81,7 +81,8 @@ feature_defs = {
 
 shared_paths = { 
     'code'      : '~/combind',
-    'data'      : "/scratch/PI/rondror/combind/bpp_data/",
+    # 'data'      : "/scratch/PI/rondror/combind/bpp_data/",
+    'data'      : "/scratch/PI/rondror/combind/nonbinders/",
     'docking'   : 'confgen_es4',
     'mcss'      : 'mcss16',
     'stats'     : stats['stats6'],
