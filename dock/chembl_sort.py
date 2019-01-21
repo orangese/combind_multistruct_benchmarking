@@ -13,10 +13,8 @@ group_size = 10
 # Generate unprocessed ligand MAE files
 
 def copy_pdb_ligs():
-    """
-    Copies pdb ligands into ligands/raw_files.
-    If ligand is already copied, does nothing.
-    Called from datadir root.
+    """ Copies pre-existing pdb ligand .mae files from structures/ligands/
+    into ligands/raw_files
     """
     for f_name in os.listdir('structures/ligands'):
         if f_name.split('_')[1] != 'lig.mae': continue
@@ -40,21 +38,19 @@ def write_unprocessed_chembl_ligs(ligs, written_ligs):
                 st_writer.close()
 
 def get_ligands():
-    """
-    Generates unprocessed ligand mae files for pdb ligands(by copying from
-    structures/ligands) and chembl ligands (by reading from the chembl/*.xls files).
-    Also adds entries in chembl_info.txt for chembl ligands that are added.
+    """ Generates unprocessed ligand mae files for pdb ligands (by copying from
+    structures/ligands) and chembl ligands (by reading from the chembl/chembl_info.txt file).
+    Also adds entries in chembl_info.txt for any new chembl ligands that are loaded.
     
     * Terminating execution will corrupt chembl_info.txt *
-    
-    Called from datadir root.
     """
     os.system('mkdir -p ligands/raw_files')
     copy_pdb_ligs()
-    ligs = []
-    # ligs = load_chembl_raw() # Read files downloaded from chembl at chembl/*.xls
+    
+    ligs = {}
+    ligs = load_chembl_raw() # Read files downloaded from chembl at chembl/*.xls
                              # into dict mapping ligand names to CHEMBL class instance
-    ligs += load_dude_raw()
+    ligs = load_dude_raw(ligs)
     if len(ligs) == 0: return
     written_ligs = load_chembl_proc()
     write_unprocessed_chembl_ligs(ligs, written_ligs)

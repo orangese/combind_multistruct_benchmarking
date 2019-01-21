@@ -41,6 +41,17 @@ class CHEMBL:
         return self.valid_stereo
 
 def load_chembl_proc(dir_path=None):
+    ''' Read information about ligands from the chembl_info.txt file. This file is comma-delimited
+    and each line in the file is formatted as so:
+
+    chembl_id, prot, stereo, ki, smi
+
+    Each chembl ligand is used to instantiate a CHEMBL object. In addition, this function tries to read
+    molw and macrocycle data from the relevant files and link this data to the CHEMBL objects.
+
+    Returns:
+    - ligs: a dictionary from chembl ID -> CHEMBL object
+    '''
     ligs = {}
     chembl_path = 'chembl/chembl_info.txt'
     if dir_path is not None:
@@ -111,7 +122,7 @@ def load_chembl_raw(dir_path=None):
                                        l_list[t_id_ind], l_list[type_ind])
     return ligs
 
-def load_dude_raw(dir_path=None):
+def load_dude_raw(ligs, dir_path=None):
     """
     This functions very similarly to load_chembl_raw, and is meant for use with the DUD.E ligands. It
     is assumed that the ligands are packaged in .ism files in the prot/dude directory. Because the dude
@@ -121,8 +132,6 @@ def load_dude_raw(dir_path=None):
     Currently, this function loads all of the avaliable actives and 100 of the decoys; this is because the
     decoy files contain thousands of ligands, but the actives may have as few as 89 (most have between 100-200).
     """
-
-    ligs = {}
     dude_path = 'dude'
     if dir_path is not None:
         dude_path = '{}/dude'.format(dir_path)
