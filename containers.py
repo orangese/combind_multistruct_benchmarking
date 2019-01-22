@@ -168,14 +168,35 @@ class LigandManager:
         self.root = root
         
         # Initialize ligand info.
+
+        # Get a dict from ligand_id -> CHEMBL object representing ligand. This dict contains all chembl
+        # ligands (i.e. ligands in chembl_info.tx) Note: this includes DUD-E ligands
         self.chembl_info = load_chembl_proc(self.root)
+
+        # Get a set of unique ligands and a dict of duplicates, where the key is the first duplicate
+        # (the numbering is arbitrary, "first" doesn't really mean anything) and the value is a set of
+        # ligands that are duplicates of each other
         self.u_ligs, self.dup_ligs = read_duplicates(self.root)
+
+        # Get a list of all ligands that are in ligands/prepared_ligands/
         self.all_ligs = self.prepped()
+
+        # TODO: this doesn't seem like it'll work anymore
+        ''''
         self.pdb = self.unique(sorted([l for l in self.all_ligs
                                       if l[:6] != 'CHEMBL'],
                                       reverse = struct == 'Last'))
+                                      '''
 
-        # Set default structure.
+        # Get the list composed of all unique PDB ligands in ligands/prepared_ligands/
+        # I chose to identify a PDB ligand as a ligand s.t. there are exactly 4 characters before
+        # the first '_'
+        self.pdb = self.unique(sorted([l for l in self.all_ligs
+                                      if len(l.split('_')[0]) == 4],
+                                      reverse = struct == 'Last'))
+
+        # Set the value of self.st as the default PDB structure. If this is the first struct, choose
+        # the alphanumerically first PDB structure. If this is the last, choose the last PDB structure
         self.st = None
         if not os.path.exists('{}/docking/grids'.format(self.root)): return
         self.grids = sorted([l for l in os.listdir('{}/docking/grids'.format(self.root)) if l[0] != '.'])
@@ -191,6 +212,11 @@ class LigandManager:
         self.helpers = {}
 
     def get_xdocked_ligands(self, num):
+        ''' Get the first num PDB ligands, leaving out the ligand bound to the default PDB structure
+        
+        Returns:
+        * list of num ligand_ids
+        '''
         ligands = self.docked(self.pdb)[:num+1]
         self_docked = self.st+'_lig'
         if self_docked in ligands:
@@ -209,6 +235,12 @@ class LigandManager:
                                   ))]
 
     def prepped(self):
+        ''' Get a set of ligand_id's of ligands that have been run through epik and prepwizard (i.e.
+        ligands s.t. there exist a file data_root/ligands/prepared_ligands/ligand_id/ligand_id_out.mae)
+
+        Returns:
+        * set of ligand_id's
+        '''
         ligdir = '{}/ligands/prepared_ligands'.format(self.root)
         if not os.path.exists(ligdir): return set([])
         return set([l for l in os.listdir(ligdir) if os.path.exists('{}/{}/{}_out.mae'.format(ligdir,l,l))])
@@ -260,7 +292,10 @@ class Protein:
     """
     def __init__(self, protein, struct = 'First'):
         self.root = "{}/{}".format(shared_paths['data'], protein)
+
+        # Unless otherwise specified, instantiate a LigandManager object with the struct 'First'
         self.lm = LigandManager(protein, self.root, struct)
+
         # Useful to be able to reference this before loading data.
         self.docking = {self.lm.st: Docking(self.root, self.lm.st)}
 

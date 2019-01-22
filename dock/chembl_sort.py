@@ -49,7 +49,7 @@ def get_ligands():
     
     * Terminating execution will corrupt chembl_info.txt *
     """
-    print("Getting unprocessed ligands")
+    print("\nGetting unprocessed ligands")
     print("---------------------------")
 
     os.system('mkdir -p ligands/raw_files')
@@ -143,7 +143,7 @@ def proc_ligands():
     Runs prepwizard and epik on ligands in raw_files.
     Writes output to prepared_ligands.
     """
-    print("Processing ligands")
+    print("\nProcessing ligands")
     print("------------------")
 
     os.system('mkdir -p ligands/prepared_ligands')
