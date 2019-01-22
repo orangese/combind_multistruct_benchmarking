@@ -7,9 +7,15 @@ import score.scores
 import score.statistics
 
 
+'''
+Protonate and dock ligands
+'''
 if sys.argv[1] == 'prepare':
 	dock.prepare_all.main(sys.argv[1:])
 
+'''
+Fingerprint poses
+'''
 elif sys.argv[1] == 'ifp':
 	ifp.fp.FP(sys.argv[1:])
 

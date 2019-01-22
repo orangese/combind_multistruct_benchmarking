@@ -41,8 +41,9 @@ def main(args):
             make_grids()           # Creates grid for all proteins
          
         if task == '2':
-           get_ligands()           # Writes MAE files for all ligs to ligands/raw_files
-           proc_ligands()          # Runs prepwizard & epik on all ligs
+            #Both functions are in dock.chembl_sort
+            get_ligands()           # Writes MAE files for all ligs to ligands/raw_files
+            proc_ligands()          # Runs prepwizard & epik on all ligs
            
         if task == 'm':
             lm.mcss.compute_mcss() # Computes MCSS, for use in pick_helpers
@@ -67,11 +68,11 @@ def main(args):
         # force redo of chembl info (do this if new chembl ligands have been added)
         # Do this after all MCSS files have been written!
         if task == 'c':
-             os.system('rm chembl/helpers/*')
-             os.system('rm chembl/duplicates.txt')
-             os.system('rm chembl/molw.txt')
-             os.system('rm chembl/macrocycle.txt') 
-             write_props(lm)
+            os.system('rm chembl/helpers/*')
+            os.system('rm chembl/duplicates.txt')
+            os.system('rm chembl/molw.txt')
+            os.system('rm chembl/macrocycle.txt') 
+            write_props(lm)
 
         # 3. decide what ligands to use and prepare them
         if task == '3':
