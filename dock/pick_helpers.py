@@ -13,7 +13,7 @@ def pick_helpers(lm, maxnum=21):
     # filters
     all_options = [
         'best_affinity.txt',
-        'best_mcss.txt',
+        #'best_mcss.txt',
     ]
 
     num_chembl = 30

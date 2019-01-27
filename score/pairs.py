@@ -7,6 +7,12 @@ class LigPair:
 
     Importantly, this class normalizes the overlap scores
     by dividing by the maximum value.
+
+    Inputs:
+    * l1/2 (Ligand objects)
+    * max_poses (int)
+    * mcss (bool)
+    * features (i.e. [feature (str) ...]) (list)
     """
     def __init__(self, l1, l2, features, mcss, max_poses):
         self.l1 = l1

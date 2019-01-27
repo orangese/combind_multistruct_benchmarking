@@ -26,7 +26,7 @@ def main(args):
     os.chdir(shared_paths['data'])
 
     for i, d in enumerate(datasets):
-        print(d, i)
+        print("\nProcessing dataset {}, {}".format(i, d))
         os.chdir(d)
         protein = Protein(d, shared_paths['pdb_order'])
         lm = protein.lm
@@ -76,9 +76,9 @@ def main(args):
 
         # 3. decide what ligands to use and prepare them
         if task == '3':
-            pick_helpers(lm)         # Picks chembl ligands for use in scoring
-            dock(lm, load_helpers()) # Dock chembl ligands to be used in scoring
-            compute_fp(lm)           # Fingerprints for docked ligands and pdb structures
-            lm.mcss.compute_mcss(True, load_helpers())
+            # pick_helpers(lm)         # Picks chembl ligands for use in scoring
+            # dock(lm, d, load_helpers()) # Dock chembl ligands to be used in scoring
+            compute_fp(d, lm)           # Fingerprints for docked ligands and pdb structures
+            # lm.mcss.compute_mcss(True, load_helpers())
 
         os.chdir('..')

@@ -4,7 +4,7 @@ from grouper import grouper
 from shared_paths import shared_paths
 from schrodinger.structure import StructureReader
 
-XGLIDE_IN = '''GRIDFILE   ../../grids/{}/{}.zip
+XGLIDE_IN = '''GRIDFILE   {}{}/{}.zip
 LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
 DOCKING_METHOD   confgen
 CANONICALIZE   True
@@ -16,7 +16,7 @@ PRECISION   SP
 NENHANCED_SAMPLING   2
 '''
 
-GLIDE_ES4 = '''GRIDFILE   ../../grids/{}/{}.zip
+GLIDE_ES4 = '''GRIDFILE   {}{}/{}.zip
 LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
 DOCKING_METHOD   confgen
 CANONICALIZE   True
@@ -28,7 +28,7 @@ PRECISION   SP
 NENHANCED_SAMPLING   4
 '''
 
-GLIDE_ES1 = '''GRIDFILE   ../../grids/{}/{}.zip
+GLIDE_ES1 = '''GRIDFILE   {}{}/{}.zip
 LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
 DOCKING_METHOD   confgen
 CANONICALIZE   True
@@ -40,7 +40,7 @@ PRECISION   SP
 NENHANCED_SAMPLING   1
 '''
 
-GLIDEXP = '''GRIDFILE   ../../grids/{}/{}.zip
+GLIDEXP = '''GRIDFILE   {}{}/{}.zip
 LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
 DOCKING_METHOD   confgen
 CANONICALIZE   True
@@ -50,7 +50,7 @@ WRITEREPT   True
 PRECISION   XP
 '''
 
-EXPANDED = '''GRIDFILE   ../../grids/{}/{}.zip
+EXPANDED = '''GRIDFILE   {}{}/{}.zip
 LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
 DOCKING_METHOD   confgen
 CANONICALIZE   True
@@ -65,14 +65,14 @@ PRECISION   SP
 NENHANCED_SAMPLING   4
 '''
 
-INPLACE = '''GRIDFILE   ../../grids/{}/{}.zip
+INPLACE = '''GRIDFILE   {}{}/{}.zip
 LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
 DOCKING_METHOD   inplace
 WRITEREPT   True
 PRECISION   SP
 '''
 
-REFINE = '''GRIDFILE   ../../grids/{}/{}.zip
+REFINE = '''GRIDFILE   {}{}/{}.zip
 LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
 DOCKING_METHOD   mininplace
 WRITEREPT   True
@@ -108,17 +108,19 @@ group_size = 5
 dock_cmd = '$SCHRODINGER/glide -WAIT {}-to-{}.in\n' 
 rmsd_cmd = '$SCHRODINGER/run rmsd.py -use_neutral_scaffold -pv second -c rmsd.csv ../../../structures/ligands/{}.mae {}-to-{}_pv.maegz\n'
 
-def get_state(ligand, grid):
+def get_state(ligand, grid, grid_root):
+    ''' Detect the stage of processing of this ligand/grid combination. The state is returned as an int
+    between 0 and 2, inclusive. The states are as follows:
+    * 0: do nothing
+    * 1: compute rmsd
+    * 2: dock
+    '''
     pv = '{}-to-{}/{}-to-{}_pv.maegz'.format(ligand, grid, ligand, grid)
     rmsd = '{}-to-{}/rmsd.csv'.format(ligand, grid)
     log = '{}-to-{}/{}-to-{}.log'.format(ligand, grid, ligand, grid)
     ref_lig = '../../structures/ligands/{}.mae'.format(ligand)
     inp_lig = '../../ligands/prepared_ligands/{}/{}.mae'.format(ligand, ligand)
-    inp_grid = '../grids/{}/{}.zip'.format(grid, grid)
-
-    # 0: do nothing
-    # 1: compute rmsd
-    # 2: dock
+    inp_grid = '{}{}/{}.zip'.format(grid_root, grid, grid)
 
     if os.path.exists(rmsd): 
         return 0
@@ -135,7 +137,7 @@ def get_state(ligand, grid):
     os.system('rm -rf {}-to-{}'.format(ligand, grid))
     return 2
 
-def write_inp_files(all_pairs, mode):
+def write_inp_files(grid_root, all_pairs, mode):
 
     TEMPLATE = modes[mode]['template']
 
@@ -143,7 +145,7 @@ def write_inp_files(all_pairs, mode):
     for ligand, grid in all_pairs:
         os.system('mkdir {}-to-{}'.format(ligand, grid))
         with open('{}-to-{}/{}-to-{}.in'.format(ligand, grid, ligand, grid), 'w') as f:
-            f.write(TEMPLATE.format(grid, grid, ligand, ligand))
+            f.write(TEMPLATE.format(grid_root, grid, grid, ligand, ligand))
 
 def proc_all(all_pairs, dock=False, rmsd=False):
     
@@ -162,12 +164,24 @@ def proc_all(all_pairs, dock=False, rmsd=False):
 
         os.system('sbatch -p {} -t 1:00:00 -o dock.out dock{}.sh'.format(queue, i))
 
-def dock(lm, chembl=None, maxnum=30, mode = 'confgen'):
+def dock(lm, protein, chembl=None, maxnum=30, mode = 'confgen'):
+    ''' dock() modified to only dock chembl helpers
+
+    Inputs:
+    * chembl (dict): maps chembl_helper_filename (str) -> pdb_ligand_helpers (dict)
+        * pdb_ligand_helpers (dict): maps ID of a PDB ligand -> list of IDs of all chembl helpers
+    '''
+
+    readable_root = shared_paths['read_data'] + protein
+    grid_root = '{}{}/docking/grids/'.format(shared_paths['read_data'],protein)
+    writeable_root = shared_paths['write_data'] + protein
+
     if lm.st is None: return
     docking = modes[mode]['name']
     os.system('mkdir -p docking/{}'.format(docking))
     os.chdir('docking/{}'.format(docking))
 
+    # If not called from prepare_all, use the first maxnum pdb ligands
     if chembl is None:
         ligs = lm.pdb[:maxnum]
         grids = [lm.st]
@@ -179,23 +193,25 @@ def dock(lm, chembl=None, maxnum=30, mode = 'confgen'):
                 ligs.add(q)
                 ligs.update(c_list)
 
+    # print("Docking {} ligands on {} grids".format(len(ligs), len(grids)))
     to_dock = []
     to_rmsd = []
     for lig in ligs:
         for grid in grids:
-            s = get_state(lig, grid)
+            s = get_state(lig, grid, grid_root)
             if s == 2: to_dock.append((lig, grid))
             if s == 1: to_rmsd.append((lig, grid))
             
     if len(to_dock) > 0:
-        print('docking {} ligands'.format(len(to_dock)))
-        write_inp_files(to_dock, mode)
+        print('Docking {} ligands'.format(len(to_dock)))
+        write_inp_files(grid_root, to_dock, mode)
         proc_all(to_dock, dock=True)
     if len(to_rmsd) > 0:
-        print('computing {} rmsds'.format(len(to_rmsd)))
+        print('Computing {} rmsds'.format(len(to_rmsd)))
         proc_all(to_rmsd, rmsd=True)
 
-    os.chdir('../..')
+    # os.chdir('../..')
+    os.chdir(writeable_root)
 
 def verify_dock(lm):
     for ligand in lm.docked(lm.all_ligs):
