@@ -8,7 +8,8 @@ import score.statistics
 
 
 if sys.argv[1] == 'prepare':
-	dock.prepare_all.main(sys.argv[1:])
+        import pdb; pdb.set_trace()
+        dock.prepare_all.main(sys.argv[1:])
 
 elif sys.argv[1] == 'ifp':
 	ifp.fp.FP(sys.argv[1:])

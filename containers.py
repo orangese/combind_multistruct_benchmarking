@@ -180,6 +180,7 @@ class LigandManager:
         if not os.path.exists('{}/docking/grids'.format(self.root)): return
         self.grids = sorted([l for l in os.listdir('{}/docking/grids'.format(self.root)) if l[0] != '.'])
         if not self.grids: return
+        
         if struct is 'First':
             self.st = self.grids[0] 
         elif struct is 'Last':
@@ -195,7 +196,7 @@ class LigandManager:
         self_docked = self.st+'_lig'
         if self_docked in ligands:
            ligands.remove(self_docked)
-        else:
+        elif ligands:
             ligands.pop(-1)
         return ligands
 

@@ -35,9 +35,9 @@ def main(args):
             sort_downloads()
      
         if task == '1':
-            process_structs()      # Runs prepwizard
-            align_structs()        # Align and give consistent numbering
-            sort_files()           # Creates ligand, protein, and complex directories
+            # process_structs()      # Runs prepwizard
+            # align_structs()        # Align and give consistent numbering
+            # sort_files()           # Creates ligand, protein, and complex directories
             make_grids()           # Creates grid for all proteins
          
         if task == '2':
