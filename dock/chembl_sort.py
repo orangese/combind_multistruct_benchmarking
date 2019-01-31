@@ -12,14 +12,16 @@ group_size = 10
 #######################################################################################
 # Generate unprocessed ligand MAE files
 
-def copy_pdb_ligs():
+def copy_pdb_ligs(write_root, read_root):
     """ Copies pre-existing pdb ligand .mae files from structures/ligands/
     into ligands/raw_files
     """
-    for f_name in os.listdir('structures/ligands'):
+    print("Copying the following PDB ligands from read_root/structures/ligands/ to write_root/ligands/raw_files/")
+    for f_name in os.listdir(read_root + 'structures/ligands'):
         if f_name.split('_')[1] != 'lig.mae': continue
-        if os.path.exists('ligands/raw_files/{}'.format(f_name)): continue
-        os.system('cp structures/ligands/{} ligands/raw_files/{}'.format(f_name, f_name))
+        if os.path.exists(write_root + 'ligands/raw_files/{}'.format(f_name)): continue
+        print("* {}".format(f_name))
+        os.system('cp {}structures/ligands/{} {}ligands/raw_files/{}'.format(read_root, f_name, write_root, f_name))
 
 def write_unprocessed_chembl_ligs(ligs, written_ligs):
     """ For each ligand not in chemb_info.txt (as determined by load_chembl_proc()),
@@ -28,7 +30,7 @@ def write_unprocessed_chembl_ligs(ligs, written_ligs):
     Schrodinger's StructureWriter class.
     """
     print("Writing the following unprocessed ligands to chembl/chembl_info.txt:")
-    with open('chembl/chembl_info.txt', 'a') as f:
+    with open('chembl/chembl_info.txt', 'a+') as f:
         for lig_name in sorted(ligs.keys(), key=lambda x: ligs[x].ki):
             if lig_name+'_lig' not in written_ligs:
                 print("* {}".format(lig_name))
@@ -42,7 +44,7 @@ def write_unprocessed_chembl_ligs(ligs, written_ligs):
                 st_writer.append(ligs[lig_name].st)
                 st_writer.close()
 
-def get_ligands():
+def get_ligands(write_root, read_root):
     """ Generates unprocessed ligand mae files for pdb ligands (by copying from
     structures/ligands) and chembl ligands (by reading from the chembl/chembl_info.txt file).
     Also adds entries in chembl_info.txt for any new chembl ligands that are loaded.
@@ -52,17 +54,19 @@ def get_ligands():
     print("\nGetting unprocessed ligands")
     print("---------------------------")
 
-    os.system('mkdir -p ligands/raw_files')
+    os.system('mkdir -p {}ligands/raw_files/'.format(write_root))
+    os.system('mkdir -p {}chembl/'.format(write_root))
 
-    print("Copying PDB ligands from structures/ligands/ to ligands/raw_files/")
 
     # Copy PDB ligands from structures/ligands/ to ligands/raw_files/
-    copy_pdb_ligs()
+    copy_pdb_ligs(write_root, read_root)
 
     print("Loading chembl ligands from chembl/*xls files")
 
+    ligs = {}
+
     # Creates CHEMBL objects (see parse_chembl.py) for ligands in chembl/*.xls files
-    ligs = load_chembl_raw() 
+    # ligs = load_chembl_raw() 
 
     print("Loading DUD-E ligands from DUD-E/*.ism files (all actives and up to 100 decoys are loaded")
 
@@ -106,14 +110,15 @@ def resolve_protonation_state(all_u):
 
 
 def run_ligand_processing(unfinished):
-    """
-    Run prepwizard and epik on ligands in list unfinished.
+    """ Run prepwizard and epik on all unfinished ligands. This generates an output file with possible
+    protonation states for each ligand.
     """
     add_h = '$SCHRODINGER/utilities/prepwizard -WAIT -rehtreat -noepik -noprotassign -noimpref {}_in.mae {}_in_epik.mae\n' 
     epik_command = '$SCHRODINGER/epik -WAIT -ph 7.0 -pht 2.0 -imae {}_in_epik.mae -omae {}_out.mae\n'
 
     print("Following ligands have been submitted for prepwizard+epik processing:")
 
+    # Process ligands in batches of size group_size
     for i, ligs in enumerate(grouper(group_size, unfinished)):
         with open('ligands/prepared_ligands/batch-{}.sh'.format(i),'w') as f:
             f.write('#!/bin/bash\n')

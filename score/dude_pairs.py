@@ -1,22 +1,22 @@
 import numpy as np
 from shared_paths import shared_paths, feature_defs
 
-class LigPair:
+class DUDEPDBLigPair:
     """
-    Computes and stores overlap scores for a ligand pair.
+    Computes and stores overlap scores for a ligand pair between a DUDE ligand and a PDB ligand.
 
     Importantly, this class normalizes the overlap scores
     by dividing by the maximum value.
 
     Inputs:
-    * l1/2 (Ligand objects)
+    * dude_ligand/2 (Ligand objects)
     * max_poses (int)
     * mcss (bool)
     * features (i.e. [feature (str) ...]) (list)
     """
-    def __init__(self, l1, l2, features, mcss, max_poses):
-        self.l1 = l1
-        self.l2 = l2
+    def __init__(self, dude_ligand, pdb_ligand, features, mcss, max_poses):
+        self.dude_ligand = dude_ligand
+        self.pdb_ligand = pdb_ligand
         self.max_poses = max_poses
         self.mcss = mcss
         self.features = features
@@ -48,23 +48,24 @@ class LigPair:
         return pp.pose1.rmsd, pp.pose2.rmsd
 
     def _init_pose_pairs(self):
-        """ Create dict of pose pairs for up to the top self.max_poses poses.
+        """ Create PosePair's for the top pose of the DUDe ligand and up to the top self.max_poses 
+        poses of the PDB ligand
 
-        Returns
-        * pairs {(i (int), j (int)):PosePair(i'th pose of l1, j'th pose of l2)}. Conceptually,
-        a dict mapping from a tuple of the ranks of the two ligands in the PosePair, to the PosePair
-        composed of those two poses
+        Returns:
+        * pairs (dict): maps from (dude_rank (int), pdb_rank (int)) tuples, composed of the ranks of
+        the two ligands -> PosePair object made from the two poses
         """
         pairs = {}
-        for rank1 in range(min(len(self.l1.poses), self.max_poses)):
-            for rank2 in range(min(len(self.l2.poses), self.max_poses)):
+        # for rank1 in range(min(len(self.dude_ligand.poses), self.max_poses)):
+        for rank1 in range(min(len(self.dude_ligand.poses), 1)):
+            for rank2 in range(min(len(self.pdb_ligand.poses), self.max_poses)):
                 if self.mcss:
-                    mcss_score = self.mcss.get_rmsd(self.l1.ligand, self.l2.ligand,
+                    mcss_score = self.mcss.get_rmsd(self.dude_ligand.ligand, self.pdb_ligand.ligand,
                                                     rank1, rank2)
                 else:
                     mcss_score = None
-                pairs[(rank1, rank2)] = PosePair(self.l1.poses[rank1],
-                                                 self.l2.poses[rank2],
+                pairs[(rank1, rank2)] = DUDEPDBPosePair(self.dude_ligand.poses[rank1],
+                                                 self.pdb_ligand.poses[rank2],
                                                  mcss_score)
         return pairs
 
@@ -81,7 +82,7 @@ class LigPair:
                                      max(feat_map[feature][1], pp_x))
         return feat_map
 
-class PosePair:
+class DUDEPDBPosePair:
     """
     Computes and stores overlap scores for pose1 and pose2.
 
@@ -92,14 +93,6 @@ class PosePair:
         self.pose1 = pose1
         self.pose2 = pose2
         self.features = {'mcss': mcss_score}
-
-    def correct(self):
-        """
-        Returns 1 if both poses are at most 2 A RMSD from their
-        crystallographic pose.
-        """
-        return int(    self.pose1.rmsd <= shared_paths['stats']['native_thresh']
-                   and self.pose2.rmsd <= shared_paths['stats']['native_thresh'])
 
     def get_feature(self, feature):
         """

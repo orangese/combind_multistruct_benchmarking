@@ -1,0 +1,18 @@
+cd /scratch/PI/rondror/combind/nonbinders
+# Get ligands and process ligands
+$SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare 2 B1AR
+
+# Redo chembl/ files
+# $SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare c B1AR
+
+# Pick helpers
+# $SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare 3 B1AR
+
+# Dock helpers
+# $SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare 4 B1AR
+
+# Compute fingerprints
+# $SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare 5 B1AR
+
+# Compute mcss
+# $SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare 6 B1AR

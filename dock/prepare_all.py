@@ -25,11 +25,15 @@ def main(args):
         datasets = proteins
     os.chdir(shared_paths['data'])
 
+
     for i, d in enumerate(datasets):
         print("\nProcessing dataset {}, {}".format(i, d))
         os.chdir(d)
         protein = Protein(d, shared_paths['pdb_order'])
         lm = protein.lm
+
+        write_root = shared_paths['write_data'] + d + '/'
+        read_root = shared_paths['read_data'] + d + '/'
 
         if task == '0':
             sort_downloads()
@@ -42,7 +46,7 @@ def main(args):
          
         if task == '2':
             #Both functions are in dock.chembl_sort
-            get_ligands()           # Writes MAE files for all ligs to ligands/raw_files
+            get_ligands(write_root, read_root)           # Writes MAE files for all ligs to ligands/raw_files
             proc_ligands()          # Runs prepwizard & epik on all ligs
            
         if task == 'm':
@@ -74,11 +78,21 @@ def main(args):
             os.system('rm chembl/macrocycle.txt') 
             write_props(lm)
 
-        # 3. decide what ligands to use and prepare them
+        # 3. pick helpers
         if task == '3':
-            # pick_helpers(lm)         # Picks chembl ligands for use in scoring
+            pick_helpers(lm)         # Picks chembl ligands for use in scoring
             # dock(lm, d, load_helpers()) # Dock chembl ligands to be used in scoring
-            compute_fp(d, lm)           # Fingerprints for docked ligands and pdb structures
-            # lm.mcss.compute_mcss(True, load_helpers())
 
-        os.chdir('..')
+        # 4. dock helpers
+        if task == '4':
+            dock(lm, d, load_helpers()) # Dock chembl ligands to be used in scoring
+
+        # 5. compute fingerprints for all ligands
+        if task == '5':
+            compute_fp(d, lm)           # Fingerprints for docked ligands and pdb structures
+
+        # 6. compute mcss
+        if task == '6':
+            lm.mcss.compute_mcss(True, load_helpers())
+
+        os.chdir(shared_paths['code'])

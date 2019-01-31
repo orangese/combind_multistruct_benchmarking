@@ -232,6 +232,7 @@ class LigandManager:
                                   ))]
 
         ligands = my_docked(self.pdb)[:num+1]
+        if len(ligands) == 0: return []
         self_docked = self.st+'_lig'
         if self_docked in ligands:
            ligands.remove(self_docked)
