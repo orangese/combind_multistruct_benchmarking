@@ -49,3 +49,11 @@ def load_helpers(dirpath=None):
                 q, chembl = line.strip().split(':')
                 helpers[fname][q] = chembl.split(',')
     return helpers
+
+def load_helpers_set():
+    helpers = load_helpers()
+    helpers_set = set()
+    for filename in helpers:
+        for PDB_ligand_id in helpers[filename]:
+            helpers_set.update(helpers[filename][PDB_ligand_id])
+    return helpers_set

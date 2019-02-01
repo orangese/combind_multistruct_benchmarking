@@ -30,7 +30,7 @@ def get_fp(protein, lm, fp_list, raw):
 def structure_fp(protein, lm):
     ''' For each PDB ligand without a structure fingerprint computed already, compute it now.
     '''
-    for lig in sorted(os.listdir('../../structures/ligands')):
+    for lig in sorted(os.listdir('{}{}/structures/ligands'.format(shared_paths['read_data'],protein))):
         pdb = lig.split('_')[0]
         output_file = '{}_struct.fp'.format(pdb)
         if os.path.exists(output_file): continue

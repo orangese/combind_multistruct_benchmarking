@@ -160,8 +160,8 @@ def proc_ligands():
     all_u = [l.split('.')[0] for l in os.listdir('ligands/raw_files')]
     all_u = [l for l in all_u
              if not os.path.exists('ligands/prepared_ligands/{}/{}.mae'.format(l,l))]
-    if len(all_u) > 0:
-        print('{} ligands in ligands/raw_files/ are unfinished'.format(len(all_u)))
+    # if len(all_u) > 0:
+    print('{} ligands in ligands/raw_files/ are unfinished'.format(len(all_u)))
 
     # For each ligand, if the ligand is prepped but not finalized, finalize it now by grabbing
     # the highest scoring protonation state
@@ -173,7 +173,7 @@ def proc_ligands():
         prepped = 'ligands/prepared_ligands/{}/{}_out.mae'.format(l,l)
         if not os.path.exists(prepped):
             unfinished.append(l)
-    if len(unfinished) > 0:
-        print('{} ligands in ligands/raw_files/ are unprocessed'.format(len(unfinished)))
+    # if len(unfinished) > 0:
+    print('{} ligands in ligands/raw_files/ are unprocessed'.format(len(unfinished)))
     
     run_ligand_processing(unfinished)

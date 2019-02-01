@@ -1,12 +1,17 @@
+PROTEINS='B1AR'
+STAGE='5'
+
 cd /scratch/PI/rondror/combind/nonbinders
+$SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare $STAGE $PROTEINS
+
 # Get ligands and process ligands
-$SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare 2 B1AR
+# $SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare 2 $PROTEINS
 
 # Redo chembl/ files
-# $SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare c B1AR
+# $SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare c $PROTEINS
 
 # Pick helpers
-# $SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare 3 B1AR
+# $SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare 3 $PROTEINS
 
 # Dock helpers
 # $SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare 4 B1AR
@@ -16,3 +21,5 @@ $SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combin
 
 # Compute mcss
 # $SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py prepare 6 B1AR
+
+combind

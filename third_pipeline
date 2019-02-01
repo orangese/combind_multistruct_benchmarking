@@ -1,0 +1,6 @@
+PROTEINS='B1AR'
+
+cd /scratch/PI/rondror/combind/nonbinders
+$SCHRODINGER/run /scratch/PI/rondror/augustine/combind_testing/augustines-combind/main.py dude_statistics $PROTEINS
+
+combind

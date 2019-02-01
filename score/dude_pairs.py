@@ -40,12 +40,13 @@ class DUDEPDBLigPair:
         return feature_value / max(maximum, 1.0)
 
     def get_gscores(self, rank1, rank2):
+        ''' Returns glide scores of rank1 pose of the dude ligand and rank2 pose of the pdb ligand '''
         pp = self.pose_pairs[(rank1,rank2)]
-        return pp.pose1.gscore, pp.pose2.gscore
+        return pp.dude_pose.gscore, pp.pdb_pose.gscore
 
     def get_rmsds(self, rank1, rank2):
         pp = self.pose_pairs[(rank1,rank2)]
-        return pp.pose1.rmsd, pp.pose2.rmsd
+        return pp.dude_pose.rmsd, pp.pdb_pose.rmsd
 
     def _init_pose_pairs(self):
         """ Create PosePair's for the top pose of the DUDe ligand and up to the top self.max_poses 
@@ -70,8 +71,12 @@ class DUDEPDBLigPair:
         return pairs
 
     def _init_feat_map(self):
-        """
-        Compute the maximum and minimum value of each feature.
+        """ Compute the maximum and minimum value of each feature.
+
+        Returns:
+        * feat_map (dict): maps feature (i.e. sb, mcss, etc.) -> (min_score (float), max_score (float)),
+        where the two floats are the lowest and highest scores, respectively, observed of that feature type
+        across all pose pairs of the two ligands
         """
         feat_map = {feature: (float('inf'), -float('inf')) for feature in self.features}
         for key, pose_pair in self.pose_pairs.items():
@@ -84,14 +89,14 @@ class DUDEPDBLigPair:
 
 class DUDEPDBPosePair:
     """
-    Computes and stores overlap scores for pose1 and pose2.
+    Computes and stores overlap scores for dude_pose and pdb_pose.
 
     This class defines the feature overlap scores as the sum of
     the geometric mean of the fingerprint values for each residue.
     """
-    def __init__(self, pose1, pose2, mcss_score):
-        self.pose1 = pose1
-        self.pose2 = pose2
+    def __init__(self, dude_pose, pdb_pose, mcss_score):
+        self.dude_pose = dude_pose
+        self.pdb_pose = pdb_pose
         self.features = {'mcss': mcss_score}
 
     def get_feature(self, feature):
@@ -112,8 +117,8 @@ class DUDEPDBPosePair:
         assert feature in feature_defs, feature
         score = 0
         # (feature_index, residue)
-        for (i, r) in self.pose1.fp:
-            if i in feature_defs[feature] and (i, r) in self.pose2.fp:
+        for (i, r) in self.dude_pose.fp:
+            if i in feature_defs[feature] and (i, r) in self.pdb_pose.fp:
                 # Geometric mean
-                score += (self.pose1.fp[(i,r)]*self.pose2.fp[(i,r)])**0.5
+                score += (self.dude_pose.fp[(i,r)]*self.pdb_pose.fp[(i,r)])**0.5
         return score

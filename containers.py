@@ -307,7 +307,7 @@ class Protein:
     Collection of ligands and docking results for a given protein.
     """
     def __init__(self, protein, struct = 'First'):
-        self.root = "{}/{}".format(shared_paths['data'], protein)
+        self.root = "{}/{}".format(shared_paths['write_data'], protein)
 
         # Unless otherwise specified, instantiate a LigandManager object with the struct 'First'
         self.lm = LigandManager(protein, self.root, struct)

@@ -1,7 +1,8 @@
+import os
 import numpy as np
 from score.density_estimate import DensityEstimate
 from score.dude_pairs import DUDEPDBLigPair
-from dock.pick_helpers import load_helpers
+from dock.pick_helpers import load_helpers_set
 from score.pairs import LigPair
 from containers import Protein
 from shared_paths import shared_paths, feature_defs
@@ -43,7 +44,7 @@ def get_fname(protein, dude_ligand, pdb_ligand):
     else:
         ID = '{}-{}'.format(dude_ligand, pdb_ligand)
     version = shared_paths['stats']['version']
-    return "{}/{}/dude_stats/{}/{}-{}-{}.de".format(shared_paths['write_data'],
+    return "{}{}/dude_stats/{}/{}-{}-{}.de".format(shared_paths['write_data'],
                                                protein, version, ID,
                                                '{}', '{}')
 
@@ -57,7 +58,7 @@ def read_stats(fname, interactions):
     Returns:
     * stats {'dude':{'mcss': DensityEstimate object, ... },
             }
-    Essentially, a dict from 'dude' to dicts mapping each feature type to a DensityEstimate
+    Essentially, a dict from the string 'dude' to dicts mapping each feature type to a DensityEstimate
     object for that stat-type+feature-type pair
     '''
     stats = {'dude':{}}
@@ -70,30 +71,27 @@ def read_stats(fname, interactions):
     return stats
 
 # Core stats computation
-def get_interaction(lig_pair, interaction):
+def get_interaction(dude_pdb_ligpair, interaction):
     '''
     Inputs:
-    * lig_pair (LigPair): ligand pair for which to get features
     * interaction (str): interaction type to get scores for
+    * dude_pdb_ligpair (LigPair): ligand pair for which to get features
     
     Returns:
-    * X_native: features for native poses
-    * X_ref:    features for all poses
-    * w_ref:    pairs of glide scores for all poses
+    * X_dude (np.array) (dim (#pairs_of_poses, 1))
     '''
-    X_native, X_ref, w_ref = [], [], []
-    for (r1,r2), pp in lig_pair.pose_pairs.items():
-        if max(r1, r2) > shared_paths['stats']['max_poses']: continue
-        pp_x = lig_pair.get_feature(interaction, r1, r2)
+    X_dude = []
+
+    for (dude_pose_rank,pdb_pose_rank), pose_pair in dude_pdb_ligpair.pose_pairs.items():
+        if max(dude_pose_rank, pdb_pose_rank) > shared_paths['stats']['max_poses']: continue
+        pp_x = dude_pdb_ligpair.get_feature(interaction, dude_pose_rank, pdb_pose_rank)
         if pp_x is not None:
-            if pp.correct():
-                X_native += [pp_x]
-            X_ref += [pp_x]
+            X_dude += [pp_x]
 
-    X_native, X_ref = np.array(X_native), np.array(X_ref)
-    return X_native, X_ref,  w_ref
+    X_dude = np.array(X_dude)
+    return X_dude
 
-def statistics_lig_pair(protein, dude_ligand, pdb_ligand, interactions):
+def statistics_dude_pdb_ligpair(protein, dude_ligand, pdb_ligand, interactions):
     '''
     Inputs:
     * protein (str):  protein name
@@ -114,7 +112,7 @@ def statistics_lig_pair(protein, dude_ligand, pdb_ligand, interactions):
                       load_fp = True, load_mcss = 'mcss' in interactions)
     lm = prot.lm
     docking = prot.docking[lm.st]
-    lig_pair = DUDEPDBLigPair(docking.ligands[dude_ligand],
+    dude_pdb_ligpair = DUDEPDBLigPair(docking.ligands[dude_ligand],
                        docking.ligands[pdb_ligand],
                        interactions, lm.mcss if 'mcss' in interactions else None,
                        shared_paths['stats']['max_poses'])
@@ -124,10 +122,10 @@ def statistics_lig_pair(protein, dude_ligand, pdb_ligand, interactions):
         if (interaction in stats['dude']):
             continue
 
-        X_native, X_ref, w_ref = get_interaction(lig_pair, interaction)
+        X_dude = get_interaction(dude_pdb_ligpair, interaction)
         w_ref = 1
 
-        for d, X in [('native', X_native), ('reference', X_ref)]:
+        for d, X in [('dude', X_dude)]:
             domain = (0, 15) if interaction == 'mcss' else (0, 1)
 
             stats[d][interaction] = DensityEstimate(domain = domain,
@@ -151,8 +149,8 @@ def statistics_protein(protein, interactions):
     # Get the first # n_ligs PDB ligands
     pdb_ligands = Protein(protein).lm.get_xdocked_ligands(shared_paths['stats']['n_ligs'])
 
-    # Get # n_helpers DUD-E ligands
-    dude_ligands = load_helpers()
+    # Get a set of #n_helpers DUD-E ligands
+    dude_ligands = load_helpers_set()
 
     print("Computing statistics for the following PDB ligands...")
     for ligand in pdb_ligands:
@@ -165,7 +163,7 @@ def statistics_protein(protein, interactions):
     # merge with all previously computed stats
     for dude_ligand in dude_ligands:
         for pdb_ligand in pdb_ligands:
-            ligpair_stats = statistics_lig_pair(protein, dude_ligand, pdb_ligand, interactions)
+            ligpair_stats = statistics_dude_pdb_ligpair(protein, dude_ligand, pdb_ligand, interactions)
             stats = merge_dicts_of_lists(stats, ligpair_stats)
 
     stats = merge_stats(stats, shared_paths['stats']['poses_equal'])
@@ -185,11 +183,12 @@ def statistics(data, interactions):
     '''
     stats = {'dude':{}}
     for protein in data:
-        os.system("mkdir -p {}/{}/dude_stats/".format(shared_paths['write_data'], protein))
+        os.system("mkdir -p {}{}/dude_stats/{}".format(shared_paths['write_data'], protein, shared_paths['stats']['version']))
+        os.chdir("{}{}/".format(shared_paths['write_data'], protein))
         protein_stats = statistics_protein(protein, interactions)
         stats = merge_dicts_of_lists(stats, protein_stats)
     return merge_stats(stats, shared_paths['stats']['ligands_equal'])
 
 def main(args):
     assert len(args) == 2
-    statistics([args[1]], feature_defs.keys())
+    statistics(args[1:], feature_defs.keys())
