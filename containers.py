@@ -64,6 +64,7 @@ class Ligand:
 
     def load_poses(self, load_fp):
         gscores, emodels, rmsds = self.parse_glide_output()
+        print(rmsds)
 
         fps = {}
         if load_fp:  
@@ -89,11 +90,15 @@ class Ligand:
 
     def parse_glide_output(self):
         if not os.path.exists(self.glide_path):
+            print("Glide path not found!!!")
             return [], [], []
+        print("Glide path found!!!")
         pair = self.glide_path.split('/')[-1]
         if os.path.exists('{}/{}_pv.maegz'.format(self.glide_path, pair)):
+            print("Rept path found!!!")
             return self.parse_rept_file(pair)
         else:
+            print("Rept path not found!!!")
             print('not finished', self.glide_path)
             return [], [], []
 
@@ -101,6 +106,7 @@ class Ligand:
         lig, prot = pair.split('-to-')
         rept_file = '{}/{}.rept'.format(self.glide_path, pair)
         rmsd_file = '{}/rmsd.csv'.format(self.glide_path, pair)
+        print("RMSD filename is {}".format(rmsd_file))
         
         gscores, emodels, rmsds = [], [], []
         with open(rept_file) as fp:
@@ -148,6 +154,7 @@ class Docking:
             if load_crystal:
                 self.ligands[ligand].load_crystal_pose()
             else:
+                print("Loading poses for {}".format(ligand))
                 self.ligands[ligand].load_poses(load_fp)
             self.num_poses[ligand] = len(self.ligands[ligand].poses)
 

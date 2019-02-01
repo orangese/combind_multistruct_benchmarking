@@ -61,7 +61,8 @@ def read_stats(fname, interactions):
     Essentially, a dict from the string 'dude' to dicts mapping each feature type to a DensityEstimate
     object for that stat-type+feature-type pair
     '''
-    stats = {'dude':{}}
+    stats = {   'dude_native':{},
+                'dude_reference':{}}
     for stattype in stats: # stattype should only take the value 'dude', this line is sort of unnecessary
         for inttype in interactions:
             try: 
@@ -80,16 +81,21 @@ def get_interaction(dude_pdb_ligpair, interaction):
     Returns:
     * X_dude (np.array) (dim (#pairs_of_poses, 1))
     '''
-    X_dude = []
+    X_dude_native = []
+    X_dude_reference = []
 
     for (dude_pose_rank,pdb_pose_rank), pose_pair in dude_pdb_ligpair.pose_pairs.items():
         if max(dude_pose_rank, pdb_pose_rank) > shared_paths['stats']['max_poses']: continue
+        
         pp_x = dude_pdb_ligpair.get_feature(interaction, dude_pose_rank, pdb_pose_rank)
         if pp_x is not None:
-            X_dude += [pp_x]
+            if pose_pair.is_DUDE_native():
+                X_dude_native += [pp_x]
+            X_dude_reference += [pp_x]
 
-    X_dude = np.array(X_dude)
-    return X_dude
+    X_dude_native = np.array(X_dude_native)
+    X_dude_reference = np.array(X_dude_reference)
+    return X_dude_native, X_dude_reference
 
 def statistics_dude_pdb_ligpair(protein, dude_ligand, pdb_ligand, interactions):
     '''
@@ -101,39 +107,43 @@ def statistics_dude_pdb_ligpair(protein, dude_ligand, pdb_ligand, interactions):
     '''
     # If all statistics for this ligpair have already been computed, just read them in and return.
     fname = get_fname(protein, dude_ligand, pdb_ligand)
-    stats = read_stats(fname, interactions)
-    if all(interaction in stats['dude'] for interaction in interactions):
-        return stats
+    ligpair_stats = read_stats(fname, interactions)
+    if all(     interaction in ligpair_stats['dude_native']
+            and interaction in ligpair_stats['dude_reference']
+            for interaction in interactions):
+        return ligpair_stats
     
-    print('Computing statistics for:', protein, dude_ligand, pdb_ligand)
+    print('Computing statistics for {} {} {}'.format(protein, dude_ligand, pdb_ligand))
     # Load relevant data.
     prot = Protein(protein)
     prot.load_docking([dude_ligand, pdb_ligand],
                       load_fp = True, load_mcss = 'mcss' in interactions)
     lm = prot.lm
     docking = prot.docking[lm.st]
-    dude_pdb_ligpair = DUDEPDBLigPair(docking.ligands[dude_ligand],
-                       docking.ligands[pdb_ligand],
-                       interactions, lm.mcss if 'mcss' in interactions else None,
-                       shared_paths['stats']['max_poses'])
+    dude_pdb_ligpair = DUDEPDBLigPair(  docking.ligands[dude_ligand],
+                                        docking.ligands[pdb_ligand],
+                                        interactions,
+                                        lm.mcss if 'mcss' in interactions else None,
+                                        shared_paths['stats']['max_poses'])
 
     # Compute all remaining statistics and write to files.
     for interaction in interactions:
-        if (interaction in stats['dude']):
+        if (    interaction in ligpair_stats['dude_native']
+            and interaction in ligpair_stats['dude_reference']):
             continue
 
-        X_dude = get_interaction(dude_pdb_ligpair, interaction)
-        w_ref = 1
+        X_dude_native, X_dude_reference = get_interaction(dude_pdb_ligpair, interaction)
+        # w_ref = 1
 
-        for d, X in [('dude', X_dude)]:
+        for d, X in [('dude_native', X_dude_native), ('dude_reference', X_dude_reference)]:
             domain = (0, 15) if interaction == 'mcss' else (0, 1)
 
-            stats[d][interaction] = DensityEstimate(domain = domain,
+            ligpair_stats[d][interaction] = DensityEstimate(domain = domain,
                               sd = shared_paths['stats']['stats_sd']*(domain[1]-domain[0]),
                               reflect = True)
-            stats[d][interaction].fit(X)
-            stats[d][interaction].write(fname.format(interaction, d))
-    return stats
+            ligpair_stats[d][interaction].fit(X)
+            ligpair_stats[d][interaction].write(fname.format(interaction, d))
+    return ligpair_stats
 
 def statistics_protein(protein, interactions):
     # Get a format string used to produce filenames for all statistics output files
@@ -141,10 +151,12 @@ def statistics_protein(protein, interactions):
 
     # Try to read any existing stats files. If they all already exist, return early!
     stats = read_stats(fname, interactions)
-    if all(inttype in stats['dude'] for inttype in interactions):
+    if all(     inttype in stats['dude_native']
+            and inttype in stats['dude_reference']
+            for inttype in interactions):
         return stats
     
-    print('Computing statistics for:', protein)
+    print('Computing statistics for {}'.format(protein))
 
     # Get the first # n_ligs PDB ligands
     pdb_ligands = Protein(protein).lm.get_xdocked_ligands(shared_paths['stats']['n_ligs'])
@@ -181,7 +193,7 @@ def statistics(data, interactions):
     Returns DensityEstimate's representing the native and reference
     distribution of the statistics for all proteins, ligands in data.
     '''
-    stats = {'dude':{}}
+    stats = {'dude_native':{}, 'dude_reference':{}}
     for protein in data:
         os.system("mkdir -p {}{}/dude_stats/{}".format(shared_paths['write_data'], protein, shared_paths['stats']['version']))
         os.chdir("{}{}/".format(shared_paths['write_data'], protein))

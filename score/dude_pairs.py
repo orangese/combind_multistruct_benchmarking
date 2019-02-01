@@ -9,7 +9,8 @@ class DUDEPDBLigPair:
     by dividing by the maximum value.
 
     Inputs:
-    * dude_ligand/2 (Ligand objects)
+    * dude_ligand (Ligand object)
+    * pdb_ligand (Ligand object)
     * max_poses (int)
     * mcss (bool)
     * features (i.e. [feature (str) ...]) (list)
@@ -98,6 +99,13 @@ class DUDEPDBPosePair:
         self.dude_pose = dude_pose
         self.pdb_pose = pdb_pose
         self.features = {'mcss': mcss_score}
+
+    def is_DUDE_native(self):
+        """
+        Returns 1 if both poses are at most 2 A RMSD from their
+        crystallographic pose.
+        """
+        return int(self.pdb_pose.rmsd <= shared_paths['stats']['native_thresh'])
 
     def get_feature(self, feature):
         """
