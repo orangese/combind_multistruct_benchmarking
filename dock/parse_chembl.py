@@ -122,7 +122,7 @@ def load_chembl_raw(dir_path=None):
                                        l_list[t_id_ind], l_list[type_ind])
     return ligs
 
-def load_dude_raw(ligs, dir_path=None):
+def load_dude_raw(ligs, num_to_load, dir_path=None):
     """
     This functions very similarly to load_chembl_raw, and is meant for use with the DUD.E ligands. It
     is assumed that the ligands are packaged in .ism files in the prot/dude directory. Because the dude
@@ -169,6 +169,6 @@ def load_dude_raw(ligs, dir_path=None):
 
                 if cid not in ligs:
                     ligs[cid] = CHEMBL(cid, smi, ki_dummy, unit_dummy, prot_id)
-                if i == 99 and tag == 'decoy': break #FOR TESTING ONLY; load 100 decoys, load all actives
+                if i == (num_to_load - 1) and tag == 'decoy': break #FOR TESTING ONLY; load 100 decoys, load all actives
 
     return ligs

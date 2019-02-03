@@ -164,17 +164,17 @@ def proc_all(all_pairs, dock=False, rmsd=False):
 
         os.system('sbatch -p {} -t 1:00:00 -o dock.out dock{}.sh'.format(queue, i))
 
-def dock(lm, protein, chembl=None, maxnum=30, mode = 'confgen'):
-    ''' dock() modified to only dock chembl helpers
+def dock(lm, protein, dude=None, maxnum=30, mode = 'confgen'):
+    ''' dock() modified to only dock dude ligands
 
     Inputs:
-    * chembl (dict): maps chembl_helper_filename (str) -> pdb_ligand_helpers (dict)
-        * pdb_ligand_helpers (dict): maps ID of a PDB ligand -> list of IDs of all chembl helpers
+    * dude (dict): maps dude_helper_filename (str) -> pdb_ligand_helpers (dict)
+        * pdb_ligand_helpers (dict): maps ID of a PDB ligand -> list of IDs of all dude helpers
     '''
 
-    readable_root = shared_paths['read_data'] + protein
-    grid_root = '{}{}/docking/grids/'.format(shared_paths['read_data'],protein)
-    writeable_root = shared_paths['write_data'] + protein
+    read_root = '{}{}/'.format(shared_paths['read_data'], protein)
+    grid_root = '{}/docking/grids/'.format(read_root)
+    write_root = '{}{}/'.format(shared_paths['write_data'], protein)
 
     if lm.st is None: return
     docking = modes[mode]['name']
@@ -182,13 +182,13 @@ def dock(lm, protein, chembl=None, maxnum=30, mode = 'confgen'):
     os.chdir('docking/{}'.format(docking))
 
     # If not called from prepare_all, use the first maxnum pdb ligands
-    if chembl is None:
+    if dude is None:
         ligs = lm.pdb[:maxnum]
         grids = [lm.st]
     else:
         ligs = set([])
         grids = [lm.st]
-        for f, f_data in chembl.items():
+        for f, f_data in dude.items():
             for q, c_list in f_data.items():
                 ligs.add(q)
                 ligs.update(c_list)
@@ -211,7 +211,7 @@ def dock(lm, protein, chembl=None, maxnum=30, mode = 'confgen'):
         proc_all(to_rmsd, rmsd=True)
 
     # os.chdir('../..')
-    os.chdir(writeable_root)
+    os.chdir(write_root)
 
 def verify_dock(lm):
     for ligand in lm.docked(lm.all_ligs):

@@ -23,11 +23,11 @@ def main(args):
     datasets = args[2:]
     if datasets == []:
         datasets = proteins
-    os.chdir(shared_paths['data'])
+    os.chdir(shared_paths['write_data'])
 
 
     for i, d in enumerate(datasets):
-        print("\nProcessing dataset {}, {}".format(i, d))
+        print("\nProcessing system {}, {}".format(i, d))
         os.chdir(d)
         protein = Protein(d, shared_paths['pdb_order'])
         lm = protein.lm
@@ -44,10 +44,12 @@ def main(args):
             sort_files()           # Creates ligand, protein, and complex directories
             make_grids()           # Creates grid for all proteins
          
+        ''' Process all DUD-E ligands (protonate and write .mae structure files to ligands/processed_ligands/)
+        '''
         if task == '2':
             #Both functions are in dock.chembl_sort
             get_ligands(write_root, read_root)           # Writes MAE files for all ligs to ligands/raw_files
-            proc_ligands()          # Runs prepwizard & epik on all ligs
+            proc_ligands()                               # Runs prepwizard & epik on all ligs
            
         if task == 'm':
             lm.mcss.compute_mcss() # Computes MCSS, for use in pick_helpers
@@ -80,7 +82,7 @@ def main(args):
 
         # 3. pick helpers
         if task == '3':
-            pick_helpers(lm)         # Picks chembl ligands for use in scoring
+            # pick_helpers(lm)         # Picks chembl ligands for use in scoring
             # dock(lm, d, load_helpers()) # Dock chembl ligands to be used in scoring
 
         # 4. dock helpers
@@ -94,5 +96,3 @@ def main(args):
         # 6. compute mcss
         if task == '6':
             lm.mcss.compute_mcss(True, load_helpers())
-
-        os.chdir(shared_paths['code'])

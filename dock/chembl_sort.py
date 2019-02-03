@@ -29,7 +29,8 @@ def write_unprocessed_chembl_ligs(ligs, written_ligs):
     file for the ligand to the ligands/raw_files/ directory. The latter is done using
     Schrodinger's StructureWriter class.
     """
-    print("Writing the following unprocessed ligands to chembl/chembl_info.txt:")
+    print("Writing the following unprocessed ligands to chembl/chembl_info.txt")
+    print("Also, the structure file for each following ligand is written to ligands/raw_files/:")
     with open('chembl/chembl_info.txt', 'a+') as f:
         for lig_name in sorted(ligs.keys(), key=lambda x: ligs[x].ki):
             if lig_name+'_lig' not in written_ligs:
@@ -59,7 +60,7 @@ def get_ligands(write_root, read_root):
 
 
     # Copy PDB ligands from structures/ligands/ to ligands/raw_files/
-    copy_pdb_ligs(write_root, read_root)
+    # copy_pdb_ligs(write_root, read_root)
 
     print("Loading chembl ligands from chembl/*xls files")
 
@@ -71,7 +72,7 @@ def get_ligands(write_root, read_root):
     print("Loading DUD-E ligands from DUD-E/*.ism files (all actives and up to 100 decoys are loaded")
 
     # Creates CHEMBL objects (see parse_chembl.py) for dude ligands
-    ligs = load_dude_raw(ligs)
+    ligs = load_dude_raw(ligs, 100)
     if len(ligs) == 0: return
 
     # If a CHEMBL/DUDE ligand doesn't already appear in chembl_info.txt, add it, and write its

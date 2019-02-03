@@ -1,6 +1,11 @@
 import os
 import sys
 
+def load_dude(lm, maxnum=21):
+    dude_ligs = lm.dude()
+    sorted_helpers = sorted(chembl_ligs, key=ki_sort)
+    unique = lm.unique(sorted_helpers)
+
 def pick_helpers(lm, maxnum=21):
 
     parent = 'chembl/helpers'
