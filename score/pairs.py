@@ -7,12 +7,6 @@ class LigPair:
 
     Importantly, this class normalizes the overlap scores
     by dividing by the maximum value.
-
-    Inputs:
-    * l1/2 (Ligand objects)
-    * max_poses (int)
-    * mcss (bool)
-    * features (i.e. [feature (str) ...]) (list)
     """
     def __init__(self, l1, l2, features, mcss, max_poses):
         self.l1 = l1
@@ -48,12 +42,8 @@ class LigPair:
         return pp.pose1.rmsd, pp.pose2.rmsd
 
     def _init_pose_pairs(self):
-        """ Create dict of pose pairs for up to the top self.max_poses poses.
-
-        Returns
-        * pairs {(i (int), j (int)):PosePair(i'th pose of l1, j'th pose of l2)}. Conceptually,
-        a dict mapping from a tuple of the ranks of the two ligands in the PosePair, to the PosePair
-        composed of those two poses
+        """
+        Create pose pairs for up to the top self.max_poses poses.
         """
         pairs = {}
         for rank1 in range(min(len(self.l1.poses), self.max_poses)):

@@ -1,11 +1,6 @@
 import os
 import sys
 
-def load_dude(lm, maxnum=21):
-    dude_ligs = lm.dude()
-    sorted_helpers = sorted(chembl_ligs, key=ki_sort)
-    unique = lm.unique(sorted_helpers)
-
 def pick_helpers(lm, maxnum=21):
 
     parent = 'chembl/helpers'
@@ -18,7 +13,7 @@ def pick_helpers(lm, maxnum=21):
     # filters
     all_options = [
         'best_affinity.txt',
-        #'best_mcss.txt',
+        'best_mcss.txt',
     ]
 
     num_chembl = 30
@@ -54,11 +49,3 @@ def load_helpers(dirpath=None):
                 q, chembl = line.strip().split(':')
                 helpers[fname][q] = chembl.split(',')
     return helpers
-
-def load_helpers_set():
-    helpers = load_helpers()
-    helpers_set = set()
-    for filename in helpers:
-        for PDB_ligand_id in helpers[filename]:
-            helpers_set.update(helpers[filename][PDB_ligand_id])
-    return helpers_set

@@ -54,8 +54,6 @@ class MCSSController:
     def __init__(self, lm):
         self.st = lm.st
         self.pdb = lm.get_xdocked_ligands(shared_paths['stats']['n_ligs'])
-
-        # Get a list of chembl ligands_ids with ki < 1000, m2 < 800, no macrocycles
         self.chembl = lm.chembl()
         self.docked  = set(lm.docked(self.pdb+self.chembl))
 

@@ -23,17 +23,13 @@ def main(args):
     datasets = args[2:]
     if datasets == []:
         datasets = proteins
-    os.chdir(shared_paths['write_data'])
-
+    os.chdir(shared_paths['data'])
 
     for i, d in enumerate(datasets):
-        print("\nProcessing system {}, {}".format(i, d))
+        print(d, i)
         os.chdir(d)
         protein = Protein(d, shared_paths['pdb_order'])
         lm = protein.lm
-
-        write_root = shared_paths['write_data'] + d + '/'
-        read_root = shared_paths['read_data'] + d + '/'
 
         if task == '0':
             sort_downloads()
@@ -44,12 +40,9 @@ def main(args):
             sort_files()           # Creates ligand, protein, and complex directories
             make_grids()           # Creates grid for all proteins
          
-        ''' Process all DUD-E ligands (protonate and write .mae structure files to ligands/processed_ligands/)
-        '''
         if task == '2':
-            #Both functions are in dock.chembl_sort
-            get_ligands(write_root, read_root)           # Writes MAE files for all ligs to ligands/raw_files
-            proc_ligands()                               # Runs prepwizard & epik on all ligs
+           get_ligands()           # Writes MAE files for all ligs to ligands/raw_files
+           proc_ligands()          # Runs prepwizard & epik on all ligs
            
         if task == 'm':
             lm.mcss.compute_mcss() # Computes MCSS, for use in pick_helpers
@@ -74,25 +67,17 @@ def main(args):
         # force redo of chembl info (do this if new chembl ligands have been added)
         # Do this after all MCSS files have been written!
         if task == 'c':
-            os.system('rm chembl/helpers/*')
-            os.system('rm chembl/duplicates.txt')
-            os.system('rm chembl/molw.txt')
-            os.system('rm chembl/macrocycle.txt') 
-            write_props(lm)
+             os.system('rm chembl/helpers/*')
+             os.system('rm chembl/duplicates.txt')
+             os.system('rm chembl/molw.txt')
+             os.system('rm chembl/macrocycle.txt') 
+             write_props(lm)
 
-        # 3. pick helpers
+        # 3. decide what ligands to use and prepare them
         if task == '3':
-            # pick_helpers(lm)         # Picks chembl ligands for use in scoring
-            # dock(lm, d, load_helpers()) # Dock chembl ligands to be used in scoring
-
-        # 4. dock helpers
-        if task == '4':
-            dock(lm, d, load_helpers()) # Dock chembl ligands to be used in scoring
-
-        # 5. compute fingerprints for all ligands
-        if task == '5':
-            compute_fp(d, lm)           # Fingerprints for docked ligands and pdb structures
-
-        # 6. compute mcss
-        if task == '6':
+            pick_helpers(lm)         # Picks chembl ligands for use in scoring
+            dock(lm, load_helpers()) # Dock chembl ligands to be used in scoring
+            compute_fp(lm)           # Fingerprints for docked ligands and pdb structures
             lm.mcss.compute_mcss(True, load_helpers())
+
+        os.chdir('..')

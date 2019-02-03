@@ -1,7 +1,6 @@
 import os
 import sys
 
-from shared_paths import shared_paths
 from schrodinger.structure import StructureReader
 from schrodinger.structutils.measure import get_shortest_distance
 
@@ -81,7 +80,6 @@ class AtomGroup:
 class FP:
     def __init__(self, args):
         self.params = {
-            'protein': '',
             'mode': '',
             'input_file': '',
             'output_file': '',
@@ -89,12 +87,8 @@ class FP:
             'raw': False
         }
 
-        # populate self.params using input arguments
         self.set_user_params(args)
         self.protein = {}
-
-        self.write_root = shared_paths['write_data'] + self.params['protein'] + '/'
-        self.read_root = shared_paths['read_data'] + self.params['protein'] + '/'
 
         if self.params['mode'] == 'pv':
             self.fp = self.fingerprint_pose_viewer()
@@ -150,16 +144,15 @@ class FP:
         pdb = self.params['output_file'].split('_')[0]
 
         try:
-            prot_st = next(StructureReader('{}structures/proteins/{}_prot.mae'.format(self.read_root, pdb)))
+            prot_st = next(StructureReader('../../structures/proteins/{}_prot.mae'.format(pdb)))
         except:
-            prot_st = next(StructureReader('{}structures/proteins/{}_prot.mae'.format(self.read_root, os.listdir('{}docking/grids'.format(self.read_root))[0])))
+            prot_st = next(StructureReader('../../structures/proteins/{}_prot.mae'.format(os.listdir('../../docking/grids')[0])))
 
         lig_st = next(StructureReader('../../structures/ligands/{}_lig.mae'.format(pdb)))
 
         return [self.fingerprint(lig_st, prot_st)]
 
     def set_user_params(self, args):
-        self.params['protein'] = args[1]
         for index in range(len(args)):
             item = args[index]
             if item[0] == '-':

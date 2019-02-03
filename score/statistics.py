@@ -24,16 +24,10 @@ def merge_stats(stats, weight):
 # I/O
 def get_fname(protein, ligand1, ligand2):
     '''
-    Inputs:
-    * protein, ligand1, ligand2 (str): names of protein and ligands
-    * for protein level stats, set ligand1 and ligand2 to None.
+    protein, ligand1, ligand2 (str): names of protein and ligands
+    for protein level stats, set ligand1 and ligand2 to None.
 
-    Returns:
-    * format string to paths of statistics files. The paths take the form:
-        shared_paths['write_data']/protein_id/stats/statsversion/ID-{}-{}.de
-
-        Note: if this is a protein-level statistics file, the ID is simply the protein ID. If this
-        is the statistics file for a ligpair, the ID takes the form 'ligand1-ligand2'
+    Returns path to where statistics files should be read/written.
     '''
     assert (ligand1 is None) == (ligand2 is None)
     if ligand1 is None and ligand2 is None:
@@ -41,23 +35,14 @@ def get_fname(protein, ligand1, ligand2):
     else:
         ID = '{}-{}'.format(ligand1, ligand2)
     version = shared_paths['stats']['version']
-    return "{}/{}/stats/{}/{}-{}-{}.de".format(shared_paths['write_data'],
+    return "{}/{}/stats/{}/{}-{}-{}.de".format(shared_paths['data'],
                                                protein, version, ID,
                                                '{}', '{}')
 
 def read_stats(fname, interactions):
-    ''' Reads all available statistics files from the correct directory and returns data in a dict.
-
-    Inputs:
-    * fname (str): output from get_fname(...)
-    * interactions [interaction (str),  ...]: interactions to read from files.
-
-    Returns:
-    * stats {'native':{'mcss': DensityEstimate object, ... },
-            'reference:{'mcss': DensityEstimate object, ... }
-            }
-    Essentially, a dict from 'native' or 'reference' to dicts mapping each feature type to a DensityEstimate
-    object for that stat-type+feature-type pair
+    '''
+    fname (str): output from get_fname(...)
+    interactions [interaction (str),  ...]: interactions to read from files.
     '''
     stats = {'native':{}, 'reference':{}}
     for d in stats:
@@ -71,14 +56,12 @@ def read_stats(fname, interactions):
 # Core stats computation
 def get_interaction(lig_pair, interaction):
     '''
-    Inputs:
-    * lig_pair (LigPair): ligand pair for which to get features
-    * interaction (str): interaction type to get scores for
+    lig_pair (LigPair): ligand pair for which to get features
+    interaction (str): interaction to get scores for
     
-    Returns:
-    * X_native: features for native poses
-    * X_ref:    features for all poses
-    * w_ref:    pairs of glide scores for all poses
+    Returns X_native: features for native poses
+            X_ref:    features for all poses
+            w_ref:    pairs of glide scores for all poses
     '''
     X_native, X_ref, w_ref = [], [], []
     for (r1,r2), pp in lig_pair.pose_pairs.items():
@@ -94,13 +77,16 @@ def get_interaction(lig_pair, interaction):
 
 def statistics_lig_pair(protein, ligand1, ligand2, interactions):
     '''
-    Inputs:
-    * protein (str):  protein name
-    * ligand1,2 (str): names of ligands for which to compute statistics
-    * interactions [interaction (str), ...]: interactions for which to compute
+    protein (str):  protein name
+    ligand1,2 (str): names of ligands for which to compute statistics
+    interactions [interaction (str), ...]: interactions for which to compute
         statistics
+    pnative (function): Maps glide scores to probability correct. Use a
+        DensityEstimate if you wish to weight by glide score, else pass
+        lambda x: 1
+    sd (float): standard deviation for density estimate.
     '''
-    # If all statistics for this ligpair have already been computed, just read them in and return.
+    # If all statistics have already been computed, just read and return.
     fname = get_fname(protein, ligand1, ligand2)
     stats = read_stats(fname, interactions)
     if all(    interaction in stats['native']
@@ -140,10 +126,7 @@ def statistics_lig_pair(protein, ligand1, ligand2, interactions):
     return stats
 
 def statistics_protein(protein, interactions):
-    # Get a format string used to produce filenames for all statistics output files
     fname = get_fname(protein, None, None)
-
-    # Try to read any existing stats files. If they all already exist, return early!
     stats = read_stats(fname, interactions)
     if all(    i in stats['native']
            and i in stats['reference']
@@ -151,15 +134,9 @@ def statistics_protein(protein, interactions):
         return stats
     
     print('Computing statistics for:', protein)
-
-    # Get the first #n_ligs PDB ligands
     ligands = Protein(protein).lm.get_xdocked_ligands(shared_paths['stats']['n_ligs'])
+    print(ligands)
 
-    print("Computing statistics for the following ligands:")
-    for ligand in ligands:
-        print("* {}".format(ligand))
-
-    # Iterate over all pairs of PDB ligands
     for j, ligand1 in enumerate(ligands):
         for ligand2 in ligands[j+1:]:
             ligand_stats = statistics_lig_pair(protein, ligand1, ligand2, interactions)

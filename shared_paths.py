@@ -70,7 +70,7 @@ ifp = {'ifp3': {'version': 'ifp3',
      }
 
 feature_defs = {
-    # 'mcss'           :[],
+    'mcss'           :[],
     'sb'             :[1],
     'hbond'          :[2,3],
     'hbond_donor'    :[2],
@@ -80,11 +80,8 @@ feature_defs = {
 }
 
 shared_paths = { 
-    'code'      : '/scratch/PI/rondror/augustine/combind_testing/augustines-combind',
-    # 'data'      : "/scratch/PI/rondror/combind/bpp_data/",
-    'data'      : "/scratch/PI/rondror/combind/nonbinders/",
-    'read_data'      : "/scratch/PI/rondror/combind/bpp_data/",
-    'write_data'      : "/scratch/PI/rondror/combind/nonbinders/",
+    'code'      : '~/combind',
+    'data'      : "/scratch/PI/rondror/combind/bpp_data/",
     'docking'   : 'confgen_es4',
     'mcss'      : 'mcss16',
     'stats'     : stats['stats6'],
