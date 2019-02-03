@@ -110,3 +110,47 @@ def load_chembl_raw(dir_path=None):
                     ligs[cid] = CHEMBL(cid, smi, ki, l_list[unit_ind], 
                                        l_list[t_id_ind], l_list[type_ind])
     return ligs
+
+def load_dude_raw(max_ligands = 100):
+    ''' Assume pwd is write_root
+    '''
+    # Presets
+    ki_dummy = 0.0
+    unit_dummy = 'nM'
+    prot_id_dummy = 12345
+
+    # To return
+    ligs = {}
+
+    # Check that path functions
+    dude_path = 'dude/decoys_final.ism'
+    if not os.path.exists(dude_path): return {}
+
+    # Parse dude decoys file
+    with open(dude_path, 'r') as r_open:
+        for i, line in enumerate(r_open):
+            if len(line.strip()) == 0: continue
+            if i >= max_ligands: break
+
+            smiles, decoy_id = line.strip().split()
+            decoy_id = 'decoy{}'.format(decoy_id)
+            ligs[decoy_id] = CHEMBL(decoy_id, smiles, ki_dummy, unit_dummy, prot_id_dummy)
+
+    dude_ligands = set(ligs.keys())
+    with open('dude/dude.log', 'w+') as w_open:
+        for ligand in dude_ligands:
+            w_open.write("{}_lig\n".format(ligand))
+
+    return ligs
+
+def get_dude_ligands():
+    if not os.path.exists('dude/dude.log'): return
+
+    dude_ligands = set()
+    with open('dude/dude.log', 'r') as r_open:
+        for i, line in enumerate(r_open):
+            dude_ligands.add(line.strip())
+    return dude_ligands
+
+
+

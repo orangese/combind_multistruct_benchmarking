@@ -134,9 +134,9 @@ class Docking:
 
     Parameterized by (protein, structure).
     """
-    def __init__(self, root, struct):
-        self.dock_dir = '{}/docking/{}'.format(root, shared_paths['docking'])
-        self.ifp_dir = '{}/ifp/{}'.format(root, shared_paths['ifp']['version'])
+    def __init__(self, write_root, struct):
+        self.dock_dir = '{}/docking/{}'.format(write_root, shared_paths['docking'])
+        self.ifp_dir = '{}/ifp/{}'.format(write_root, shared_paths['ifp']['version'])
         self.struct = struct
         self.ligands = {}
         self.num_poses = {}
@@ -160,25 +160,28 @@ class LigandManager:
 
     Parameterized by (protein).
     """
-    def __init__(self, protein, root, struct = 'First'):
+    def __init__(self, protein, write_root, read_root, struct = 'First'):
         """
         root (string): Path to protein's data directory.
         """
         self.protein = protein
-        self.root = root
+        self.write_root = write_root
+        self.read_root = read_root
         
-        # Initialize ligand info.
-        self.chembl_info = load_chembl_proc(self.root)
-        self.u_ligs, self.dup_ligs = read_duplicates(self.root)
+        # Initialize dude ligand info from chembl_info.txt
+        self.chembl_info = load_chembl_proc(self.write_root)
+        self.u_ligs, self.dup_ligs = read_duplicates(self.write_root)
+
+        # Get all_ligs from all write_root/ligands/prepared_ligands
         self.all_ligs = self.prepped()
         self.pdb = self.unique(sorted([l for l in self.all_ligs
-                                      if l[:6] != 'CHEMBL'],
+                                      if len(l.split('_')[0]) == 4],
                                       reverse = struct == 'Last'))
 
         # Set default structure.
         self.st = None
-        if not os.path.exists('{}/docking/grids'.format(self.root)): return
-        self.grids = sorted([l for l in os.listdir('{}/docking/grids'.format(self.root)) if l[0] != '.'])
+        if not os.path.exists('{}/docking/grids'.format(self.read_root)): return
+        self.grids = sorted([l for l in os.listdir('{}/docking/grids'.format(self.read_root)) if l[0] != '.'])
         if not self.grids: return
         if struct is 'First':
             self.st = self.grids[0] 
@@ -187,11 +190,13 @@ class LigandManager:
         else:
             assert False
 
-        self.mcss = MCSSController(self)
+        # self.mcss = MCSSController(self)
         self.helpers = {}
 
     def get_xdocked_ligands(self, num):
         ligands = self.docked(self.pdb)[:num+1]
+        if len(ligands) == 0: return []
+
         self_docked = self.st+'_lig'
         if self_docked in ligands:
            ligands.remove(self_docked)
@@ -203,13 +208,13 @@ class LigandManager:
         if st == None: st = self.st
         return [ligand for ligand in ligands
                 if os.path.exists("{}/{}-to-{}_pv.maegz".format(
-                                  Ligand(ligand, Docking(self.root, st).dock_dir,
+                                  Ligand(ligand, Docking(self.write_root, st).dock_dir,
                                          '', st).glide_path,
                                   ligand, st
                                   ))]
 
     def prepped(self):
-        ligdir = '{}/ligands/prepared_ligands'.format(self.root)
+        ligdir = '{}/ligands/prepared_ligands'.format(self.write_root)
         if not os.path.exists(ligdir): return set([])
         return set([l for l in os.listdir(ligdir) if os.path.exists('{}/{}/{}_out.mae'.format(ligdir,l,l))])
 
@@ -249,7 +254,7 @@ class LigandManager:
     def get_helpers(self, query, fname, num=10, struct=None):
         if struct is None: struct = self.st
         if fname not in self.helpers:
-            self.helpers[fname] = load_helpers(self.root)[fname]
+            self.helpers[fname] = load_helpers(self.write_root)[fname]
             for q in self.helpers[fname]:
                 self.helpers[fname][q] = self.docked(self.helpers[fname][q], struct)
         return self.helpers[fname][query][:num]
@@ -259,10 +264,11 @@ class Protein:
     Collection of ligands and docking results for a given protein.
     """
     def __init__(self, protein, struct = 'First'):
-        self.root = "{}/{}".format(shared_paths['data'], protein)
-        self.lm = LigandManager(protein, self.root, struct)
+        self.write_root = "{}/{}".format(shared_paths['write_data'], protein)
+        self.read_root = "{}/{}".format(shared_paths['read_data'], protein)
+        self.lm = LigandManager(protein, self.write_root, self.read_root, struct)
         # Useful to be able to reference this before loading data.
-        self.docking = {self.lm.st: Docking(self.root, self.lm.st)}
+        self.docking = {self.lm.st: Docking(self.write_root, self.lm.st)}
 
     def load_docking(self, ligands, load_fp=False, load_crystal = False,
                      load_mcss = False, st = None):
@@ -274,7 +280,7 @@ class Protein:
         if st == None: st = self.lm.st
 
         if st not in self.docking:
-            self.docking[st] = Docking(self.root, st)
+            self.docking[st] = Docking(self.write_root, st)
         self.docking[st].load(ligands, load_fp, load_crystal)
 
         if load_mcss:

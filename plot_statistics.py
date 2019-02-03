@@ -32,13 +32,13 @@ def main():
         for n, protein in enumerate(["B1AR"]):
             if protein in ['SIGMAR1', 'ERA', 'PYGM', 'CHRM3', 'TRPV1']: continue
 
-            native_fname_format = '{}{}/stats/{}/*-*-{}-native.de'.format(shared_paths['read_data'], protein,
+            native_fname_format = '{}/{}/stats/{}/*-*-{}-native.de'.format(shared_paths['read_data'], protein,
                                                                           shared_paths['stats']['version'],
                                                                           interaction)
-            reference_fname_format = '{}{}/stats/{}/*-*-{}-reference.de'.format(shared_paths['read_data'], protein,
+            reference_fname_format = '{}/{}/stats/{}/*-*-{}-reference.de'.format(shared_paths['read_data'], protein,
                                                                           shared_paths['stats']['version'],
                                                                           interaction)
-            dude_fname_format = '{}{}/dude_stats/{}/*-*-{}-dude.de'.format(shared_paths['write_data'], protein,
+            dude_fname_format = '{}/{}/stats/{}/*-*-{}-dude.de'.format(shared_paths['write_data'], protein,
                                                                           shared_paths['stats']['version'],
                                                                           interaction)
             
@@ -52,22 +52,22 @@ def main():
             #     dude = DensityEstimate.read(fname)
             #     ax.plot(dude.x, dude.fx, c = 'r', alpha = 0.05, lw=1)
 
-            native_fname_format = '{}{}/stats/{}/{}-{}-native.de'.format(shared_paths['read_data'], protein,
+            native_fname_format = '{}/{}/stats/{}/{}-{}-native.de'.format(shared_paths['read_data'], protein,
                                                                 shared_paths['stats']['version'],
                                                                 protein, interaction)
-            reference_fname_format = '{}{}/stats/{}/{}-{}-reference.de'.format(shared_paths['read_data'], protein,
+            reference_fname_format = '{}/{}/stats/{}/{}-{}-reference.de'.format(shared_paths['read_data'], protein,
                                                                 shared_paths['stats']['version'],
                                                                 protein, interaction)
-            dude_fname_format = '{}{}/dude_stats/{}/{}-{}-dude.de'.format(shared_paths['write_data'], protein,
+            dude_fname_format = '{}/{}/stats/{}/{}-{}-dude_native.de'.format(shared_paths['write_data'], protein,
                                                                 shared_paths['stats']['version'],
                                                                 protein, interaction)
             native = DensityEstimate.read(native_fname_format)
             reference = DensityEstimate.read(reference_fname_format)
             dude = DensityEstimate.read(dude_fname_format)
             ax.set_title(protein, va = 'top')
-            ax.plot(native.x, native.fx, c = 'b', lw = 3)
-            ax.plot(reference.x, reference.fx, c = 'g', lw = 3)
-            ax.plot(dude.x, dude.fx, c = 'r', lw = 3)
+            ax.plot(native.x, native.fx, c = 'b', lw = 3, label='Native')
+            ax.plot(reference.x, reference.fx, c = 'g', lw = 3, label='Reference')
+            ax.plot(dude.x, dude.fx, c = 'r', lw = 3, label='DUDE-Native')
             
             m = max(m, native.fx.max(), dude.fx.max(), reference.fx.max())
         
@@ -77,6 +77,7 @@ def main():
         ax.set_yticks([])
         ax.set_yticklabels([])
         ax.set_ylim(0, m)
+        ax.legend()
 
         if interaction == 'mcss':
             pass
@@ -85,7 +86,7 @@ def main():
 
         ax.set_xticklabels([0, 1], fontsize = 8)
         plt.suptitle(interaction)
-        plt.savefig("plots/alldistr-dude-{}.png".format(interaction))
+        plt.savefig("plots/alldistr-dude-native-{}.png".format(interaction))
 
 if __name__ == '__main__':
     main()

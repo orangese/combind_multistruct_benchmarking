@@ -83,12 +83,17 @@ class FP:
             'mode': '',
             'input_file': '',
             'output_file': '',
+            'write_root': '',
+            'read_root': '',
             'poses': 105,
             'raw': False
         }
 
         self.set_user_params(args)
         self.protein = {}
+
+        self.write_root = self.params['write_root']
+        self.read_root = self.params['read_root']
 
         if self.params['mode'] == 'pv':
             self.fp = self.fingerprint_pose_viewer()
@@ -144,11 +149,11 @@ class FP:
         pdb = self.params['output_file'].split('_')[0]
 
         try:
-            prot_st = next(StructureReader('../../structures/proteins/{}_prot.mae'.format(pdb)))
+            prot_st = next(StructureReader('{}/structures/proteins/{}_prot.mae'.format(self.read_root, pdb)))
         except:
-            prot_st = next(StructureReader('../../structures/proteins/{}_prot.mae'.format(os.listdir('../../docking/grids')[0])))
+            prot_st = next(StructureReader('{}/structures/proteins/{}_prot.mae'.format(self.read_root, os.listdir('{}/docking/grids'.format(self.read_root))[0])))
 
-        lig_st = next(StructureReader('../../structures/ligands/{}_lig.mae'.format(pdb)))
+        lig_st = next(StructureReader('{}/structures/ligands/{}_lig.mae'.format(self.read_root, pdb)))
 
         return [self.fingerprint(lig_st, prot_st)]
 

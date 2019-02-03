@@ -14,7 +14,7 @@ def write_props(lm):
     write_macrocycles(lm, l_path, StructureReader)
 
 def write_molw(lm,l_path,StructureReader):
-    with open('chembl/molw.txt', 'w') as fname:
+    with open('chembl/molw.txt', 'w+') as fname:
         for f in lm.all_ligs:
             mw = next(StructureReader(l_path.format(f,f))).total_weight
             fname.write('{},{}\n'.format(f,mw))
@@ -35,7 +35,7 @@ def read_molw(dir_path=None):
 
 def write_macrocycles(lm, l_path, StructureReader):
     macrocycle_thresh = 8
-    with open('chembl/macrocycle.txt', 'w') as fname:
+    with open('chembl/macrocycle.txt', 'w+') as fname:
         for f in lm.all_ligs:
             st = next(StructureReader(l_path.format(f,f)))
             ring_sizes = [len(ring.atom) >= macrocycle_thresh
@@ -66,7 +66,7 @@ def write_duplicates(lm,l_path,StructureReader):
                 break
         else:
             duplicates[l1] = [l1]
-    with open('chembl/duplicates.txt','w') as f:
+    with open('chembl/duplicates.txt','w+') as f:
         for lig,l_list in duplicates.items():
             f.write('{}\n'.format(','.join(l_list)))
 

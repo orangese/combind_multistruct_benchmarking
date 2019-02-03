@@ -1,6 +1,6 @@
 COMBIND_CODE="/scratch/PI/rondror/augustine/combind_testing/augustines-combind"
 WRITE_DIR="/scratch/PI/rondror/combind/nonbinders"
-PROTEINS='B1AR'
+PROTEINS='A2AR AR B1AR B2AR BRAF CDK2 ERA JAK2 PLK1'
 PREPARATION_STAGE='2'
 # Stages:
 # 2: Get ligands and process ligands

@@ -4,7 +4,7 @@ from grouper import grouper
 
 from schrodinger.structure import StructureReader, StructureWriter
 
-from dock.parse_chembl import load_chembl_raw, load_chembl_proc
+from dock.parse_chembl import load_chembl_raw, load_chembl_proc, load_dude_raw
 
 queue = 'owners'
 group_size = 10
@@ -23,14 +23,29 @@ def copy_pdb_ligs():
         if os.path.exists('ligands/raw_files/{}'.format(f_name)): continue
         os.system('cp structures/ligands/{} ligands/raw_files/{}'.format(f_name, f_name))
 
+def copy_pdb_ligs_from_read_root(read_root, write_root):
+    """
+    Copies pdb ligands into ligands/raw_files.
+    If ligand is already copied, does nothing.
+    Called from datadir root.
+    """
+    print("Copying the following PDB ligand files:")
+    for f_name in os.listdir('{}/structures/ligands'.format(read_root)):
+        if f_name.split('_')[1] != 'lig.mae': continue
+        if os.path.exists('{}/ligands/raw_files/{}'.format(write_root,f_name)): continue
+        print("* {}".format(f_name))
+        os.system('cp {}/structures/ligands/{} {}/ligands/raw_files/{}'.format(read_root, f_name, write_root, f_name))
+
 def write_unprocessed_chembl_ligs(ligs, written_ligs):
     """
     Writes unprepped MAE files for chembl ligands and
     writes important properties to chembl_info.txt.
     """
-    with open('chembl/chembl_info.txt', 'a') as f:
-        for lig_name in sorted(ligs.keys(), key=lambda x: ligs[x].ki):
+    print("Writing the following ligands to chembl/chembl_info.txt and adding structure files to ligands/raw_files/:")
+    with open('chembl/chembl_info.txt', 'a+') as f:
+        for i, lig_name in enumerate(sorted(ligs.keys(), key=lambda x: ligs[x].ki)):
             if lig_name+'_lig' not in written_ligs:
+                print("* decoy {}: {}".format(i, lig_name))
                 valid_stereo = ligs[lig_name].check_stereo()
                 f.write('{},{},{},{},{}\n'.format(lig_name, ligs[lig_name].target_prot,
                                                   valid_stereo, ligs[lig_name].ki,
@@ -39,7 +54,7 @@ def write_unprocessed_chembl_ligs(ligs, written_ligs):
                 st_writer.append(ligs[lig_name].st)
                 st_writer.close()
 
-def get_ligands():
+def get_ligands(read_root, write_root):
     """
     Generates unprocessed ligand mae files for pdb ligands(by copying from
     structures/ligands) and chembl ligands (by reading from the chembl/*.xls files).
@@ -50,9 +65,12 @@ def get_ligands():
     Called from datadir root.
     """
     os.system('mkdir -p ligands/raw_files')
-    copy_pdb_ligs()
-    ligs = load_chembl_raw() # Read files downloaded from chembl at chembl/*.xls
-                             # into dict mapping ligand names to CHEMBL class instance
+    os.system('mkdir -p dude/')
+    os.system('mkdir -p chembl/')
+    # copy_pdb_ligs()
+    copy_pdb_ligs_from_read_root(read_root, write_root)
+    # ligs = load_chembl_raw()
+    ligs = load_dude_raw()
     if len(ligs) == 0: return
     written_ligs = load_chembl_proc()
     write_unprocessed_chembl_ligs(ligs, written_ligs)
@@ -66,6 +84,7 @@ def resolve_protonation_state(all_u):
     first entry in the file (corresponding to the best scoring species).
     """
     count = 0
+    print("Resolving protonation states for the following ligands:")
     for l in all_u:
         prepped = 'ligands/prepared_ligands/{}/{}_out.mae'.format(l,l)
         final = 'ligands/prepared_ligands/{}/{}.mae'.format(l,l)
@@ -77,6 +96,7 @@ def resolve_protonation_state(all_u):
                     stwr = StructureWriter(final)
                     stwr.append(st)
                     stwr.close()
+                    print("* {}".format(l))
                     count += 1
                 except Exception as e:
                     print(l)
@@ -92,7 +112,10 @@ def run_ligand_processing(unfinished):
     add_h = '$SCHRODINGER/utilities/prepwizard -WAIT -rehtreat -noepik -noprotassign -noimpref {}_in.mae {}_in_epik.mae\n' 
     epik_command = '$SCHRODINGER/epik -WAIT -ph 7.0 -pht 2.0 -imae {}_in_epik.mae -omae {}_out.mae\n'
 
+    print("Running ligand processing for the following ligands:")
     for i, ligs in enumerate(grouper(group_size, unfinished)):
+        for ligand in ligs:
+            print("* {}".format(ligand))
         with open('ligands/prepared_ligands/batch-{}.sh'.format(i),'w') as f:
             f.write('#!/bin/bash\n')
             for name in ligs:
@@ -128,17 +151,17 @@ def proc_ligands():
     all_u = [l.split('.')[0] for l in os.listdir('ligands/raw_files')]
     all_u = [l for l in all_u
              if not os.path.exists('ligands/prepared_ligands/{}/{}.mae'.format(l,l))]
-    if len(all_u) > 0:
-        print(len(all_u), 'unfinished ligands')
+    print(len(all_u), 'unfinished ligands')
 
-    resolve_protonation_state(all_u)
+    if len(all_u) > 0:
+        resolve_protonation_state(all_u)
 
     unfinished = []
     for l in all_u:
         prepped = 'ligands/prepared_ligands/{}/{}_out.mae'.format(l,l)
         if not os.path.exists(prepped):
             unfinished.append(l)
-    if len(unfinished) > 0:
-        print(len(unfinished), 'unprocessed ligands')
+    print(len(unfinished), 'unprocessed ligands')
     
-    run_ligand_processing(unfinished)
+    if len(unfinished) > 0:
+        run_ligand_processing(unfinished)
