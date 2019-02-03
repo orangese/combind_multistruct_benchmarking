@@ -5,6 +5,7 @@ import mcss.mcss
 import score.controller
 import score.scores
 import score.statistics
+import score.dude_statistics
 
 
 if sys.argv[1] == 'prepare':
@@ -24,4 +25,7 @@ elif sys.argv[1] == 'statistics':
 
 elif sys.argv[1] == 'score':
 	score.scores.main(sys.argv[1:])
+
+elif sys.argv[1] == 'dude_statistics':
+	score.dude_statistics.main(sys.argv[1:])
 

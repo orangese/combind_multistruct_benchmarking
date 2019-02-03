@@ -13,6 +13,7 @@ from dock.dock import dock, verify_dock
 from dock.chembl_sort import get_ligands, proc_ligands
 from dock.chembl_props import write_props
 from dock.pick_helpers import pick_helpers, load_helpers
+from dock.parse_chembl import get_dude_ligands
 
 from shared_paths import shared_paths, proteins
 from ifp.fp_controller import compute_fp
@@ -31,6 +32,9 @@ def main(args):
         protein = Protein(d, shared_paths['pdb_order'])
         lm = protein.lm
 
+        read_root = "{}/{}".format(shared_paths['read_data'], d)
+        write_root = "{}/{}".format(shared_paths['write_data'], d)
+
         if task == '0':
             sort_downloads()
      
@@ -41,7 +45,7 @@ def main(args):
             make_grids()           # Creates grid for all proteins
          
         if task == '2':
-           get_ligands()           # Writes MAE files for all ligs to ligands/raw_files
+           get_ligands(read_root, write_root)           # Writes MAE files for all ligs to ligands/raw_files
            proc_ligands()          # Runs prepwizard & epik on all ligs
            
         if task == 'm':
@@ -79,5 +83,13 @@ def main(args):
             dock(lm, load_helpers()) # Dock chembl ligands to be used in scoring
             compute_fp(lm)           # Fingerprints for docked ligands and pdb structures
             lm.mcss.compute_mcss(True, load_helpers())
+
+        # 4. decide what ligands to use and prepare them
+        if task == '4':
+            dock(write_root, read_root, lm, dude_ligands=get_dude_ligands()) # Dock chembl ligands to be used in scoring
+
+        # 4. decide what ligands to use and prepare them
+        if task == '5':
+            compute_fp(lm)           # Fingerprints for docked ligands and pdb structures
 
         os.chdir('..')
