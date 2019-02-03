@@ -70,7 +70,7 @@ ifp = {'ifp3': {'version': 'ifp3',
      }
 
 feature_defs = {
-    # 'mcss'           :[],
+    'mcss'           :[],
     'sb'             :[1],
     'hbond'          :[2,3],
     'hbond_donor'    :[2],
@@ -80,10 +80,8 @@ feature_defs = {
 }
 
 shared_paths = { 
-    'code'      : "/scratch/PI/rondror/augustine/combind_testing/augustines-combind",
-    'data'      : "/scratch/PI/rondror/combind/nonbinders",
-    'read_data'      : "/scratch/PI/rondror/combind/bpp_data",
-    'write_data'      : "/scratch/PI/rondror/combind/nonbinders",
+    'code'      : '~/combind',
+    'data'      : "/scratch/PI/rondror/combind/bpp_data/",
     'docking'   : 'confgen_es4',
     'mcss'      : 'mcss16',
     'stats'     : stats['stats6'],
@@ -93,7 +91,7 @@ shared_paths = {
 
 import os
 exclude = []
-proteins = [p for p in os.listdir(shared_paths['data']) if p[0] != '.' and p not in exclude and p != 'old_data']
+proteins = [p for p in os.listdir(shared_paths['data']) if p[0] != '.' and p not in exclude]
 
 assert shared_paths['ifp']['version'] == shared_paths['stats']['ifp_version']
 assert shared_paths['docking'] == shared_paths['stats']['docking_version']

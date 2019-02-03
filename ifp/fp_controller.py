@@ -6,8 +6,8 @@ from shared_paths import shared_paths
 queue = 'owners'
 group_size = 10
 
-pv_cmd = '$SCHRODINGER/run {}/main.py ifp -mode pv -input_file {} -output_file {} -raw {} -write_root {} -read_root {}\n'
-st_cmd = '$SCHRODINGER/run {}/main.py ifp -mode st -output_file {} -write_root {} -read_root {}\n'
+pv_cmd = '$SCHRODINGER/run {}/main.py ifp -mode pv -input_file {} -output_file {} -raw {}\n'
+st_cmd = '$SCHRODINGER/run {}/main.py ifp -mode st -output_file {}\n'
 
 def get_fp(lm, fp_list, raw):
     if len(fp_list) > 0:
@@ -20,19 +20,19 @@ def get_fp(lm, fp_list, raw):
                 input_file = '../../docking/{}/{}/{}_pv.maegz'.format(shared_paths['docking'],
                                                                       name, name)
                 output_file = '{}-{}.fp'.format(name, shared_paths['docking'])
-                f.write(pv_cmd.format(shared_paths['code'], input_file, output_file, raw, lm.write_root, lm.read_root)) 
+                f.write(pv_cmd.format(shared_paths['code'], input_file, output_file, raw)) 
             f.write('wait\n')
         os.system('sbatch --cpus-per-task=1 --time=02:00:00 -p {} {}fp.sh'.format(queue, i))
 
 def structure_fp(lm):
-    for lig in sorted(os.listdir('{}/structures/ligands'.format(lm.read_root))):
+    for lig in sorted(os.listdir('../../structures/ligands')):
         pdb = lig.split('_')[0]
         output_file = '{}_struct.fp'.format(pdb)
         if os.path.exists(output_file): continue
         print ('structure fp', pdb)
         with open('{}.sh'.format(pdb), 'w') as f:
             f.write('#!/bin/bash\n')
-            f.write(st_cmd.format(shared_paths['code'], output_file, lm.write_root, lm.read_root)) 
+            f.write(st_cmd.format(shared_paths['code'], output_file)) 
         os.system('sbatch --time=00:10:00 -n 1 -p {} {}.sh'.format(queue, pdb))
 
 def compute_fp(lm, raw = False):
