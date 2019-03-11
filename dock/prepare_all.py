@@ -79,5 +79,12 @@ def main(args):
             dock(lm, load_helpers()) # Dock chembl ligands to be used in scoring
             compute_fp(lm)           # Fingerprints for docked ligands and pdb structures
             lm.mcss.compute_mcss(True, load_helpers())
+        
+        # 3m. same as 3, except we have multiple mutant receptors to dock to
+        if task == '3m':
+            pick_helpers(lm)
+            dock(lm, mutants=True)
+            compute_fp(lm)
+            lm.mcss.compute_mcss(True)
 
         os.chdir('..')

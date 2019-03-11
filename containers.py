@@ -255,6 +255,9 @@ class LigandManager:
                 self.helpers[fname][q] = self.docked(self.helpers[fname][q], struct)
         return self.helpers[fname][query][:num]
 
+    def get_grids(self):
+        return self.grids
+
 class Protein:
     """
     Collection of ligands and docking results for a given protein.

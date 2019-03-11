@@ -91,6 +91,7 @@ def run_ligand_processing(unfinished):
     """
     add_h = '$SCHRODINGER/utilities/prepwizard -WAIT -rehtreat -noepik -noprotassign -noimpref {}_in.mae {}_in_epik.mae\n' 
     epik_command = '$SCHRODINGER/epik -WAIT -ph 7.0 -pht 2.0 -imae {}_in_epik.mae -omae {}_out.mae\n'
+    # epik_command += ' cp {}_out.mae {}.mae\n' 
 
     for i, ligs in enumerate(grouper(group_size, unfinished)):
         with open('ligands/prepared_ligands/batch-{}.sh'.format(i),'w') as f:
@@ -109,7 +110,7 @@ def run_ligand_processing(unfinished):
                 with open('ligands/prepared_ligands/{}/process_in.sh'.format(name), 'w') as f2:
                     f2.write('#!/bin/bash\n')
                     f2.write(add_h.format(name, name))
-                    f2.write(epik_command.format(name, name))
+                    f2.write(epik_command.format(name, name, name))
 
         os.chdir('ligands/prepared_ligands')
         os.system('sbatch -p {} -t 1:00:00 batch-{}.sh'.format(queue,i))

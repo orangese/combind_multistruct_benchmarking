@@ -23,11 +23,11 @@ def make_grids():
         if prot_matches is not None:
             prot_prefix = prot_matches.group(1)
         
-        if os.path.exists('docking/grids/{}/{}.zip'.format(pdb, pdb)): 
+        if os.path.exists('docking/grids/{}/{}.zip'.format(prot_prefix, prot_prefix)): 
             continue
         if not (os.path.exists('structures/proteins/{}_prot.mae'.format(prot_prefix)) and os.path.exists('structures/ligands/{}_lig.mae'.format(pdb))):
             continue
-        os.system('rm -rf docking/grids/{}'.format(pdb))        
+        os.system('rm -rf docking/grids/{}'.format(prot_prefix))
 
         if pdb == '3J5Q':
             x,y,z = 13,-30,-33
