@@ -222,7 +222,7 @@ class MCSS:
         return True
 
     def write_rmsds(self, poseviewer_paths, init_file, mcss_types_file,
-                    rmsd_file, max_poses): #, full_struct=False):
+                    rmsd_file, max_poses):
         """
         rmsd_file (str): path to where to write RMSDs.
         init_file (str): path to where to write MCSS init file if on-the-fly
@@ -241,8 +241,6 @@ class MCSS:
         l1_atom_idxss, l2_atom_idxss = self._get_atom_idxss(pv1[0], pv2[0],
                                                             init_file, mcss_types_file)
         
-        # l1_atom_idxss = [atom.idx for atom in pv1[0].atom if atom.element != 'H']
-        # l2_atom_idxss = [atom.idx for atom in pv2[0].atom if atom.element != 'H']
 
         rmsds = {}
         for i, pose1 in enumerate(pv1[:max_poses]):

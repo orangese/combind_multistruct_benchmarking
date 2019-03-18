@@ -7,8 +7,6 @@ import score.scores
 import score.statistics
 
 
-import pdb; pdb.set_trace()
-
 if sys.argv[1] == 'prepare':
         dock.prepare_all.main(sys.argv[1:])
 

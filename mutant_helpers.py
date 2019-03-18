@@ -194,20 +194,27 @@ def read_pairwise_poses_rmsd_file(fileName):
     -------
     rmsdData : numpy array
     """
-    rmsdData = []
+
+    ##### NOT YET tested
+    
+    import pdb; pdb.set_trace()
+    pose1Max = -1
+    pose2Max = -1
     with open(fileName, 'r') as f:
-        i = 0 # first pose
-        posePairsToRef = [] # pose pair RMSD relative to pose in first column
         for line in f:
-            data = line.rstrip()
-            data = data.split(',')
-            data = [float(entry) for entry in data]
-            j = data[0]
-            if j != i:
-                rmsdData.append(posePairsToRef)
-                posePairsToRef = []
-                i = j
-            posePairsToRef.append(data[2])
+            pose1, pose2, _ = line.rstrip().split(',')
+            pose1Max = max(int(pose1), pose1Max)
+            pose2Max = max(int(pose2), pose2Max)
+            
+    assert(pose1Max != -1)
+    assert(pose2Max != -1)
+    
+    rmsdData = np.zeros((pose1Max+1, pose2Max+1))
+    
+    with open(fileName, 'r') as f:
+        for line in f:
+            pose1, pose2, rmsd = line.rstrip().split(',')
+            rmsdData[int(pose1), int(pose2)] = float(rmsd)
         
     return(np.array(rmsdData))
 
@@ -265,7 +272,7 @@ def average_pose_over_mutants(prot, lig, control=False):
         - file of the posesToNativeRmsd and rescoredPosesToNativeRmsd
         - file of the scores of each pose for all mutant receptor used in the analysis
     """
-    import pdb; pdb.set_trace()
+
     refProt = ''
     if (prot == 'A2AR'):
         refProt = '2YDO'
