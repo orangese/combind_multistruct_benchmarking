@@ -91,7 +91,7 @@ def run_ligand_processing(unfinished):
     """
     add_h = '$SCHRODINGER/utilities/prepwizard -WAIT -rehtreat -noepik -noprotassign -noimpref {}_in.mae {}_in_epik.mae\n' 
     epik_command = '$SCHRODINGER/epik -WAIT -ph 7.0 -pht 2.0 -imae {}_in_epik.mae -omae {}_out.mae\n'
-
+    
     for i, ligs in enumerate(grouper(group_size, unfinished)):
         with open('ligands/prepared_ligands/batch-{}.sh'.format(i),'w') as f:
             f.write('#!/bin/bash\n')

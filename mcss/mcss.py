@@ -1,4 +1,5 @@
 import os
+from schrodinger.structure import StructureReader, StructureWriter
 
 class MCSS:
     """
@@ -112,7 +113,7 @@ class MCSS:
         self.tried_small = small
 
         with open(init_file, 'w') as fp:
-            fp.write(str(mcss)+'\n')
+            fp.write(str(self)+'\n')
 
         os.system('rm {} {}'.format(structure_file, mcss_file))
 
@@ -175,8 +176,8 @@ class MCSS:
                 print(self.name, 'MCSS size dencreased by one.')
         
         self.n_mcss_atoms = n_mcss_atoms
-        self.smarts_l1 += ligs[mcss.l1.replace('_crystal', '')]
-        self.smarts_l2 += ligs[mcss.l2.replace('_crystal', '')]
+        self.smarts_l1 += ligs[self.l1.replace('_crystal', '')]
+        self.smarts_l2 += ligs[self.l2.replace('_crystal', '')]
 
     # RMSD Methods.
     def load_rmsds(self, rmsd_file, poseviewer_paths, max_poses):
@@ -240,6 +241,7 @@ class MCSS:
         l1_atom_idxss, l2_atom_idxss = self._get_atom_idxss(pv1[0], pv2[0],
                                                             init_file, mcss_types_file)
         
+
         rmsds = {}
         for i, pose1 in enumerate(pv1[:max_poses]):
             for j, pose2 in enumerate(pv2[:max_poses]):
@@ -341,7 +343,6 @@ class MCSS:
                 atom.atomic_number = 9
             
 def main(args):
-    from schrodinger.structure import StructureReader, StructureWriter
     mode = args[1]
     if mode == 'INIT':
         l1, l2, l1_path, l2_path, init_file, mcss_types_file = args[2:8]
