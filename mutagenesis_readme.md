@@ -57,3 +57,6 @@
   * Thymidylate Synthase
      * DCM
      * UMP
+3. Dock to active states of receptors, and mutants generated from these active states, instead of crystallized inactive states
+   * May recapitulate experimental values for activity better
+4. Allow sidechain flexibility when docking
