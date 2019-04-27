@@ -2,7 +2,6 @@ import pytest
 import os
 import sys
 
-sys.path.insert(0, os.environ['COMBINDHOME'])
 from score.controller import score
 
 def test_standard_pdb(tmpdir, mocker):
