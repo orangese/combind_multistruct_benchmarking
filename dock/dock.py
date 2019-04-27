@@ -162,7 +162,7 @@ def proc_all(all_pairs, dock=False, rmsd=False):
 
         os.system('sbatch -p {} -t 1:00:00 -o dock.out dock{}.sh'.format(queue, i))
 
-def dock(lm, chembl=None, maxnum=30, mode = 'confgen'):
+def dock(lm, chembl=None, mutants=False, maxnum=30, mode = 'confgen'):
     if lm.st is None: return
     docking = modes[mode]['name']
     os.system('mkdir -p docking/{}'.format(docking))
@@ -178,6 +178,10 @@ def dock(lm, chembl=None, maxnum=30, mode = 'confgen'):
             for q, c_list in f_data.items():
                 ligs.add(q)
                 ligs.update(c_list)
+
+    # if mutants flag is True, then we will try docking all ligands to all mutant receptors
+    if mutants:
+        grids = lm.get_grids()
 
     to_dock = []
     to_rmsd = []

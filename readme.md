@@ -12,15 +12,9 @@ for future development (Some of these documents
 are still under development). A general overview of the
 workflow is below.
 
-There are currently no automated tests for this project,
-however, as examples where the code does not behave as
-expected are identified they should be added to the test
-directory in each directory. The hope is that we will only
-have to manually discover each failure mode once.
-
 Before the code is run, you should source setup_combind.
 
-Inside the code global constants are stored in shared_paths.py.k
+Inside the code global constants are stored in shared_paths.py.
 You should never pass the shared_paths dictionary
 as an argument, as this is unncessary and confusing.
 

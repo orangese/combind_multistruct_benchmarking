@@ -1,9 +1,8 @@
 import pytest
 import os
 import sys
-sys.path.insert(0, os.environ['COMBINDHOME'])
-from shared_paths import shared_paths
 
+from shared_paths import shared_paths
 from ifp.fp_controller import compute_fp, structure_fp, get_fp
 
 
@@ -24,8 +23,8 @@ class TestComputeFP:
 		lm = MockLigandManager()
 		mocker.patch.dict(shared_paths, {'docking': 'confgen_es11'})
 		mock_exists = mocker.patch('os.path.exists')
-		mock_structure_fp = mocker.patch('fp_controller.structure_fp')
-		mock_get_fp = mocker.patch('fp_controller.get_fp')
+		mock_structure_fp = mocker.patch('ifp.fp_controller.structure_fp')
+		mock_get_fp = mocker.patch('ifp.fp_controller.get_fp')
 		
 		compute_fp(lm)
 
@@ -41,8 +40,8 @@ class TestComputeFP:
 		os.chdir(tmpdir)
 		lm = MockLigandManager()
 		mocker.patch('os.path.exists', lambda x: False)
-		mock_structure_fp = mocker.patch('fp_controller.structure_fp')
-		mock_get_fp = mocker.patch('fp_controller.get_fp')
+		mock_structure_fp = mocker.patch('ifp.fp_controller.structure_fp')
+		mock_get_fp = mocker.patch('ifp.fp_controller.get_fp')
 		compute_fp(lm)
 
 		mock_structure_fp.assert_called_with(lm)
@@ -55,8 +54,8 @@ class TestComputeFP:
 		os.chdir(tmpdir)
 		lm = MockLigandManager()
 		mocker.patch('os.path.exists', lambda x: False)
-		mock_structure_fp = mocker.patch('fp_controller.structure_fp')
-		mock_get_fp = mocker.patch('fp_controller.get_fp')
+		mock_structure_fp = mocker.patch('ifp.fp_controller.structure_fp')
+		mock_get_fp = mocker.patch('ifp.fp_controller.get_fp')
 		compute_fp(lm, True)
 
 		mock_structure_fp.assert_not_called()

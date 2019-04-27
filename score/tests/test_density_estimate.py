@@ -3,7 +3,6 @@ import os
 import sys
 import numpy as np
 
-sys.path.insert(0, os.environ['COMBINDHOME'])
 from score.density_estimate import DensityEstimate
 from score.statistics import merge_dicts_of_lists
 
