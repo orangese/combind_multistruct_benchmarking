@@ -28,7 +28,7 @@ def basic_ps():
 			 			   'hbond': DensityEstimate(domain = (0, 1))}}
 	stats['native']['sb'].fx = np.linspace(0.01, 2, stats['native']['sb'].fx.shape[0])
 	stats['reference']['sb'].fx = np.linspace(2, 0.01, stats['native']['sb'].fx.shape[0])
-	features = ['sb']
+	features = ['sb', 'hbond']
 	return PredictStructs(ligands, None, stats, features, 3, 1.0)
 
 def two_interaction_ps():
@@ -135,7 +135,7 @@ def test_ratio_two():
 	y = ps._log_likelihood_ratio_pair({'lig1':1, 'lig2':1},'lig2', 'lig1')
 
 	assert x == y
-	assert x == np.log(0.01) - np.log(2.0) + np.log(1.2) - np.log(1.0)
+	assert x == np.log(0.01) - np.log(2.0) + np.log(2*.6**0.5) - np.log(1.0)
 
 def test_ratio_zero():
 	ps = two_interaction_ps()
@@ -194,12 +194,12 @@ def test_max():
 	assert ps.max_posterior() == opt
 	assert ps.max_posterior() == opt
 
-def three_ligands():
-	ps = basic_ps()
+def test_optimize_three():
+	ps = three_ligands()
 	def like(p1, p2, p3):
 		return ps._optimize_cluster({'lig1':p1, 'lig2':p2, 'lig3': p3}, 1)
 
-	opt = {'lig1':1, 'lig2':0, 'lig3': 0}
+	opt = {'lig1':1, 'lig2':0, 'lig3': 1}
 	for i in range(2):
 		for j in range(2):
 			for k in range(2):
@@ -208,7 +208,7 @@ def three_ligands():
 def test_max_three():
 	ps = three_ligands()
 
-	opt = {'lig1':1, 'lig2':0, 'lig3': 0}
+	opt = {'lig1':1, 'lig2':0, 'lig3': 1}
 	assert ps.max_posterior() == opt
 	assert ps.max_posterior() == opt
 	assert ps.max_posterior() == opt
