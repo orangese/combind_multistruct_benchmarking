@@ -1,5 +1,8 @@
+"""
+Core optimization code.
+"""
+
 import numpy as np
-import random
 from score.pairs import LigPair
 
 class PredictStructs:
@@ -7,9 +10,9 @@ class PredictStructs:
     ligands ({name: containers.Ligand, })
     mcss (mcss.MCSSController): All applicable RMSDs should be loaded.
     stats ({feature: {'native': score.DensityEstimate, 'reference': score.DensityEstimate}})
-    features ([str, ])
-    max_poses (int)
-    alpha (float)
+    features ([str, ]): Features to use when computing similarity scores.
+    max_poses (int): Maximum number of poses to consider.
+    alpha (float): Factor to which to weight the glide scores.
     """
     def __init__(self, ligands, mcss, stats, features, max_poses, alpha):
         self.ligands = ligands
@@ -44,6 +47,18 @@ class PredictStructs:
         assert self.max_poses > 0
 
     def max_posterior(self, sampling = 10, restart = 15):
+        """
+        Computes the pose cluster maximizing the posterior likelihood.
+
+        Note that this function is not guarenteed to find the global maximum
+        since the search space is not convex. This is handled by restarting from
+        multiple initial configurations and returning the best scoring configuration
+        found in any optimization.
+
+        sampling (int): Continue each optimization until the score has not improved
+            for sampling * (number of ligands) ** 2 iterations.
+        restart (int): Number of times to run the optimization
+        """
         self._validate()
         best_score = -float('inf')
         for i in range(restart):
@@ -125,9 +140,6 @@ class PredictStructs:
                 poses_cluster[ligname1] and pose_clusters[ligname2]
         
         as the the sum of the log likelihoods of each of the k_list.
-
-        This function supports 3 options for the "denominator" or "reference"
-        distribution that is specified by self.reference.
         """
         pair_key = ((ligname1, ligname2, pose_cluster[ligname1], pose_cluster[ligname2])
                     if ligname1 < ligname2 else
@@ -140,31 +152,39 @@ class PredictStructs:
                                                                                    pose_cluster,
                                                                                    ligname1,
                                                                                    ligname2)
+                # If either of these are 0, we will get infs or nans
+                # using a gKDE this should not happen, but if we ever switch
+                # to a compact kernel, this could be hard to debug
+                assert p_x_native != 0.0
+                assert p_x != 0.0
+
                 log_likelihood += np.log(p_x_native) - np.log(p_x)
             self.log_likelihood_ratio_cache[pair_key] = log_likelihood
         return self.log_likelihood_ratio_cache[pair_key]
 
-    def _likelihoods_for_pair_and_single_feature(self, k, pose_cluster,
-                                                 ligname1, ligname2):
+    def _likelihoods_for_pair_and_single_feature(self, feature, pose_cluster, ligname1, ligname2):
         """
         Returns the feature value 'x' and its likelihoods P(x|l) and P(x)
         for feature 'fname' and poses pose_cluster[ligname1] and pose_cluster[ligname2].
         """
-        x_k = self._get_feature(k, ligname1, ligname2,
-                                pose_cluster[ligname1], pose_cluster[ligname2])
+        x = self._get_feature(feature, ligname1, ligname2,
+                              pose_cluster[ligname1], pose_cluster[ligname2])
         
-        if x_k is None: return 0, 1, 1
+        if x is None: return 0.0, 1.0, 1.0
 
-        p_x_native  = self.stats['native'][k](x_k)
-        p_x = self.stats['reference'][k](x_k)
+        p_x_native  = self.stats['native'][feature](x)
+        p_x = self.stats['reference'][feature](x)
 
-        return x_k, p_x_native, p_x
+        return x, p_x_native, p_x
 
     def _get_feature(self, feature, ligname1, ligname2, pose1, pose2):
+        # Maintain the convention that ligname1 < ligname2, so that
+        # we don't put duplicate entries in self.lig_pairs.
         if ligname1 > ligname2:
             ligname1, ligname2 = ligname2, ligname1
             pose1, pose2 = pose2, pose1
 
+        # Constructing LigPairs is expensive, so we cache them.
         if (ligname1, ligname2) not in self.lig_pairs:
             self.lig_pairs[(ligname1, ligname2)] = LigPair(self.ligands[ligname1],
                                                            self.ligands[ligname2],
@@ -173,14 +193,14 @@ class PredictStructs:
 
         return self.lig_pairs[(ligname1, ligname2)].get_feature(feature, pose1, pose2)
 
-    def _get_gscore(self, ligand, pose):
-        return self.ligands[ligand].poses[pose].gscore
+    def _get_gscore(self, ligname, pose):
+        return self.ligands[ligname].poses[pose].gscore
 
     def _num_poses(self, ligname):
         return min(self.max_poses, len(self.ligands[ligname].poses))
 
     ####################################################################################
-    # Methods important for figure making, but not execution
+    # Methods important for figure making, but not execution.
     def likelihood_and_feature_matrix(self, pose_cluster, k, lig_order):
         """
         Returns the feature values and likelihood ratios, P(X|l)/P(X)

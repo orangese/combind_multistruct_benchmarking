@@ -84,7 +84,7 @@ class DensityEstimate:
             if self.out_of_bounds is None: return self.fx[0]
             return self.out_of_bounds
         if x > self.x[-1]:
-            #print('Warning: value out of domain of function')
+            print('Warning: value out of domain of function')
             if self.out_of_bounds is None: return self.fx[-1]
             return self.out_of_bounds
 
