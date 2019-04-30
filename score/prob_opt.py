@@ -46,7 +46,7 @@ class PredictStructs:
         assert self.alpha >= 0
         assert self.max_poses > 0
 
-    def max_posterior(self, sampling = 10, restart = 15):
+    def max_posterior(self, max_iterations = 1e6, restart = 50):
         """
         Computes the pose cluster maximizing the posterior likelihood.
 
@@ -55,8 +55,7 @@ class PredictStructs:
         multiple initial configurations and returning the best scoring configuration
         found in any optimization.
 
-        sampling (int): Continue each optimization until the score has not improved
-            for sampling * (number of ligands) ** 2 iterations.
+        max_iterations (int): Maximum number of iterations to attempt before exiting.
         restart (int): Number of times to run the optimization
         """
         self._validate()
@@ -66,7 +65,7 @@ class PredictStructs:
                        if i == 0 else
                        {lig: np.random.randint(self._num_poses(lig)) for lig in self.ligands})
 
-            score, cluster = self._optimize_cluster(cluster, sampling=sampling)
+            score, cluster = self._optimize_cluster(cluster, max_iterations)
             if score > best_score:
                 best_score = score
                 best_cluster = cluster
@@ -76,7 +75,7 @@ class PredictStructs:
 
         return best_cluster
 
-    def _optimize_cluster(self, pose_cluster, sampling):
+    def _optimize_cluster(self, pose_cluster, max_iterations):
         """
         Maximizes
             log P(L = l1 .. ln) = C + (sum - glide / T) + (sum log_odds)
@@ -86,22 +85,28 @@ class PredictStructs:
             2) Assume that the highest scoring pose for all other ligands is correct.
             3) Maximizing the score for the selected ligand.
 
-        pose_cluster: dict of  ligand_name -> current pose number
-        sampling: int sample sampling*len(init_cluster)**2 times
+        pose_cluster ({ligand_name: current pose number, })
+        max_iterations (int)
         """
-        time_since_update = 0
-        while time_since_update < sampling * len(list(pose_cluster.keys()))**2:
-            time_since_update += 1
-            query = np.random.choice(list(pose_cluster.keys()))
-            best_score = self._partial_log_posterior(pose_cluster, query)
-            best_pose  = pose_cluster[query]
-            for pose in range(self._num_poses(query)):
-                pose_cluster[query] = pose
-                score = self._partial_log_posterior(pose_cluster, query)
-                if score > best_score:
-                    best_score, best_pose = score, pose
-                    time_since_update = 0
-            pose_cluster[query] = best_pose
+        iterations = 0
+        update = True
+        while update:
+            if iterations > max_iterations:
+                assert False, ('Warning: Reached maximum iterations'
+                               '({}) without convergence.'.format(max_iterations))
+            iterations += 1
+            
+            update = False
+            for query in np.random.permutation(list(pose_cluster.keys())):
+                best_score = self._partial_log_posterior(pose_cluster, query)
+                best_pose  = pose_cluster[query]
+                for pose in range(self._num_poses(query)):
+                    pose_cluster[query] = pose
+                    score = self._partial_log_posterior(pose_cluster, query)
+                    if score > best_score:
+                        best_score, best_pose = score, pose
+                        update = True
+                pose_cluster[query] = best_pose
 
         return self.log_posterior(pose_cluster), pose_cluster
 

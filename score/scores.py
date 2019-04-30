@@ -64,7 +64,7 @@ class ScoreContainer:
         # Set ligands and optimize!
         self.ps.ligands = {lig: self.predict_data.docking[self.struct].ligands[lig]
                            for lig in queries}
-        best_cluster = self.ps.max_posterior(restart=50, sampling=3)
+        best_cluster = self.ps.max_posterior()
         return best_cluster
 
     def write_results(self, cluster, fname):

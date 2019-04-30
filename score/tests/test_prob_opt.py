@@ -177,7 +177,7 @@ def test_posterior():
 def test_optimize():
 	ps = basic_ps()
 	def like(p1, p2):
-		return ps._optimize_cluster({'lig1':p1, 'lig2':p2}, 1)
+		return ps._optimize_cluster({'lig1':p1, 'lig2':p2}, 5)
 
 	opt = {'lig1':1, 'lig2':0}
 	assert like(0, 0)[1] == opt
@@ -197,7 +197,7 @@ def test_max():
 def test_optimize_three():
 	ps = three_ligands()
 	def like(p1, p2, p3):
-		return ps._optimize_cluster({'lig1':p1, 'lig2':p2, 'lig3': p3}, 1)
+		return ps._optimize_cluster({'lig1':p1, 'lig2':p2, 'lig3': p3}, 5)
 
 	opt = {'lig1':1, 'lig2':0, 'lig3': 1}
 	for i in range(2):
@@ -214,3 +214,9 @@ def test_max_three():
 	assert ps.max_posterior() == opt
 	assert ps.max_posterior() == opt
 
+def test_max_iterations():
+	ps = three_ligands()
+
+	opt = {'lig1':1, 'lig2':0, 'lig3': 1}
+	with pytest.raises(AssertionError):
+		ps.max_posterior(max_iterations=1)

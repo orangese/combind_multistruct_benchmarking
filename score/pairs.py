@@ -26,20 +26,13 @@ class LigPair:
         feature_value = self.pose_pairs[(rank1,rank2)].get_feature(feature)
         minimum, maximum = self.feat_map[feature]
         
+        # Feature isn't present in any pose pair.
         if not maximum or feature_value is None:
             return None
         
         if feature == 'mcss':
             return feature_value
         return feature_value / max(maximum, 1.0)
-
-    def get_gscores(self, rank1, rank2):
-        pp = self.pose_pairs[(rank1,rank2)]
-        return pp.pose1.gscore, pp.pose2.gscore
-
-    def get_rmsds(self, rank1, rank2):
-        pp = self.pose_pairs[(rank1,rank2)]
-        return pp.pose1.rmsd, pp.pose2.rmsd
 
     def _init_pose_pairs(self):
         """
@@ -94,23 +87,17 @@ class PosePair:
     def get_feature(self, feature):
         """
         Get the value of feature for this pose pair.
+
+        Specifically, computes residue level scores by taking the geometric
+        mean of the fingerprint values, then sums them to get a target level score.
         """
         if feature not in self.features:
-            self.features[feature] = self.interaction_similarity(feature)
+            assert feature in feature_defs, feature
+            score = 0
+            # (feature_index, residue)
+            for (i, r) in self.pose1.fp:
+                if i in feature_defs[feature] and (i, r) in self.pose2.fp:
+                    # Geometric mean
+                    score += (self.pose1.fp[(i,r)]*self.pose2.fp[(i,r)])**0.5
+            self.features[feature] = score
         return self.features[feature]
-
-    def interaction_similarity(self, feature):
-        """
-        Compute the overlap score for feature. Specifically,
-        computes residue level scores by taking the geometric
-        mean of the fingerprint values, then sums them to get
-        a target level score.
-        """
-        assert feature in feature_defs, feature
-        score = 0
-        # (feature_index, residue)
-        for (i, r) in self.pose1.fp:
-            if i in feature_defs[feature] and (i, r) in self.pose2.fp:
-                # Geometric mean
-                score += (self.pose1.fp[(i,r)]*self.pose2.fp[(i,r)])**0.5
-        return score
