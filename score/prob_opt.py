@@ -3,27 +3,55 @@ import random
 from score.pairs import LigPair
 
 class PredictStructs:
-    def __init__(self, prot, stats, features, max_poses, alpha):
-        self.mcss      = prot.lm.mcss if 'mcss' in features else None
-        self.docking   = prot.docking[prot.lm.st].ligands
-        self.stats     = stats
-        self.features  = features
+    """
+    ligands ({name: containers.Ligand, })
+    mcss (mcss.MCSSController): All applicable RMSDs should be loaded.
+    stats ({feature: {'native': score.DensityEstimate, 'reference': score.DensityEstimate}})
+    features ([str, ])
+    max_poses (int)
+    alpha (float)
+    """
+    def __init__(self, ligands, mcss, stats, features, max_poses, alpha):
+        self.ligands = ligands
+        self.mcss = mcss
+        self.stats = stats
+        self.features = features
         self.max_poses = max_poses
-        self.alpha     = float(alpha)
+        self.alpha = float(alpha)
 
         self.log_likelihood_ratio_cache = {}
         self.lig_pairs = {}
 
-    def max_posterior(self, ligands, sampling = 10, restart = 15):
-        best_score, best_cluster = self._optimize_cluster({l:0 for l in ligands},
-                                                          sampling=sampling)
-        print(best_cluster)
-        print('cluster -1, score {}'.format(best_score))
+        self._validate()
 
+    def _validate(self):
+        if 'mcss' in self.features:
+            assert self.mcss is not None
+            for lig1 in self.ligands:
+                for lig2 in self.ligands:
+                    if lig1 == lig2: continue
+                    try:
+                        self.mcss.get_rmsd(lig1, lig2, 0, 0)
+                    except KeyError:
+                        assert False
+        
+        for feature in self.features:
+            assert feature in self.stats['native']
+            assert feature in self.stats['reference']
+        
+        assert type(self.ligands) == dict
+        assert self.alpha >= 0
+        assert self.max_poses > 0
+
+    def max_posterior(self, sampling = 10, restart = 15):
+        self._validate()
+        best_score = -float('inf')
         for i in range(restart):
-            score, cluster = self._optimize_cluster({l: np.random.randint(self._num_poses(l))
-                                                     for l in ligands},
-                                                    sampling=sampling)
+            cluster = ({lig: 0 for lig in self.ligands}
+                       if i == 0 else
+                       {lig: np.random.randint(self._num_poses(lig)) for lig in self.ligands})
+
+            score, cluster = self._optimize_cluster(cluster, sampling=sampling)
             if score > best_score:
                 best_score = score
                 best_cluster = cluster
@@ -36,7 +64,7 @@ class PredictStructs:
     def _optimize_cluster(self, pose_cluster, sampling):
         """
         Maximizes
-            log P(L = l1 .. ln) = C + (\sum - glide / T) + (\sum log_odds)
+            log P(L = l1 .. ln) = C + (sum - glide / T) + (sum log_odds)
         by the following method:
 
             1) Randomly select a ligand.
@@ -83,7 +111,7 @@ class PredictStructs:
     def _partial_log_posterior(self, pose_cluster, query):
         """
         Computes the partial contribution of ligand 'query' in 'pose' to the total log prob.
-        This is simply - GlideScore(l_q)  / T + \sum log_odds.
+        This is simply - GlideScore(l_q)  / T + sum log_odds.
         """
         log_odds = sum(self._log_likelihood_ratio_pair(pose_cluster, query, ligname)
                        for ligname in pose_cluster if ligname != query)
@@ -138,18 +166,18 @@ class PredictStructs:
             pose1, pose2 = pose2, pose1
 
         if (ligname1, ligname2) not in self.lig_pairs:
-            self.lig_pairs[(ligname1, ligname2)] = LigPair(self.docking[ligname1],
-                                                           self.docking[ligname2],
+            self.lig_pairs[(ligname1, ligname2)] = LigPair(self.ligands[ligname1],
+                                                           self.ligands[ligname2],
                                                            self.features, self.mcss,
                                                            self.max_poses)
 
         return self.lig_pairs[(ligname1, ligname2)].get_feature(feature, pose1, pose2)
 
     def _get_gscore(self, ligand, pose):
-        return self.docking[ligand].poses[pose].gscore
+        return self.ligands[ligand].poses[pose].gscore
 
     def _num_poses(self, ligname):
-        return min(self.max_poses, len(self.docking[ligname].poses))
+        return min(self.max_poses, len(self.ligands[ligname].poses))
 
     ####################################################################################
     # Methods important for figure making, but not execution
@@ -177,4 +205,3 @@ class PredictStructs:
     def get_rmsd(self, cluster):
         tmp = [self.docking[l].poses[p].rmsd for l,p in cluster.items()]
         return np.mean([r for r in tmp if r is not None])
-    

@@ -41,8 +41,8 @@ def main(args):
             make_grids()           # Creates grid for all proteins
          
         if task == '2':
-           get_ligands()           # Writes MAE files for all ligs to ligands/raw_files
-           proc_ligands()          # Runs prepwizard & epik on all ligs
+            get_ligands()           # Writes MAE files for all ligs to ligands/raw_files
+            proc_ligands()          # Runs prepwizard & epik on all ligs
            
         if task == 'm':
             lm.mcss.compute_mcss() # Computes MCSS, for use in pick_helpers

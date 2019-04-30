@@ -21,7 +21,7 @@ class ScoreContainer:
         self.read_stats(stats_root)
  
         self.predict_data = Protein(prot)
-        self.ps = PredictStructs(self.predict_data, self.stats,
+        self.ps = PredictStructs({}, self.predict_data.lm.mcss, self.stats,
                                  self.settings['k_list'], self.settings['num_poses'],
                                  self.settings['alpha'])
 
@@ -61,7 +61,10 @@ class ScoreContainer:
                                            load_mcss = 'mcss' in self.settings['k_list'],
                                            st = self.struct)
 
-        best_cluster = self.ps.max_posterior(queries, restart=50, sampling=3)
+        # Set ligands and optimize!
+        self.ps.ligands = {lig: self.predict_data.docking[self.struct].ligands[lig]
+                           for lig in queries}
+        best_cluster = self.ps.max_posterior(restart=50, sampling=3)
         return best_cluster
 
     def write_results(self, cluster, fname):

@@ -1,5 +1,7 @@
 import os
 from schrodinger.structure import StructureReader, StructureWriter
+from schrodinger.structutils.analyze import evaluate_smarts_canvas
+from schrodinger.structutils.rmsd import ConformerRmsd
 
 class MCSS:
     """
