@@ -93,6 +93,24 @@ class ScoreContainer:
                     self.ps.log_posterior({k:0 for k in cluster.keys()}),
                     self.ps.log_posterior(best_cluster) if len(best_cluster) == len(cluster) else 0))
 
+    def read_results(self, fname):
+        cluster = {}
+        with open('{}/{}'.format(self.root, fname)) as fp:
+            fp.readline()
+            for line in fp:
+                if line[:7] == 'combind': continue
+
+                lig, combind_pose, *rest = line.split(',')
+                cluster[lig] = int(combind_pose)
+
+        self.predict_data.load_docking(list(cluster.keys()), load_fp = True,
+                                       load_mcss = 'mcss' in self.settings['k_list'],
+                                       st = self.struct)
+        self.ps.ligands = {lig: self.predict_data.docking[self.struct].ligands[lig]
+                           for lig in list(cluster.keys())}
+        return cluster
+
+
 def main(args):
     stats_root, struct, protein = args[1:4]
     queries = args[4:]

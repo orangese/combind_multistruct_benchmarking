@@ -4,6 +4,10 @@ Core optimization code.
 
 import numpy as np
 from score.pairs import LigPair
+from matplotlib import colors
+from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.pyplot as plt
+from shared_paths import feature_defs
 
 class PredictStructs:
     """
@@ -46,7 +50,7 @@ class PredictStructs:
         assert self.alpha >= 0
         assert self.max_poses > 0
 
-    def max_posterior(self, max_iterations = 1e6, restart = 50):
+    def max_posterior(self, max_iterations = 1e6, restart = 500):
         """
         Computes the pose cluster maximizing the posterior likelihood.
 
@@ -223,6 +227,117 @@ class PredictStructs:
                 x[i, j] = x_k
                 log_likelihood_ratio[i, j] = np.log(p_x_native) - np.log(p_x)
         return x, log_likelihood_ratio
+
+    def interactions(self, pose_clusters, k):
+        interactions = set()
+        for pose_cluster in pose_clusters:
+            _interactions = set([interaction
+                                 for ligand, pose in pose_cluster.items()
+                                 for interaction in self.ligands[ligand].poses[pose].fp
+                                 if (interaction[0] in feature_defs[k])])
+            interactions = interactions.union(_interactions)
+        interactions = sorted(interactions)
+        #labels = [format_int(l[1]) for l in interactions]
+        return interactions
+
+    def interaction_matrix(self, pose_cluster, interactions, lig_order):
+        X = []
+        for ligand in lig_order:
+            X += [[]]
+            pose = self.ligands[ligand].poses[pose_cluster[ligand]]
+            for interaction in interactions:
+                X[-1] += [pose.fp[interaction] if interaction in pose.fp else 0]
+        return np.array(X).T
+
+    def gel_plot(self, combind_cluster, glide_cluster, k, lig_order,
+                 divide=2, resname_size=14):
+        interactions = self.interactions([combind_cluster, glide_cluster], k)
+        combind = self.interaction_matrix(combind_cluster,interactions, lig_order)
+        glide = self.interaction_matrix(glide_cluster, interactions, lig_order)
+
+        seen = combind + glide
+        diff = combind - glide
+
+        labels = [self._format_int(interaction) for interaction in interactions]
+
+        # Remove interactions that are never seen.
+        X = diff[seen.sum(axis = 1) > 0]
+        labels = np.array(labels)[seen.sum(axis = 1) > 0]
+        seen = seen[seen.sum(axis = 1) > 0]
+
+        # Sort by interaction frequency
+        idx = np.argsort(seen.sum(axis = 1))[::-1]
+        X = X[idx]
+        labels = labels[idx]
+        seen = seen[idx]
+    
+        # Differentiate values that are the same and
+        # positive from those that are zero.
+        X[seen == 0] = float('inf')
+    
+        # Y is X + empty cells seperating boxes.
+        Y = np.zeros((X.shape[0]*divide, X.shape[1]*divide))
+        Y.fill(float('inf')) # dividers should be white.
+        Y[::divide, ::divide] = X
+
+    
+        rkb = [(1, 0, 0.5), (0, 0, 0), (0.5, 1, 0)]
+        cm = LinearSegmentedColormap.from_list('rkb', rkb, N=256, gamma=1.0)
+        plt.figure(figsize = (5, 5))
+        plt.imshow(Y, cm, aspect = 'auto', vmin=-0.5, vmax=0.5)
+        self._pretty(lig_order, labels, divide, resname_size)
+        print('ComBind - Glide: {}'.format(diff.sum()))
+
+    def _pretty(self, lig_order, resnames, divide, resname_size):
+        for spine in plt.gca().spines.values():
+            spine.set_visible(False)
+        for axis in ['x', 'y']:
+            plt.tick_params(axis=axis, which='both',bottom=False,
+                            top=False, left=False, right=False)
+        plt.yticks(range(0, divide*len(resnames), divide), resnames,
+                   size = resname_size, fontname = 'monospace')
+        plt.xticks(range(0, divide*len(lig_order), divide), lig_order,
+                   rotation = 'vertical', size = resname_size, fontname = 'monospace')
+        plt.show()
+
+    def _format_int(self, interaction):
+        three_to_one = {
+            'TYR': 'Y',
+            'VAL': 'V',
+            'ARG': 'R',
+            'THR': 'T',
+            'GLU': 'E',
+            'SER': 'S',
+            'PHE': 'F',
+            'ALA': 'A',
+            'MET': 'M',
+            'ILE': 'I',
+            'ASP': 'D',
+            'GLN': 'Q',
+            'ASN': 'N',
+            'GLY': 'G',
+            'PRO': 'P',
+            'TRP': 'W',
+            'LEU': 'L',
+            'LYS': 'K',
+            'CYS': 'C',
+            'HIS': 'H'
+        }
+        name = interaction[1].split('(')[1][:-1]
+        num = interaction[1].split('(')[0].split(':')[1]
+        if name in three_to_one:
+            name = three_to_one[name]
+        
+        feature = [feature for feature, codes in feature_defs.items()
+                   if interaction[0] in codes]
+        if 'hbond' in feature:
+            feature.remove('hbond')
+        assert len(feature) == 1
+        feature = feature[0]
+
+
+        
+        return '{}{}:{}'.format(name, num, feature)
     
     def get_poses(self, cluster):
         return {l:self.docking[l].poses[p] for l,p in cluster.items()}
