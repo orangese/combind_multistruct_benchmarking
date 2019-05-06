@@ -7,7 +7,7 @@ def read_results(fname):
         fp.readline()
         for line in fp:
             if line[:3] == 'com': continue
-            print line.strip().split(',')
+            print(line.strip().split(','))
             ligand, combind, _, glide, _, best, _ = line.strip().split(',')
 
             data[ligand] = (int(combind),
@@ -25,7 +25,7 @@ def pose(poseviewer, pose_number, label = 'pose'):
         pose_number = '0' + str(pose_number)
     else:
         pose_number = str(pose_number)
-    print name, struct, ligand, pose_number
+    print(name, struct, ligand, pose_number)
     cmd.load(poseviewer)
     cmd.split_states(name)
     cmd.delete(name)
@@ -42,7 +42,7 @@ def pose(poseviewer, pose_number, label = 'pose'):
 def results(fname, protein, struct, docking):
     data = read_results(fname)
     for ligand, (combind, glide, best) in data.items():
-        print ligand
+        print(ligand)
         poseviewer = '{}/docking/{}/{}-to-{}/{}-to-{}_pv.maegz'.format(protein, docking,
                                                                        ligand, struct,
                                                                        ligand, struct)
@@ -58,8 +58,6 @@ def results(fname, protein, struct, docking):
     cmd.group('combind', 'combind*')
     cmd.group('grid', 'grid*')
 
-def check():
-    print diff
 
 cmd.extend('pose', pose)
 cmd.extend('results', results)

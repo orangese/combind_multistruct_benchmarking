@@ -92,9 +92,10 @@ class FP:
 
         if self.params['mode'] == 'pv':
             self.fp = self.fingerprint_pose_viewer()
+            self.write_fp()
         elif self.params['mode'] == 'st':
             self.fp = self.fingerprint_pair()
-        self.write_fp()
+            self.write_fp()
 
     def fingerprint(self, lig_st, prot_st, pnum=None):
         lig = AtomGroup(lig_st, 'lig')

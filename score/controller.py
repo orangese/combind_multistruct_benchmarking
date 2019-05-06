@@ -24,15 +24,13 @@ from glob import glob
 from grouper import grouper
 
 group_size = 4
-num_ligs = [10, 20]
-alpha_factors = [1.0] # [0.1, 1.0, 1.5, 2.0]
-features = [#['mcss', 'pipi', 'contact', 'hbond', 'sb'],
-            ['mcss', 'contact', 'hbond', 'sb'],
-            #['mcss', 'hbond', 'sb'],
-            #['pipi', 'contact', 'hbond', 'sb'],
-            #['mcss', 'pipi', 'contact', 'sb'],
-            #['mcss', 'pipi', 'hbond', 'sb'],
-            #['mcss', 'pipi', 'contact', 'hbond'],
+num_ligs = [10] #[1, 3, 5, 10, 15, 20]
+alpha_factors = [1.0]
+features = [['mcss', 'contact', 'hbond', 'sb'],
+            ['mcss', 'contact', 'sb'],
+            ['mcss', 'hbond', 'sb'],
+            ['mcss', 'contact', 'hbond'],
+            ['contact', 'hbond', 'sb']
             ]
 
 cmd = '$SCHRODINGER/run {0:}/main.py score {1:} {1:} {1:} {1:}'.format(

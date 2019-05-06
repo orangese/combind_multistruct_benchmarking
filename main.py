@@ -1,3 +1,11 @@
+#!/bin/sh
+if "true" : '''\'
+then
+exec "$SCHRODINGER/run" "$0" "$@"
+exit 127
+fi
+'''
+
 import sys
 import dock.prepare_all
 import ifp.fp
@@ -24,4 +32,8 @@ elif sys.argv[1] == 'statistics':
 
 elif sys.argv[1] == 'score':
 	score.scores.main(sys.argv[1:])
+
+else:
+	print('Invalid arguments. Doing nothing.')
+
 

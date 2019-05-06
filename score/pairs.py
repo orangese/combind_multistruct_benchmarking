@@ -41,7 +41,7 @@ class LigPair:
         pairs = {}
         for rank1 in range(min(len(self.l1.poses), self.max_poses)):
             for rank2 in range(min(len(self.l2.poses), self.max_poses)):
-                if self.mcss:
+                if 'mcss' in self.features:
                     mcss_score = self.mcss.get_rmsd(self.l1.ligand, self.l2.ligand,
                                                     rank1, rank2)
                 else:

@@ -28,6 +28,18 @@ PRECISION   SP
 NENHANCED_SAMPLING   4
 '''
 
+GLIDE_ES4_NOCANON = '''GRIDFILE   ../../grids/{}/{}.zip
+LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
+DOCKING_METHOD   confgen
+CANONICALIZE   False
+EXPANDED_SAMPLING   False
+POSES_PER_LIG   300
+POSTDOCK_NPOSE   300
+WRITEREPT   True
+PRECISION   SP
+NENHANCED_SAMPLING   4
+'''
+
 GLIDE_ES1 = '''GRIDFILE   ../../grids/{}/{}.zip
 LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
 DOCKING_METHOD   confgen
@@ -88,6 +100,9 @@ modes = {'confgen':{
         'confgen_es4': {
                        'name':     'confgen_es4',
                        'template': GLIDE_ES4},
+        'confgen_es4_nocanon': {
+                       'name':     'confgen_es4_noncanon',
+                       'template': GLIDE_ES4_NOCANON},
         'inplace':{
                        'name':     'inplace',
                        'template': INPLACE},

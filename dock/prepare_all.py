@@ -51,6 +51,7 @@ def main(args):
             dock(lm)
             dock(lm, mode = 'confgen_es1')
             dock(lm, mode = 'confgen_es4')
+            dock(lm, mode = 'confgen_es4_nocanon')
             dock(lm, mode = 'inplace')
             dock(lm, mode = 'mininplace')
             dock(lm, mode = 'XP')

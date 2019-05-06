@@ -130,13 +130,13 @@ shared_paths = {
     'data'      : "/scratch/PI/rondror/combind/bpp_data",
     'docking'   : 'confgen_es4',
     'mcss'      : 'mcss16',
-    'stats'     : stats['stats6'],
-    'ifp'       : ifp['ifp4'],
+    'stats'     : stats['stats7'],
+    'ifp'       : ifp['ifp5'],
     'pdb_order' : 'First'
 }
 
 import os
-exclude = []
+exclude = ['D2']
 proteins = [p for p in os.listdir(shared_paths['data']) if p[0] != '.' and p not in exclude]
 
 assert shared_paths['ifp']['version'] == shared_paths['stats']['ifp_version']
