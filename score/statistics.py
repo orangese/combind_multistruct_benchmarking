@@ -61,9 +61,8 @@ def get_interaction(lig_pair, interaction):
     
     Returns X_native: features for native poses
             X_ref:    features for all poses
-            w_ref:    pairs of glide scores for all poses
     '''
-    X_native, X_ref, w_ref = [], [], []
+    X_native, X_ref = [], []
     for (r1,r2), pp in lig_pair.pose_pairs.items():
         if max(r1, r2) > shared_paths['stats']['max_poses']: continue
         pp_x = lig_pair.get_feature(interaction, r1, r2)
@@ -71,9 +70,7 @@ def get_interaction(lig_pair, interaction):
             if pp.correct():
                 X_native += [pp_x]
             X_ref += [pp_x]
-
-    X_native, X_ref = np.array(X_native), np.array(X_ref)
-    return X_native, X_ref,  w_ref
+    return np.array(X_native), np.array(X_ref)
 
 def statistics_lig_pair(protein, ligand1, ligand2, interactions):
     '''
@@ -103,7 +100,8 @@ def statistics_lig_pair(protein, ligand1, ligand2, interactions):
     docking = prot.docking[lm.st]
     lig_pair = LigPair(docking.ligands[ligand1],
                        docking.ligands[ligand2],
-                       interactions, lm.mcss if 'mcss' in interactions else None,
+                       interactions,
+                       lm.mcss if 'mcss' in interactions else None,
                        shared_paths['stats']['max_poses'])
 
     # Compute all remaining statistics and write to files.
@@ -112,15 +110,13 @@ def statistics_lig_pair(protein, ligand1, ligand2, interactions):
             and interaction in stats['reference']):
             continue
 
-        X_native, X_ref, w_ref = get_interaction(lig_pair, interaction)
-        w_ref = 1
+        X_native, X_ref = get_interaction(lig_pair, interaction)
 
         for d, X in [('native', X_native), ('reference', X_ref)]:
             domain = (0, 15) if interaction == 'mcss' else (0, 1)
+            sd = shared_paths['stats']['stats_sd']*(domain[1]-domain[0])
 
-            stats[d][interaction] = DensityEstimate(domain = domain,
-                              sd = shared_paths['stats']['stats_sd']*(domain[1]-domain[0]),
-                              reflect = True)
+            stats[d][interaction] = DensityEstimate(domain=domain, sd=sd, reflect=True)
             stats[d][interaction].fit(X)
             stats[d][interaction].write(fname.format(interaction, d))
     return stats

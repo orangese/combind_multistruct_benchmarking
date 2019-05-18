@@ -182,7 +182,6 @@ class DensityEstimate:
         Returns a new function representing the average of the self and other
         functions. The domain of the new function covers the domain of both
         input functions with the same number of points as self.
-        If weight, weight average by number of samples.
         '''
         assert self.reflect == other.reflect, "Either reflect or don't."
         if not other.n_samples:

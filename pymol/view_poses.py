@@ -19,6 +19,8 @@ def pose(poseviewer, pose_number, label = 'pose'):
     name = poseviewer.split('/')[-1].split('.')[0]
     struct = name.split('-to-')[-1].split('_')[0] + '_prot'
     ligand = name.split('-to-')[0]
+    if struct == '6CM4_prot':
+        ligand = ligand.replace('_lig', '')
     if pose_number == 0:
         pose_number = ''
     elif pose_number < 10:

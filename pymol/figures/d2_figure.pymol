@@ -1,0 +1,28 @@
+
+results D2/scores/v2/pdb.sc, D2, 6CM4, confgen_es4
+
+
+bg_color white
+set cartoon_transparency, 0
+set cartoon_oval_length, 1.0
+set opaque_background, 0
+set cartoon_color, white
+set ray_trace_mode, 1
+set ray_shadow, 0
+set dash_width, 4
+set surface_cavity_mode, 2
+hide lines
+util.cbaw
+
+
+
+color chartreuse, combind* and element c
+color hotpink, glide* and element c
+color manganese, grid* and element c
+
+
+show sticks, resid 91+100+118+193+389+386+114
+hide sticks, element H and not (element N+O extend 1)
+hide sticks, name o+n+c
+
+

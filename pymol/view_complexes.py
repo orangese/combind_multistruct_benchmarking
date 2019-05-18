@@ -25,7 +25,7 @@ def load_crystal_protein(protein, ligand):
     cmd.set_name('{}_prot'.format(ligand), 'prot_{}'.format(ligand))
 
 def load_crystal_pose(protein, ligand):
-    cmd.load('{}/structures/ligands/{}_lig.mae'.format(protein, ligand))
+    cmd.load('{}/ligands/prepared_ligands/{}_lig.mae'.format(protein, ligand))
     cmd.set_name('{}_lig'.format(ligand), 'crystal_{}'.format(ligand))
 
 ###################################################################

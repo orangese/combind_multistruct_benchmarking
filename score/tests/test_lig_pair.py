@@ -6,6 +6,7 @@ import pytest
 from score.pairs import LigPair
 from containers import Ligand, Pose
 
+
 def create_ligand(name, fps):
 	ligand = Ligand(name, '', '', '')
 	ligand.poses = []

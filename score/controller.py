@@ -24,13 +24,13 @@ from glob import glob
 from grouper import grouper
 
 group_size = 4
-num_ligs = [10] #[1, 3, 5, 10, 15, 20]
-alpha_factors = [1.0]
+num_ligs = [1, 3, 5, 10, 15, 20]
+alpha_factors = [1.71]
 features = [['mcss', 'contact', 'hbond', 'sb'],
-            ['mcss', 'contact', 'sb'],
-            ['mcss', 'hbond', 'sb'],
-            ['mcss', 'contact', 'hbond'],
-            ['contact', 'hbond', 'sb']
+            #['mcss', 'contact', 'sb', 'hbond_donor', 'hbond_acceptor'],
+            #['mcss', 'hbond', 'sb'],
+            #['mcss', 'contact', 'hbond'],
+            #['contact', 'hbond', 'sb']
             ]
 
 cmd = '$SCHRODINGER/run {0:}/main.py score {1:} {1:} {1:} {1:}'.format(
@@ -149,20 +149,20 @@ def run_pdb():
         os.chdir('..')
 
         # Crystal.
-        os.chdir('crystal')
-        for alpha_factor in alpha_factors:
-            for feature in features:
-                score(stats_root, protein.lm.st, protein.lm.protein, ligands,
-                      True, alpha_factor, feature)
-        os.chdir('..')
+        # os.chdir('crystal')
+        # for alpha_factor in alpha_factors:
+        #     for feature in features:
+        #         score(stats_root, protein.lm.st, protein.lm.protein, ligands,
+        #               True, alpha_factor, feature)
+        # os.chdir('..')
 
-        # Crystal only.
-        os.chdir('only_crystal')
-        for alpha_factor in alpha_factors:
-            for feature in features:
-                score(stats_root, protein.lm.st, protein.lm.protein, ligands,
-                      True, alpha_factor, feature, crystal = True)
-        os.chdir('..')
+        # # Crystal only.
+        # os.chdir('only_crystal')
+        # for alpha_factor in alpha_factors:
+        #     for feature in features:
+        #         score(stats_root, protein.lm.st, protein.lm.protein, ligands,
+        #               True, alpha_factor, feature, crystal = True)
+        # os.chdir('..')
 
 def run_chembl(helpers):
     for i, d in enumerate(proteins):
@@ -252,7 +252,7 @@ def merge_protein(mode, protein):
             _protein, _, version, pdb, params, settings, name = fname.split('/')[-7:]
             settings = settings.split('-')
             if len(settings) == 2:
-                settings =['0'] + settings
+                settings = ['0'] + settings
             assert _protein == protein
             assert version == shared_paths['stats']['version']
                 
