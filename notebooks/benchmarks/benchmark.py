@@ -33,6 +33,7 @@ def load_pdb(stats, helpers = 'pdb'):
 def load_chembl(stats, helpers):
     data = {}
     for protein in proteins:
+        if protein == 'D2': continue
         print(protein)
         fname = '{}/{}/scores/{}/summary/{}.tsv'.format(shared_paths['data'], protein, stats, helpers)
         with open(fname) as fp:
@@ -100,13 +101,15 @@ class Marker:
         self.next[fam] = (out[0], (out[1] + 1) % len(self.markers))
         return out[0], self.markers[out[1]]
 
-def ligand_level_performance(results):
-    x, y = [], []
+def ligand_level_performance(results, prots = []):
+    x, y, z = [], [], []
     for prot, ligs in results.items():
+        if prots and prot not in prots: continue
         for lig, (combind, glide, best) in ligs.items():
             x += [glide]
             y += [combind]
-    return x, y
+            z += [best]
+    return x, y, z
 
 
 def target_level_performance(results, valid_lig = lambda x, y: True, thresh = None):
@@ -175,13 +178,17 @@ def target_level_plot(title, xlabel, ylabel, x, y, label):
 ######################################################################
 
 def benchmark(results, thresh = 2.0, correct_only = False, families = None,
-              mcss_sizes = None, low = None, high = None):
+              mcss_sizes = None, low = None, high = None, exclude = None):
     if high is not None or low is not None:
         assert mcss_sizes is not None
     low  = -1 if low  is None else low
     high = 2  if high is None else high
     
     def valid_lig(prot, lig):
+        def not_excluded():
+            if exclude is None:
+                return True
+            return prot not in exclude
         def overlap():
             if low < 0 and high > 1:
                 return True
@@ -197,7 +204,7 @@ def benchmark(results, thresh = 2.0, correct_only = False, families = None,
                 return True
             return Marker().get_family(prot) in families
 
-        return overlap() and correct_exists() and family()
+        return overlap() and correct_exists() and family() and not_excluded()
     
     print('{} valid ligands'.format(sum(valid_lig(prot, lig)
                                         for prot, ligs in results.items()
