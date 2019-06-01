@@ -33,6 +33,7 @@ def load_pdb(stats, helpers = 'pdb'):
 def load_chembl(stats, helpers):
     data = {}
     for protein in proteins:
+        if protein == 'D2': continue
         print(protein)
         fname = '{}/{}/scores/{}/summary/{}.tsv'.format(shared_paths['data'], protein, stats, helpers)
         with open(fname) as fp:
@@ -72,10 +73,10 @@ class Marker:
     family = {
         'GPCR': ['5HT2B', 'A2AR', 'B1AR', 'B2AR', 'CHRM3','SMO', 'MGLUR5'],
         'Kinase': ['BRAF', 'CDK2', 'CHK1', 'JAK2', 'PLK1', 'MAPK14', 'MEK1'],
-        'Transporter': ['SLC6A4', 'GLUT1', 'DAT', 'TRPV1'],
+        'Transporter': ['SLC6A4', 'GLUT1', 'DAT'],
         'Nuclear Receptor': ['NR3C2', 'NR3C1', 'AR', 'VDR', 'ERA'],
         'Peptidase': ['F2', 'F10', 'F11', 'PLAU', 'P00760', 'BACE1'],
-        'Other': ['PYGM', 'PTPN1', 'BRD4', 'HSP90AA1', 'PDE10A', 'SIGMAR1', 'ELANE']
+        'Other': ['PYGM', 'PTPN1', 'BRD4', 'HSP90AA1', 'PDE10A', 'SIGMAR1', 'ELANE', 'TRPV1', 'DHFR']
     }
 
     markers = ['o', 'v', 's', '<', '>', 'X', 'D']
@@ -100,13 +101,16 @@ class Marker:
         self.next[fam] = (out[0], (out[1] + 1) % len(self.markers))
         return out[0], self.markers[out[1]]
 
-def ligand_level_performance(results):
-    x, y = [], []
+def ligand_level_performance(results, prots = [], correct_only = False):
+    x, y, z = [], [], []
     for prot, ligs in results.items():
+        if prots and prot not in prots: continue
         for lig, (combind, glide, best) in ligs.items():
+            if best > 2.0: continue
             x += [glide]
             y += [combind]
-    return x, y
+            z += [best]
+    return x, y, z
 
 
 def target_level_performance(results, valid_lig = lambda x, y: True, thresh = None):
@@ -154,34 +158,58 @@ def ligand_level_plot(title, xlabel, ylabel, x, y, thresh):
     plt.show()
 
 def target_level_plot(title, xlabel, ylabel, x, y, label):
-    m = Marker()
-    f, ax = plt.subplots()
-    for i, (_x, _y, _label) in enumerate(zip(x, y, label)):
-        color, marker = m(_label)
-        plt.scatter(_x, _y, marker = marker, c = color, label = _label)
-    plt.xlabel(xlabel, fontsize = 16)
-    plt.ylabel(ylabel, fontsize = 16)
+    f, ax = plt.subplots(figsize = (3, 10))
+    
+    
+    order = ['GPCR', 'Transporter', 'Kinase', 'Nuclear Receptor', 'Peptidase', 'Other']
+    order = order[::-1]
+    
+    def get_fam(prot):
+        fam = [k for k, v in Marker.family.items() if prot in v]
+        assert len(fam) == 1, prot
+        return fam[0]
+        
+    
+    def key(args):
+        perf, _, prot = args
+        fam = get_fam(prot)
+        return order.index(fam)*1000 + perf
+        
+    
+    x, y, label = zip(*sorted(zip(x, y, label), key = lambda args: key(args)))
+    yticks = []
+    i = 0
+    last_fam = order[0]
+    for _x, _y, prot in zip(x, y, label):
+        if get_fam(prot) != last_fam:
+            i += 2
+            yticks += ['', '']
+        yticks += [prot]
+        plt.scatter(_y, i, c = 'g')
+        plt.scatter(_x, i, c = 'm')
+        last_fam = get_fam(prot)
+        i += 1
+    plt.yticks(range(len(yticks)), yticks, fontsize = 12)
     plt.title(title, fontsize = 20)
-    plt.plot(range(int(math.ceil(max(x+y)))+1), linestyle='--', c = 'k')
-    ax.set_aspect('equal', 'box')
     print('{} {}: {}'.format(title, xlabel, sum(x) / float(len(x))))
     print('{} {}: {}'.format(title, ylabel, sum(y) / float(len(y))))
-    handles, labels = ax.get_legend_handles_labels()
-    labels, handles = zip(*sorted(zip(labels, handles),
-                                      key=lambda t: m.get_index(t[0])))
-    plt.legend(handles, labels, bbox_to_anchor=(1.1, 1.05), ncol=3)
+    plt.xlim(0, max(x+y))
     plt.show()
     
 ######################################################################
 
 def benchmark(results, thresh = 2.0, correct_only = False, families = None,
-              mcss_sizes = None, low = None, high = None):
+              mcss_sizes = None, low = None, high = None, exclude = None):
     if high is not None or low is not None:
         assert mcss_sizes is not None
     low  = -1 if low  is None else low
     high = 2  if high is None else high
     
     def valid_lig(prot, lig):
+        def not_excluded():
+            if exclude is None:
+                return True
+            return prot not in exclude
         def overlap():
             if low < 0 and high > 1:
                 return True
@@ -197,7 +225,7 @@ def benchmark(results, thresh = 2.0, correct_only = False, families = None,
                 return True
             return Marker().get_family(prot) in families
 
-        return overlap() and correct_exists() and family()
+        return overlap() and correct_exists() and family() and not_excluded()
     
     print('{} valid ligands'.format(sum(valid_lig(prot, lig)
                                         for prot, ligs in results.items()

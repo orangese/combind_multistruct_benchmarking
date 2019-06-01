@@ -1,7 +1,4 @@
 import os
-from schrodinger.structure import StructureReader, StructureWriter
-from schrodinger.structutils.analyze import evaluate_smarts_canvas
-from schrodinger.structutils.rmsd import ConformerRmsd
 
 class MCSS:
     """
@@ -345,6 +342,10 @@ class MCSS:
                 atom.atomic_number = 9
             
 def main(args):
+    from schrodinger.structure import StructureReader, StructureWriter
+    from schrodinger.structutils.analyze import evaluate_smarts_canvas
+    from schrodinger.structutils.rmsd import ConformerRmsd
+
     mode = args[1]
     if mode == 'INIT':
         l1, l2, l1_path, l2_path, init_file, mcss_types_file = args[2:8]
