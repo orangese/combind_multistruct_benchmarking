@@ -73,10 +73,10 @@ class Marker:
     family = {
         'GPCR': ['5HT2B', 'A2AR', 'B1AR', 'B2AR', 'CHRM3','SMO', 'MGLUR5'],
         'Kinase': ['BRAF', 'CDK2', 'CHK1', 'JAK2', 'PLK1', 'MAPK14', 'MEK1'],
-        'Transporter': ['SLC6A4', 'GLUT1', 'DAT', 'TRPV1'],
+        'Transporter': ['SLC6A4', 'GLUT1', 'DAT'],
         'Nuclear Receptor': ['NR3C2', 'NR3C1', 'AR', 'VDR', 'ERA'],
         'Peptidase': ['F2', 'F10', 'F11', 'PLAU', 'P00760', 'BACE1'],
-        'Other': ['PYGM', 'PTPN1', 'BRD4', 'HSP90AA1', 'PDE10A', 'SIGMAR1', 'ELANE']
+        'Other': ['PYGM', 'PTPN1', 'BRD4', 'HSP90AA1', 'PDE10A', 'SIGMAR1', 'ELANE', 'TRPV1', 'DHFR']
     }
 
     markers = ['o', 'v', 's', '<', '>', 'X', 'D']
@@ -101,11 +101,12 @@ class Marker:
         self.next[fam] = (out[0], (out[1] + 1) % len(self.markers))
         return out[0], self.markers[out[1]]
 
-def ligand_level_performance(results, prots = []):
+def ligand_level_performance(results, prots = [], correct_only = False):
     x, y, z = [], [], []
     for prot, ligs in results.items():
         if prots and prot not in prots: continue
         for lig, (combind, glide, best) in ligs.items():
+            if best > 2.0: continue
             x += [glide]
             y += [combind]
             z += [best]
@@ -157,22 +158,42 @@ def ligand_level_plot(title, xlabel, ylabel, x, y, thresh):
     plt.show()
 
 def target_level_plot(title, xlabel, ylabel, x, y, label):
-    m = Marker()
-    f, ax = plt.subplots()
-    for i, (_x, _y, _label) in enumerate(zip(x, y, label)):
-        color, marker = m(_label)
-        plt.scatter(_x, _y, marker = marker, c = color, label = _label)
-    plt.xlabel(xlabel, fontsize = 16)
-    plt.ylabel(ylabel, fontsize = 16)
+    f, ax = plt.subplots(figsize = (3, 10))
+    
+    
+    order = ['GPCR', 'Transporter', 'Kinase', 'Nuclear Receptor', 'Peptidase', 'Other']
+    order = order[::-1]
+    
+    def get_fam(prot):
+        fam = [k for k, v in Marker.family.items() if prot in v]
+        assert len(fam) == 1, prot
+        return fam[0]
+        
+    
+    def key(args):
+        perf, _, prot = args
+        fam = get_fam(prot)
+        return order.index(fam)*1000 + perf
+        
+    
+    x, y, label = zip(*sorted(zip(x, y, label), key = lambda args: key(args)))
+    yticks = []
+    i = 0
+    last_fam = order[0]
+    for _x, _y, prot in zip(x, y, label):
+        if get_fam(prot) != last_fam:
+            i += 2
+            yticks += ['', '']
+        yticks += [prot]
+        plt.scatter(_y, i, c = 'g')
+        plt.scatter(_x, i, c = 'm')
+        last_fam = get_fam(prot)
+        i += 1
+    plt.yticks(range(len(yticks)), yticks, fontsize = 12)
     plt.title(title, fontsize = 20)
-    plt.plot(range(int(math.ceil(max(x+y)))+1), linestyle='--', c = 'k')
-    ax.set_aspect('equal', 'box')
     print('{} {}: {}'.format(title, xlabel, sum(x) / float(len(x))))
     print('{} {}: {}'.format(title, ylabel, sum(y) / float(len(y))))
-    handles, labels = ax.get_legend_handles_labels()
-    labels, handles = zip(*sorted(zip(labels, handles),
-                                      key=lambda t: m.get_index(t[0])))
-    plt.legend(handles, labels, bbox_to_anchor=(1.1, 1.05), ncol=3)
+    plt.xlim(0, max(x+y))
     plt.show()
     
 ######################################################################

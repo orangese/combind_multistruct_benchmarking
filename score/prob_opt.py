@@ -216,8 +216,8 @@ class PredictStructs:
         for feature 'fname' for poses in 'pose_cluster'
         as len(pose_cluster) x len(pose_cluster) numpy arrays.
         """
-        x                    = np.zeros((len(pose_cluster), len(pose_cluster)))
-        log_likelihood_ratio = np.zeros((len(pose_cluster), len(pose_cluster)))
+        x                    = np.zeros((len(lig_order), len(lig_order)))
+        log_likelihood_ratio = np.zeros((len(lig_order), len(lig_order)))
 
         for i, ligname1 in enumerate(lig_order):
             for j, ligname2 in enumerate(lig_order):
