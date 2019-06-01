@@ -20,7 +20,7 @@ color hotpink, glide* and element c
 color manganese, grid* and element c
 
 
-show sticks, resid 91+100+118+193+389+386+114
+show sticks, resid 91+100+193+386+114
 hide sticks, element H and not (element N+O extend 1)
 hide sticks, name o+n+c
 

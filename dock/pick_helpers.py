@@ -1,7 +1,7 @@
 import os
 import sys
 
-def pick_helpers(lm, maxnum=21):
+def pick_helpers(lm, maxnum=20):
 
     parent = 'chembl/helpers'
     os.system('mkdir -p {}'.format(parent))
