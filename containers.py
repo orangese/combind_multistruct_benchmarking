@@ -188,6 +188,15 @@ class LigandManager:
         else:
             assert False
 
+        if self.protein == 'AR':
+            self.st = '2AXA'
+
+        if self.protein == 'NR3C1':
+            self.st = '3BQD'
+
+        if self.protein == 'NR3C2':
+            self.st = '3WFF'
+
         self.mcss = MCSSController(self)
         self.helpers = {}
 
