@@ -3,6 +3,8 @@ from schrodinger.structure import StructureReader, StructureWriter
 from schrodinger.structutils.analyze import evaluate_smarts_canvas
 from schrodinger.structutils.rmsd import ConformerRmsd
 
+from shared_paths import shared_paths
+
 class MCSS:
     """
     Reads and writes MCSS features for a ligand pair.
@@ -66,8 +68,13 @@ class MCSS:
         (It would be problematic if small MCSSs were taken into account
         because the score is based solely on RMSD).
         """
-        return (2 * self.n_mcss_atoms > min(self.n_l1_atoms, self.n_l2_atoms)
-                and self.n_mcss_atoms > 10)
+        f = shared_paths['stats']['mcss_func']
+        r = shared_paths['stats']['mcss_rel_min']
+        rel_thresh = r * f(self.n_l1_atoms, self.n_l2_atoms)
+        
+        abs_thresh = shared_paths['stats']['mcss_abs_min']
+        
+        return self.n_mcss_atoms > max(rel_thresh, abs_thresh)
     
     # Constructors
     @classmethod
@@ -345,9 +352,6 @@ class MCSS:
                 atom.atomic_number = 9
             
 def main(args):
-    from schrodinger.structure import StructureReader, StructureWriter
-    from schrodinger.structutils.analyze import evaluate_smarts_canvas
-    from schrodinger.structutils.rmsd import ConformerRmsd
 
     mode = args[1]
     if mode == 'INIT':

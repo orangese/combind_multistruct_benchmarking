@@ -207,7 +207,9 @@ class MCSSController:
         """
         if l1 > l2: l1, l2 = l2, l1
         mcss = self.MCSSs["{}-{}".format(l1, l2)]
-        return mcss.n_mcss_atoms / float(max(mcss.n_l1_atoms, mcss.n_l2_atoms))
+
+        f = shared_paths['stats']['mcss_func']
+        return mcss.n_mcss_atoms / float(f(mcss.n_l1_atoms, mcss.n_l2_atoms))
 
     def load_mcss(self, temp_init_files = None):
         """
