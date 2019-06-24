@@ -48,14 +48,15 @@ def main(args):
             lm.mcss.compute_mcss() # Computes MCSS, for use in pick_helpers
 
         if task == 'p':
-            dock(lm)
-            dock(lm, mode = 'confgen_es1')
+            #dock(lm)
+            #dock(lm, mode = 'confgen_es1')
             dock(lm, mode = 'confgen_es4')
-            dock(lm, mode = 'confgen_es4_nocanon')
-            dock(lm, mode = 'inplace')
-            dock(lm, mode = 'mininplace')
+            dock(lm, mode = 'confgen_es4_soft')
+            #dock(lm, mode = 'confgen_es4_nocanon')
+            #dock(lm, mode = 'inplace')
+            #dock(lm, mode = 'mininplace')
             dock(lm, mode = 'XP')
-            dock(lm, mode = 'expanded')
+            #dock(lm, mode = 'expanded')
             lm.mcss.compute_mcss(False)
             compute_fp(lm, raw = 'raw' in shared_paths['ifp']['version'])
 

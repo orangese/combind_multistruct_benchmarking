@@ -187,6 +187,17 @@ class MCSSController:
             return self.MCSSs[name].n_mcss_atoms
         return sorted(ligands, key=size, reverse=True)
 
+    def get_mcss_and_ligand_sizes(self, l1, l2):
+        """
+        Returns the fraction of the smaller of the ligands
+        that composes the MCSS for l1 and l2.
+
+        l1, l2: string, ligand names
+        """
+        if l1 > l2: l1, l2 = l2, l1
+        mcss = self.MCSSs["{}-{}".format(l1, l2)]
+        return mcss.n_mcss_atoms, mcss.n_l1_atoms, mcss.n_l2_atoms
+
     def get_mcss_size(self, l1, l2):
         """
         Returns the fraction of the smaller of the ligands
@@ -196,7 +207,7 @@ class MCSSController:
         """
         if l1 > l2: l1, l2 = l2, l1
         mcss = self.MCSSs["{}-{}".format(l1, l2)]
-        return mcss.n_mcss_atoms / float(min(mcss.n_l1_atoms, mcss.n_l2_atoms))
+        return mcss.n_mcss_atoms / float(max(mcss.n_l1_atoms, mcss.n_l2_atoms))
 
     def load_mcss(self, temp_init_files = None):
         """
@@ -359,7 +370,7 @@ class MCSSController:
             self.no_mcss.add((l1,l2))
         elif (    compute_rmsd
               and (l1 in self.docked or 'crystal' in l1)
-              and (l2 in self.docked or 'crsytal' in l2)
+              and (l2 in self.docked or 'crystal' in l2)
               and self.MCSSs[name].is_valid()
               and not os.path.exists(self.rmsd_file.format(name))):
             self.no_rmsd.add((l1, l2))

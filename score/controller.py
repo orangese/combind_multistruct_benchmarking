@@ -25,10 +25,10 @@ from grouper import grouper
 
 group_size = 4
 num_ligs = [1, 3, 5, 10, 15, 20]
-alpha_factors = [1.0, 2.0]
+alpha_factors = [0.1, 0.5, 1.0, 2.0]
 features = [['mcss', 'contact', 'hbond', 'sb'],
-            #['mcss', 'contact', 'sb', 'hbond_donor', 'hbond_acceptor'],
-            #['mcss', 'hbond', 'sb'],
+            ['mcss'],
+            ['mcss', 'hbond', 'sb'],
             #['mcss', 'contact', 'hbond'],
             #['contact', 'hbond', 'sb']
             ]
@@ -151,20 +151,20 @@ def run_pdb():
         os.chdir('..')
 
         # Crystal.
-        # os.chdir('crystal')
-        # for alpha_factor in alpha_factors:
-        #     for feature in features:
-        #         score(stats_root, protein.lm.st, protein.lm.protein, ligands,
-        #               True, alpha_factor, feature)
-        # os.chdir('..')
+        os.chdir('crystal')
+        for alpha_factor in alpha_factors:
+            for feature in features:
+                score(stats_root, protein.lm.st, protein.lm.protein, ligands,
+                      True, alpha_factor, feature)
+        os.chdir('..')
 
-        # # Crystal only.
-        # os.chdir('only_crystal')
-        # for alpha_factor in alpha_factors:
-        #     for feature in features:
-        #         score(stats_root, protein.lm.st, protein.lm.protein, ligands,
-        #               True, alpha_factor, feature, crystal = True)
-        # os.chdir('..')
+        # Crystal only.
+        os.chdir('only_crystal')
+        for alpha_factor in alpha_factors:
+            for feature in features:
+                score(stats_root, protein.lm.st, protein.lm.protein, ligands,
+                      True, alpha_factor, feature, crystal = True)
+        os.chdir('..')
 
 def run_chembl(helpers):
     for i, d in enumerate(proteins):
