@@ -15,6 +15,9 @@ class LigPair:
         self.mcss = mcss
         self.features = features
 
+        if 'mcss' in features:
+            assert self.mcss is not None
+
         self.pose_pairs = self._init_pose_pairs()
         self.feat_map = self._init_feat_map()
 
@@ -55,7 +58,8 @@ class LigPair:
         """
         Compute the maximum and minimum value of each feature.
         """
-        feat_map = {feature: (float('inf'), -float('inf')) for feature in self.features}
+        feat_map = {feature: (float('inf'), -float('inf'))
+                    for feature in self.features}
         for key, pose_pair in self.pose_pairs.items():
             for feature in self.features:
                 pp_x = pose_pair.get_feature(feature)
