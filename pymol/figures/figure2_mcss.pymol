@@ -9,7 +9,7 @@ set_view (\
     -0.914366126,    0.255829573,    0.313810468,\
     -0.000153530,   -0.000016991,  -47.932552338,\
    -30.465457916,    5.377783298,  -22.136383057,\
-    42.710041046,   53.334465027,  -20.000000000 )
+    42.381752014,   53.662754059,  -20.000000000 )
 
 bg_color white
 set cartoon_transparency, 0
@@ -22,6 +22,9 @@ set dash_width, 10
 set surface_cavity_mode, 2
 hide lines
 util.cbaw
+hide labels
+show cartoon
+hide cartoon, resid 247-251
 
 hide sticks
 show sticks, het
@@ -42,11 +45,11 @@ set stick_transparency, 0.5
 set stick_transparency, 0, 4UHR_mcss or 3EML_mcss
 
 
-disable *; enable 3EML_lig-to-2YDO_pv or 4UHR_lig-to-2YDO_pv or 3EML_lig-to-2YDO_pv.3EML_lig or 4UHR_lig-to-2YDO_pv.4UHR_lig
+disable *; enable 3EML_lig-to-2YDO_pv or 4UHR_lig-to-2YDO_pv or 3EML_lig-to-2YDO_pv.3EML_lig or 4UHR_lig-to-2YDO_pv.4UHR_lig or 3EML_lig-to-2YDO_pv.2YDO_prot
 ray
 png ~/Downloads/combind_code/pymol/figures/fig2_panels/mcss_ref.png
 
-disable *; enable 3EML_lig-to-2YDO_pv or 4UHR_lig-to-2YDO_pv or 3EML_lig-to-2YDO_pv.3EML_lig_63 or 4UHR_lig-to-2YDO_pv.4UHR_lig_01
+disable *; enable 3EML_lig-to-2YDO_pv or 4UHR_lig-to-2YDO_pv or 3EML_lig-to-2YDO_pv.3EML_lig_63 or 4UHR_lig-to-2YDO_pv.4UHR_lig_01 or 3EML_lig-to-2YDO_pv.2YDO_prot
 ray
 png ~/Downloads/combind_code/pymol/figures/fig2_panels/mcss_nat.png
 

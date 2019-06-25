@@ -16,10 +16,7 @@ set surface_cavity_mode, 2
 hide lines
 util.cbaw
 
-set stick_transparency, 0.5, crystal*
 
-
-color grey, crystal* and element c
 color manganese, prot* and element c
 color cyan, 3THB_lig-to-2OWB_pv.3THB_lig_09 and element c
 color magenta, 2YAC_lig-to-2OWB_pv.2YAC_lig and element c
@@ -46,37 +43,37 @@ set_view (\
 enable 2YAC_lig-to-2OWB_pv or 2YAC_lig-to-2OWB_pv.2YAC_lig or 2YAC_lig-to-2OWB_pv.2YAC_lig_11 or prot_2OWB or crystal_2YAC or 3THB_lig-to-2OWB_pv or 3THB_lig-to-2OWB_pv.3THB_lig_09 or 3THB_lig-to-2OWB_pv.2YAC_lig_04
 
 # Reference Poses
-disable *; enable 2YAC_lig-to-2OWB_pv or 2YAC_lig-to-2OWB_pv.2YAC_lig    or prot_2OWB or crystal_2YAC
+disable *; enable 2YAC_lig-to-2OWB_pv or 2YAC_lig-to-2OWB_pv.2YAC_lig or 2YAC_lig-to-2OWB_pv.2OWB_prot
 delete dist*
-dist prot_2OWB and 133/n, 2YAC_lig-to-2OWB_pv.2YAC_lig and element n and (133/n expand 4)
-dist prot_2OWB and 133/o, 2YAC_lig-to-2OWB_pv.2YAC_lig and element n and (133/o expand 3.1)
+dist 2YAC_lig-to-2OWB_pv.2OWB_prot and 133/n, 2YAC_lig-to-2OWB_pv.2YAC_lig and element n and (133/n expand 4)
+dist 2YAC_lig-to-2OWB_pv.2OWB_prot and 133/o, 2YAC_lig-to-2OWB_pv.2YAC_lig and element n and (133/o expand 3.1)
 hide labels
 ray
 png ~/Downloads/combind_code/pymol/figures/fig2_panels/2YAC_ref.png
 
 
-disable *; enable 3THB_lig-to-2OWB_pv or 3THB_lig-to-2OWB_pv.3THB_lig_09 or prot_2OWB or crystal_3THB
+disable *; enable 3THB_lig-to-2OWB_pv or 3THB_lig-to-2OWB_pv.3THB_lig_09 or 3THB_lig-to-2OWB_pv.2OWB_prot
 ray
 png ~/Downloads/combind_code/pymol/figures/fig2_panels/3THB_ref.png
 
 
 # Near-Native Poses
 
-disable *; enable 2YAC_lig-to-2OWB_pv or 2YAC_lig-to-2OWB_pv.2YAC_lig_11 or prot_2OWB or crystal_2YAC
+disable *; enable 2YAC_lig-to-2OWB_pv or 2YAC_lig-to-2OWB_pv.2YAC_lig_11 2YAC_lig-to-2OWB_pv.2OWB_prot
 delete dist*
-dist prot_2OWB and 133/n, 2YAC_lig-to-2OWB_pv.2YAC_lig_11 and element n and (133/n expand 4)
-dist prot_2OWB and 133/o, 2YAC_lig-to-2OWB_pv.2YAC_lig_11 and name N14
-dist prot_2OWB and 140/oe2, 2YAC_lig-to-2OWB_pv.2YAC_lig_11 and element n and (140/oe2 expand 3.1)
+dist 2YAC_lig-to-2OWB_pv.2OWB_prot and 133/n, 2YAC_lig-to-2OWB_pv.2YAC_lig_11 and element n and (133/n expand 4)
+dist 2YAC_lig-to-2OWB_pv.2OWB_prot and 133/o, 2YAC_lig-to-2OWB_pv.2YAC_lig_11 and name N14
+dist 2YAC_lig-to-2OWB_pv.2OWB_prot and 140/oe2, 2YAC_lig-to-2OWB_pv.2YAC_lig_11 and element n and (140/oe2 expand 4.0)
 hide labels
 ray
 png ~/Downloads/combind_code/pymol/figures/fig2_panels/2HVC_nat.png
 
 # 133 140
-disable *; enable 3THB_lig-to-2OWB_pv or 3THB_lig-to-2OWB_pv.3THB_lig_04 or prot_2OWB or crystal_3THB
+disable *; enable 3THB_lig-to-2OWB_pv or 3THB_lig-to-2OWB_pv.3THB_lig_04 or 3THB_lig-to-2OWB_pv.2OWB_prot
 delete dist*
-dist prot_2OWB and 133/n, 3THB_lig-to-2OWB_pv.3THB_lig_04 and element n and (133/n expand 4)
-dist prot_2OWB and 133/o, 3THB_lig-to-2OWB_pv.3THB_lig_04 and element n and (133/o expand 3.5)
-dist prot_2OWB and 140/oe2, 3THB_lig-to-2OWB_pv.3THB_lig_04 and element n and (140/oe2 expand 3.1)
+dist 3THB_lig-to-2OWB_pv.2OWB_prot and 133/n, 3THB_lig-to-2OWB_pv.3THB_lig_04 and element n and (133/n expand 4)
+dist 3THB_lig-to-2OWB_pv.2OWB_prot and 133/o, 3THB_lig-to-2OWB_pv.3THB_lig_04 and element n and (133/o expand 3.5)
+dist 3THB_lig-to-2OWB_pv.2OWB_prot and 140/oe2, 3THB_lig-to-2OWB_pv.3THB_lig_04 and element n and (140/oe2 expand 4.0)
 hide labels
 ray
 png ~/Downloads/combind_code/pymol/figures/fig2_panels/3THB_nat.png
