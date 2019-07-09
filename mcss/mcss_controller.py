@@ -114,7 +114,9 @@ class MCSSController:
         l1, l2: string, ligand names
         pose1, pose2: int, pose numbers for which to get rmsd.
         """
-        if l1 > l2: l1, l2 = l2, l1
+        if l1 > l2:
+            l1, l2 = l2, l1
+            pose1, pose2 = pose2, pose1
         mcss = self.MCSSs["{}-{}".format(l1, l2)]
         if not mcss.is_valid(): return None
         if (pose1, pose2) not in mcss.rmsds: return None

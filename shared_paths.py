@@ -1,4 +1,19 @@
 
+class StringFunction:
+    """
+    Wraps function such that it's string representation
+    can be read with the eval() function.
+    """
+    def __init__(self, func):
+        self.str = func
+        self.func = eval(func)
+    def __call__(self, *args):
+        return self.func(*args)
+    def __str__(self):
+        return self.str
+    def __repr__(self):
+        return self.str
+
 stats = {'stats5': {'version'         : 'stats5',
                     'ifp_version'     : 'ifp3',
                     'mcss_version'    : 'mcss14',
@@ -191,7 +206,7 @@ stats = {'stats5': {'version'         : 'stats5',
         'stats19': {'version'         : 'stats19', # Uses MCSS only if half size of larger ligand and greater than 10 atoms.
                     'ifp_version'     : 'ifp5',
                     'mcss_version'    : 'mcss16',
-                    'mcss_func'       : max,
+                    'mcss_func'       : StringFunction('max'),
                     'mcss_rel_min'    : 0.5,
                     'mcss_abs_min'    : 10,
                     'docking_version' : 'confgen_es4',
@@ -206,7 +221,7 @@ stats = {'stats5': {'version'         : 'stats5',
         'stats20': {'version'         : 'stats20',
                     'ifp_version'     : 'ifp5',
                     'mcss_version'    : 'mcss16',
-                    'mcss_func'       : max,
+                    'mcss_func'       : StringFunction('max'),
                     'mcss_rel_min'    : 0.5,
                     'mcss_abs_min'    : 10,
                     'docking_version' : 'XP',
