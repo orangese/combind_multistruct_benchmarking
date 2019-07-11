@@ -203,7 +203,7 @@ class PredictStructs:
         return self.lig_pairs[(ligname1, ligname2)].get_feature(feature, pose1, pose2)
 
     def _get_gscore(self, ligname, pose):
-        return self.ligands[ligname].poses[pose].emodel / 10.0
+        return self.ligands[ligname].poses[pose].gscore
 
     def _num_poses(self, ligname):
         return min(self.max_poses, len(self.ligands[ligname].poses))
@@ -335,8 +335,6 @@ class PredictStructs:
         assert len(feature) == 1
         feature = feature[0]
 
-
-        
         return '{}{}:{}'.format(name, num, feature)
     
     def get_poses(self, cluster):

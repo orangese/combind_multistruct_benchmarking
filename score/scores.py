@@ -89,7 +89,7 @@ class ScoreContainer:
                         glide_cluster[lig] = i
                         best_emodel = pose.emodel
 
-                glide_pose = glide_cluster[lig]
+                glide_pose = 0 #glide_cluster[lig]
                 best_pose = best_cluster[lig] if lig in best_cluster else None
                 f.write(','.join(map(str, [lig,
                                            combind_pose, poses[combind_pose].rmsd,
