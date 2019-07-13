@@ -115,6 +115,28 @@ def run_ligand_processing(unfinished):
         os.system('sbatch -p {} -t 1:00:00 batch-{}.sh'.format(queue,i))
         os.chdir('../..')
 
+def prep_chembl_workflow():
+    '''
+    Prep only the chembl ligands
+    :return:
+    '''
+    os.system('mkdir -p ligands/chembl')
+    ligs = load_chembl_raw() # Read files downloaded from chembl at chembl/*.xls
+    for lig in ligs:
+        print(lig.self.chembl_id,  lig.smiles)
+
+    #prep_from_smiles_cmd(smiles_str, folder_name, absolute_path)
+
+def prep_from_smiles_cmd(name):
+    '''
+    Make the folder if it doesn't exist
+
+    :param smiles_str:
+    :param absolute_folder_path:
+    :return: Return the cmd string
+    '''
+    return '$SCHRODINGER/ligprep -ismi {}.smi -omae {}_lig.mae -epik \n'.format(name, name)
+
 def proc_ligands():
     """
     Runs prepwizard and epik on ligands in raw_files.

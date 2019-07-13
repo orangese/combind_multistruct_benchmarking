@@ -10,7 +10,7 @@ from dock.sort_files import sort_files
 from dock.grids import make_grids
 from dock.dock import dock, verify_dock
 
-from dock.chembl_sort import get_ligands, proc_ligands
+import dock.chembl_sort as chembl_sort
 from dock.chembl_props import write_props
 from dock.pick_helpers import pick_helpers, load_helpers
 
@@ -41,9 +41,12 @@ def main(args):
             make_grids()           # Creates grid for all proteins
          
         if task == '2':
-            get_ligands()           # Writes MAE files for all ligs to ligands/raw_files
-            proc_ligands()          # Runs prepwizard & epik on all ligs
-           
+            chembl_sort.get_ligands()           # Writes MAE files for all ligs to ligands/raw_files
+            chembl_sort.proc_ligands()          # Runs prepwizard & epik on all ligs
+
+        if task == '2chembl':  # prep only chembl ligands from smiles
+            chembl_sort.prep_chembl_workflow()
+
         if task == 'm':
             lm.mcss.compute_mcss() # Computes MCSS, for use in pick_helpers
 
@@ -88,5 +91,6 @@ def main(args):
             dock(lm, mutants=True)
             compute_fp(lm)
             lm.mcss.compute_mcss(True)
+
 
         os.chdir('..')
