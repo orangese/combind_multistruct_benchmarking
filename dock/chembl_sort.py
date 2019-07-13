@@ -123,7 +123,7 @@ def prep_chembl_workflow():
     os.system('mkdir -p ligands/chembl')
     ligs = load_chembl_raw() # Read files downloaded from chembl at chembl/*.xls
     for lig in ligs:
-        print(lig.self.chembl_id,  lig.smiles)
+        print(lig.chembl_id,  lig.smiles)
 
     #prep_from_smiles_cmd(smiles_str, folder_name, absolute_path)
 
