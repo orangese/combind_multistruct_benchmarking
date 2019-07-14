@@ -116,34 +116,82 @@ def run_ligand_processing(unfinished):
         os.system('sbatch -p {} -t 1:00:00 batch-{}.sh'.format(queue,i))
         os.chdir('../..')
 
+def proc_ligands():
+    """
+    Runs prepwizard and epik on ligands in raw_files.
+    Writes output to prepared_ligands.
+    """
+    os.system('mkdir -p ligands/prepared_ligands')
+    os.system('rm -f ligands/prepared_ligands/*.sh')
+    os.system('rm -f ligands/prepared_ligands/*.out')
+
+    # All ligands that have not been fully prepared.
+    all_u = [l.split('.')[0] for l in os.listdir('ligands/raw_files')]
+    all_u = [l for l in all_u
+             if not os.path.exists('ligands/prepared_ligands/{}/{}.mae'.format(l,l))]
+    if len(all_u) > 0:
+        print(len(all_u), 'unfinished ligands')
+
+    resolve_protonation_state(all_u)
+
+    unfinished = []
+    for l in all_u:
+        prepped = 'ligands/prepared_ligands/{}/{}_out.mae'.format(l,l)
+        if not os.path.exists(prepped):
+            unfinished.append(l)
+    if len(unfinished) > 0:
+        print(len(unfinished), 'unprocessed ligands')
+    
+    run_ligand_processing(unfinished)
+
+
 def prep_chembl_workflow(dir):
     '''
     Prep only the needed chembl ligands
+    '''
+    chembl_all = get_needed_chembl()
+    for chembl in chembl_all:
+        # todo: eventually move the following to be part of some chembl object or prep object
+        chembl.folder = dir + '/ligands/chembl/' + chembl.chembl_id + '_lig'
+        os.makedirs(chembl.folder, exist_ok=True)
+        chembl.prep_cmd = prep_from_smiles_cmd(chembl.chembl_id)
+        # write the chembl smiles string to a file
+        with open(chembl.folder + '/' + chembl.chembl_id + '.smi', 'w') as f:
+            f.write(chembl.smiles)
+
+    run_config = {'group_size': group_size, 'run_folder': dir + '/ligands/chembl', 'dry_run': False, 'partition': queue}
+    process_chembl(run_config, chembl_all)
+
+def check_chembl_prep_complete(dir):
+    chembl_all = get_needed_chembl()
+    missing_list = []
+    for chembl in chembl_all:
+        chembl.folder = dir + '/ligands/chembl/' + chembl.chembl_id + '_lig'
+        if not os.path.isfile(chembl.folder + '/' + chembl.chembl_id + '_lig.mae'):
+            missing_list.append(chembl.chembl_id)
+    print('Missing {}/{}'.format(len(missing_list), len(chembl_all)), missing_list)
+    return missing_list
+
+def get_needed_chembl():
+    '''
+    Get the needed chembl objects
+    :return: (list of chembl objects)
     '''
     helpers = load_helpers()
     # get all relevent chembl ligand ids
     needed_cheml_ids = []
     for type in helpers.keys():
-        #merge lists of needed chembl ids together
+        # merge lists of needed chembl ids together
         needed_cheml_ids = needed_cheml_ids + sum(helpers[type].values(), [])
     needed_cheml_ids = [i[:-4] for i in set(needed_cheml_ids)]
 
-    ligs = load_chembl_raw() # Read files downloaded from chembl at chembl/*.xls
+    ligs = load_chembl_raw()  # Read files downloaded from chembl at chembl/*.xls
     chembl_all = [lig for lig in ligs.values() if lig.chembl_id in needed_cheml_ids]
-    for chembl in chembl_all:
-        #todo: eventually move the following to be part of some chembl object or prep object
-        chembl.folder = dir+'/ligands/chembl/'+chembl.chembl_id+'_lig'
-        os.makedirs(chembl.folder, exist_ok=True)
-        chembl.prep_cmd = prep_from_smiles_cmd(chembl.chembl_id)
-        #write the chembl smiles string to a file
-        with open(chembl.folder+'/'+chembl.chembl_id+'.smi', 'w') as f:
-            f.write(chembl.smiles)
-
-    run_config = {'group_size':group_size, 'run_folder':dir+'/ligands/chembl', 'dry_run':True, 'partition':queue}
-    process_chembl(run_config, chembl_all)
+    return chembl_all
 
 def prep_from_smiles_cmd(name):
     return '$SCHRODINGER/ligprep -ismi {}.smi -omae {}_lig.mae -epik \n'.format(name, name)
+
 
 def process_chembl(run_config, all_docking, type='prep'):
     '''
@@ -174,31 +222,3 @@ def write_sh_file(name, chembl_list, run_config):
             f.write('cd {}\n'.format(chembl.folder))
             f.write(chembl.prep_cmd)
             f.write('cd {}\n'.format(run_config['run_folder']))
-
-def proc_ligands():
-    """
-    Runs prepwizard and epik on ligands in raw_files.
-    Writes output to prepared_ligands.
-    """
-    os.system('mkdir -p ligands/prepared_ligands')
-    os.system('rm -f ligands/prepared_ligands/*.sh')
-    os.system('rm -f ligands/prepared_ligands/*.out')
-
-    # All ligands that have not been fully prepared.
-    all_u = [l.split('.')[0] for l in os.listdir('ligands/raw_files')]
-    all_u = [l for l in all_u
-             if not os.path.exists('ligands/prepared_ligands/{}/{}.mae'.format(l,l))]
-    if len(all_u) > 0:
-        print(len(all_u), 'unfinished ligands')
-
-    resolve_protonation_state(all_u)
-
-    unfinished = []
-    for l in all_u:
-        prepped = 'ligands/prepared_ligands/{}/{}_out.mae'.format(l,l)
-        if not os.path.exists(prepped):
-            unfinished.append(l)
-    if len(unfinished) > 0:
-        print(len(unfinished), 'unprocessed ligands')
-    
-    run_ligand_processing(unfinished)
