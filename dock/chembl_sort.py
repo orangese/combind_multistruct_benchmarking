@@ -145,12 +145,16 @@ def proc_ligands():
     run_ligand_processing(unfinished)
 
 
-def prep_chembl_workflow(dir):
+def prep_chembl_workflow(dir, only_missing=True):
     '''
     Prep only the needed chembl ligands
+    only_missing: (boolean) if true will only prepare chembl ligands
+        that don't already have an existing .mae file in prepared folder
     '''
     chembl_all = get_needed_chembl()
-    for chembl in chembl_all:
+    missing = check_chembl_prep_complete(dir)
+    chembl_needed = [l for l in chembl_all if l.chembl_id in missing] if only_missing else chembl_all
+    for chembl in chembl_needed:
         # todo: eventually move the following to be part of some chembl object or prep object
         chembl.folder = dir + '/ligands/chembl/' + chembl.chembl_id + '_lig'
         os.makedirs(chembl.folder, exist_ok=True)
@@ -158,9 +162,8 @@ def prep_chembl_workflow(dir):
         # write the chembl smiles string to a file
         with open(chembl.folder + '/' + chembl.chembl_id + '.smi', 'w') as f:
             f.write(chembl.smiles)
-
     run_config = {'group_size': group_size, 'run_folder': dir + '/ligands/chembl', 'dry_run': False, 'partition': queue}
-    process_chembl(run_config, chembl_all)
+    process_chembl(run_config, chembl_needed)
 
 def check_chembl_prep_complete(dir):
     chembl_all = get_needed_chembl()
@@ -179,14 +182,14 @@ def get_needed_chembl():
     '''
     helpers = load_helpers()
     # get all relevent chembl ligand ids
-    needed_cheml_ids = []
+    needed_chembl_ids = []
     for type in helpers.keys():
         # merge lists of needed chembl ids together
-        needed_cheml_ids = needed_cheml_ids + sum(helpers[type].values(), [])
-    needed_cheml_ids = [i[:-4] for i in set(needed_cheml_ids)]
+        needed_chembl_ids = needed_chembl_ids + sum(helpers[type].values(), [])
+    needed_chembl_ids = [i[:-4] for i in set(needed_chembl_ids)]
 
     ligs = load_chembl_raw()  # Read files downloaded from chembl at chembl/*.xls
-    chembl_all = [lig for lig in ligs.values() if lig.chembl_id in needed_cheml_ids]
+    chembl_all = [lig for lig in ligs.values() if lig.chembl_id in needed_chembl_ids]
     return chembl_all
 
 def prep_from_smiles_cmd(name):
