@@ -5,6 +5,7 @@ from grouper import grouper
 from schrodinger.structure import StructureReader, StructureWriter
 
 from dock.parse_chembl import load_chembl_raw, load_chembl_proc
+from dock.pick_helpers import load_helpers
 
 queue = 'owners'
 group_size = 10
@@ -115,27 +116,64 @@ def run_ligand_processing(unfinished):
         os.system('sbatch -p {} -t 1:00:00 batch-{}.sh'.format(queue,i))
         os.chdir('../..')
 
-def prep_chembl_workflow():
+def prep_chembl_workflow(dir):
     '''
-    Prep only the chembl ligands
-    :return:
+    Prep only the needed chembl ligands
     '''
-    os.system('mkdir -p ligands/chembl')
-    ligs = load_chembl_raw() # Read files downloaded from chembl at chembl/*.xls
-    for lig in ligs:
-        print(ligs[lig].chembl_id,  ligs[lig].smiles)
+    helpers = load_helpers()
+    # get all relevent chembl ligand ids
+    needed_cheml_ids = []
+    for type in helpers.keys():
+        #merge lists of needed chembl ids together
+        needed_cheml_ids = needed_cheml_ids + sum(helpers[type].values(), [])
+    needed_cheml_ids = [i[:-4] for i in set(needed_cheml_ids)]
 
-    #prep_from_smiles_cmd(smiles_str, folder_name, absolute_path)
+    ligs = load_chembl_raw() # Read files downloaded from chembl at chembl/*.xls
+    chembl_all = [lig for lig in ligs.values() if lig.chembl_id in needed_cheml_ids]
+    for chembl in chembl_all:
+        #todo: eventually move the following to be part of some chembl object or prep object
+        chembl.folder = dir+'/ligands/chembl/'+chembl.chembl_id+'_lig'
+        os.makedirs(chembl.folder, exist_ok=True)
+        chembl.prep_cmd = prep_from_smiles_cmd(chembl.chembl_id)
+        #write the chembl smiles string to a file
+        with open(chembl.folder+'/'+chembl.chembl_id, 'w') as f:
+            f.write(chembl.smiles)
+
+    run_config = {'group_size':group_size, 'run_folder':dir+'ligands/chembl', 'dry_run':True, 'partition':queue}
+    process_chembl(run_config, chembl_all)
 
 def prep_from_smiles_cmd(name):
-    '''
-    Make the folder if it doesn't exist
-
-    :param smiles_str:
-    :param absolute_folder_path:
-    :return: Return the cmd string
-    '''
     return '$SCHRODINGER/ligprep -ismi {}.smi -omae {}_lig.mae -epik \n'.format(name, name)
+
+def process_chembl(run_config, all_docking, type='prep'):
+    '''
+    method to run a set of tasks
+    todo: eventually this becomes a generic method to be used across different prep tasks
+    '''
+    groups = grouper(run_config['group_size'], all_docking)
+    # make the folder if it doesn't exist
+    os.makedirs(run_config['run_folder'], exist_ok=True)
+    top_wd = os.getcwd()  # get current working directory
+    os.chdir(run_config['run_folder'])
+    for i, docks_group in enumerate(groups):
+        file_name = '{}_{}'.format(type, i)
+        write_sh_file(file_name + '.sh', docks_group, run_config, type)
+        if not run_config['dry_run']:
+            os.system('sbatch -p {} -t 1:00:00 -o {}.out {}.sh'.format(run_config['partition'], file_name,
+                                                                       file_name))
+    os.chdir(top_wd)  # change back to original working directory
+
+def write_sh_file(self, name, chembl_list, run_config):
+    '''
+    method to write a sh file to run a set of commands
+    todo: eventually this becomes a generic method to be used across different prep tasks
+    '''
+    with open(name, 'w') as f:
+        f.write('#!/bin/bash\nml load chemistry\nml load schrodinger\n')
+        for chembl in chembl_list:
+            f.write('cd {}\n'.format(chembl.folder))
+            f.write(chembl.prep_cmd)
+            f.write('cd {}\n'.format(run_config['run_folder']))
 
 def proc_ligands():
     """

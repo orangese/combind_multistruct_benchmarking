@@ -45,7 +45,7 @@ def main(args):
             chembl_sort.proc_ligands()          # Runs prepwizard & epik on all ligs
 
         if task == '2chembl':  # prep only chembl ligands from smiles
-            chembl_sort.prep_chembl_workflow()
+            chembl_sort.prep_chembl_workflow(shared_paths['data']+'/'+d)
 
         if task == 'm':
             lm.mcss.compute_mcss() # Computes MCSS, for use in pick_helpers
