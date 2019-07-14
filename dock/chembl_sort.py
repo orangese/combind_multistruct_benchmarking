@@ -139,7 +139,7 @@ def prep_chembl_workflow(dir):
         with open(chembl.folder+'/'+chembl.chembl_id+'.smi', 'w') as f:
             f.write(chembl.smiles)
 
-    run_config = {'group_size':group_size, 'run_folder':dir+'ligands/chembl', 'dry_run':True, 'partition':queue}
+    run_config = {'group_size':group_size, 'run_folder':dir+'/ligands/chembl', 'dry_run':True, 'partition':queue}
     process_chembl(run_config, chembl_all)
 
 def prep_from_smiles_cmd(name):
@@ -157,13 +157,13 @@ def process_chembl(run_config, all_docking, type='prep'):
     os.chdir(run_config['run_folder'])
     for i, docks_group in enumerate(groups):
         file_name = '{}_{}'.format(type, i)
-        write_sh_file(file_name + '.sh', docks_group, run_config, type)
+        write_sh_file(file_name + '.sh', docks_group, run_config)
         if not run_config['dry_run']:
             os.system('sbatch -p {} -t 1:00:00 -o {}.out {}.sh'.format(run_config['partition'], file_name,
                                                                        file_name))
     os.chdir(top_wd)  # change back to original working directory
 
-def write_sh_file(self, name, chembl_list, run_config):
+def write_sh_file(name, chembl_list, run_config):
     '''
     method to write a sh file to run a set of commands
     todo: eventually this becomes a generic method to be used across different prep tasks
