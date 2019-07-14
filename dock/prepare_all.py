@@ -46,6 +46,8 @@ def main(args):
 
         if task == '2chembl':  # prep only chembl ligands from smiles
             chembl_sort.prep_chembl_workflow(shared_paths['data']+'/'+d)
+        if task == '2chembl_done_check':  # check if chembl prep done, print results
+            chembl_sort.check_chembl_prep_complete(shared_paths['data']+'/'+d)
 
         if task == 'm':
             lm.mcss.compute_mcss() # Computes MCSS, for use in pick_helpers
