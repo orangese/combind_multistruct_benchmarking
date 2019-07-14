@@ -136,7 +136,7 @@ def prep_chembl_workflow(dir):
         os.makedirs(chembl.folder, exist_ok=True)
         chembl.prep_cmd = prep_from_smiles_cmd(chembl.chembl_id)
         #write the chembl smiles string to a file
-        with open(chembl.folder+'/'+chembl.chembl_id, 'w') as f:
+        with open(chembl.folder+'/'+chembl.chembl_id+'.smi', 'w') as f:
             f.write(chembl.smiles)
 
     run_config = {'group_size':group_size, 'run_folder':dir+'ligands/chembl', 'dry_run':True, 'partition':queue}
