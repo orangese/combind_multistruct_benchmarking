@@ -158,10 +158,13 @@ def prep_chembl_workflow(dir, only_missing=True):
         # todo: eventually move the following to be part of some chembl object or prep object
         chembl.folder = dir + '/ligands/chembl/' + chembl.chembl_id + '_lig'
         os.makedirs(chembl.folder, exist_ok=True)
-        chembl.prep_cmd = prep_from_smiles_cmd(chembl.chembl_id)
         # write the chembl smiles string to a file
         with open(chembl.folder + '/' + chembl.chembl_id + '.smi', 'w') as f:
             f.write(chembl.smiles)
+        with open(chembl.folder + '/process_in.sh', 'w') as f:
+            f.write('#!/bin/bash\n')
+            f.write(prep_from_smiles_cmd(chembl.chembl_id))
+
     run_config = {'group_size': group_size, 'run_folder': dir + '/ligands/chembl', 'dry_run': False, 'partition': queue}
     process_chembl(run_config, chembl_needed)
 
@@ -220,8 +223,8 @@ def write_sh_file(name, chembl_list, run_config):
     todo: eventually this becomes a generic method to be used across different prep tasks
     '''
     with open(name, 'w') as f:
-        f.write('#!/bin/bash\nml load chemistry\nml load schrodinger\n')
+        f.write('#!/bin/bash\n')
         for chembl in chembl_list:
             f.write('cd {}\n'.format(chembl.folder))
-            f.write(chembl.prep_cmd)
+            f.write('sh process_in.sh > process.out\n')
             f.write('cd {}\n'.format(run_config['run_folder']))
