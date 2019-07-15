@@ -196,22 +196,21 @@ def get_needed_chembl():
     return chembl_all
 
 def prep_from_smiles_cmd(name):
-    return '$SCHRODINGER/ligprep -ismi {}.smi -omae {}_lig.mae -epik \n'.format(name, name)
+    return '$SCHRODINGER/ligprep -WAIT -ismi {}.smi -omae {}_lig.mae -epik \n'.format(name, name)
 
-
-def process_chembl(run_config, all_docking, type='prep'):
+def process_chembl(run_config, all_items, type='prep'):
     '''
     method to run a set of tasks
     todo: eventually this becomes a generic method to be used across different prep tasks
     '''
-    groups = grouper(run_config['group_size'], all_docking)
+    groups = grouper(run_config['group_size'], all_items)
     # make the folder if it doesn't exist
     os.makedirs(run_config['run_folder'], exist_ok=True)
     top_wd = os.getcwd()  # get current working directory
     os.chdir(run_config['run_folder'])
-    for i, docks_group in enumerate(groups):
+    for i, group in enumerate(groups):
         file_name = '{}_{}'.format(type, i)
-        write_sh_file(file_name + '.sh', docks_group, run_config)
+        write_sh_file(file_name + '.sh', group, run_config)
         if not run_config['dry_run']:
             os.system('sbatch -p {} -t 1:00:00 -o {}.out {}.sh'.format(run_config['partition'], file_name,
                                                                        file_name))
