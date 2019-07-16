@@ -5,6 +5,7 @@ from grouper import grouper
 from schrodinger.structure import StructureReader, StructureWriter
 
 from dock.parse_chembl import load_chembl_raw, load_chembl_proc
+from dock.pick_helpers import load_helpers
 
 queue = 'owners'
 group_size = 10
@@ -142,3 +143,87 @@ def proc_ligands():
         print(len(unfinished), 'unprocessed ligands')
     
     run_ligand_processing(unfinished)
+
+
+def prep_chembl_workflow(dir, only_missing=True):
+    '''
+    Prep only the needed chembl ligands
+    only_missing: (boolean) if true will only prepare chembl ligands
+        that don't already have an existing .mae file in prepared folder
+    '''
+    chembl_all = get_needed_chembl()
+    missing = check_chembl_prep_complete(dir)
+    chembl_needed = [l for l in chembl_all if l.chembl_id in missing] if only_missing else chembl_all
+    for chembl in chembl_needed:
+        # todo: eventually move the following to be part of some chembl object or prep object
+        chembl.folder = dir + '/ligands/chembl/' + chembl.chembl_id + '_lig'
+        os.makedirs(chembl.folder, exist_ok=True)
+        # write the chembl smiles string to a file
+        with open(chembl.folder + '/' + chembl.chembl_id + '.smi', 'w') as f:
+            f.write(chembl.smiles)
+        with open(chembl.folder + '/process_in.sh', 'w') as f:
+            f.write('#!/bin/bash\n')
+            f.write(prep_from_smiles_cmd(chembl.chembl_id))
+
+    run_config = {'group_size': group_size, 'run_folder': dir + '/ligands/chembl', 'dry_run': False, 'partition': queue}
+    process_chembl(run_config, chembl_needed)
+
+def check_chembl_prep_complete(dir):
+    chembl_all = get_needed_chembl()
+    missing_list = []
+    for chembl in chembl_all:
+        chembl.folder = dir + '/ligands/chembl/' + chembl.chembl_id + '_lig'
+        if not os.path.isfile(chembl.folder + '/' + chembl.chembl_id + '_lig.mae'):
+            missing_list.append(chembl.chembl_id)
+    print('Missing {}/{}'.format(len(missing_list), len(chembl_all)), missing_list)
+    return missing_list
+
+def get_needed_chembl():
+    '''
+    Get the needed chembl objects
+    :return: (list of chembl objects)
+    '''
+    helpers = load_helpers()
+    # get all relevent chembl ligand ids
+    needed_chembl_ids = []
+    for type in helpers.keys():
+        # merge lists of needed chembl ids together
+        needed_chembl_ids = needed_chembl_ids + sum(helpers[type].values(), [])
+    needed_chembl_ids = [i[:-4] for i in set(needed_chembl_ids)]
+
+    ligs = load_chembl_raw()  # Read files downloaded from chembl at chembl/*.xls
+    chembl_all = [lig for lig in ligs.values() if lig.chembl_id in needed_chembl_ids]
+    return chembl_all
+
+def prep_from_smiles_cmd(name):
+    return '$SCHRODINGER/ligprep -WAIT -ismi {}.smi -omae {}_lig.mae -epik \n'.format(name, name)
+
+def process_chembl(run_config, all_items, type='prep'):
+    '''
+    method to run a set of tasks
+    todo: eventually this becomes a generic method to be used across different prep tasks
+    '''
+    groups = grouper(run_config['group_size'], all_items)
+    # make the folder if it doesn't exist
+    os.makedirs(run_config['run_folder'], exist_ok=True)
+    top_wd = os.getcwd()  # get current working directory
+    os.chdir(run_config['run_folder'])
+    for i, group in enumerate(groups):
+        file_name = '{}_{}'.format(type, i)
+        write_sh_file(file_name + '.sh', group, run_config)
+        if not run_config['dry_run']:
+            os.system('sbatch -p {} -t 1:00:00 -o {}.out {}.sh'.format(run_config['partition'], file_name,
+                                                                       file_name))
+    os.chdir(top_wd)  # change back to original working directory
+
+def write_sh_file(name, chembl_list, run_config):
+    '''
+    method to write a sh file to run a set of commands
+    todo: eventually this becomes a generic method to be used across different prep tasks
+    '''
+    with open(name, 'w') as f:
+        f.write('#!/bin/bash\n')
+        for chembl in chembl_list:
+            f.write('cd {}\n'.format(chembl.folder))
+            f.write('sh process_in.sh > process.out\n')
+            f.write('cd {}\n'.format(run_config['run_folder']))
