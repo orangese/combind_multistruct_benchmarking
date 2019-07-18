@@ -5,6 +5,7 @@ Core optimization code.
 import numpy as np
 from score.pairs import LigPair
 from matplotlib import colors
+from matplotlib.gridspec import GridSpec
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.pyplot as plt
 from shared_paths import feature_defs
@@ -237,8 +238,19 @@ class PredictStructs:
                                  if (interaction[0] in feature_defs[k])])
             interactions = interactions.union(_interactions)
         interactions = sorted(interactions)
-        #labels = [format_int(l[1]) for l in interactions]
-        return interactions
+        X = 0
+        for pose_cluster in pose_clusters:
+            X += self.interaction_matrix(pose_cluster, interactions, list(pose_cluster.keys()))
+
+        # Remove interactions that are never seen
+        interactions = [interaction
+                        for interaction, present in zip(interactions, X.sum(axis = 1) > 0)
+                        if present]
+        X = X[X.sum(axis = 1) > 0]
+
+        # Sort by interacton frequency
+        idx = np.argsort(X.sum(axis = 1))[::-1]
+        return [interactions[i] for i in idx]
 
     def interaction_matrix(self, pose_cluster, interactions, lig_order):
         X = []
@@ -249,6 +261,27 @@ class PredictStructs:
                 X[-1] += [pose.fp[interaction] if interaction in pose.fp else 0]
         return np.array(X).T
 
+    def gel_plot_individual(self, cluster, k, lig_order, interactions=None,
+                            divide=2, resname_size=14, ax=None, pretty=True):
+        if interactions is None:
+            interactions = self.interactions([cluster], k)
+        X = self.interaction_matrix(cluster, interactions, lig_order)
+        labels = [self._format_int(interaction) for interaction in interactions]
+
+        # Y is X + empty cells seperating boxes.
+        Y = np.zeros((X.shape[0]*divide, X.shape[1]*divide))
+        Y[::divide, ::divide] = X
+        if ax is None:
+            figure = plt.figure(figsize =  (9, 5))
+            gs = GridSpec(1, 2, figure = figure, width_ratios = [4, 5])
+            ax = plt.subplot(gs[1])
+        ax.imshow(Y, cmap='binary', aspect = 'auto', vmin=0, vmax=1.0)
+        #ax.set(adjustable='box', aspect='equal')
+
+        if pretty:
+            self._pretty(lig_order, labels, divide, resname_size)
+
+    
     def gel_plot(self, combind_cluster, glide_cluster, k, lig_order,
                  divide=2, resname_size=14):
         interactions = self.interactions([combind_cluster, glide_cluster], k)
@@ -256,21 +289,10 @@ class PredictStructs:
         glide = self.interaction_matrix(glide_cluster, interactions, lig_order)
 
         seen = combind + glide
-        diff = combind - glide
+        X = combind - glide
 
         labels = [self._format_int(interaction) for interaction in interactions]
 
-        # Remove interactions that are never seen.
-        X = diff[seen.sum(axis = 1) > 0]
-        labels = np.array(labels)[seen.sum(axis = 1) > 0]
-        seen = seen[seen.sum(axis = 1) > 0]
-
-        # Sort by interaction frequency
-        idx = np.argsort(seen.sum(axis = 1))[::-1]
-        X = X[idx]
-        labels = labels[idx]
-        seen = seen[idx]
-    
         # Differentiate values that are the same and
         # positive from those that are zero.
         X[seen == 0] = float('inf')
@@ -283,10 +305,13 @@ class PredictStructs:
     
         rkb = [(1, 0, 0.5), (0, 0, 0), (0.5, 1, 0)]
         cm = LinearSegmentedColormap.from_list('rkb', rkb, N=256, gamma=1.0)
-        plt.figure(figsize = (5, 5))
-        plt.imshow(Y, cm, aspect = 'auto', vmin=-0.5, vmax=0.5)
+        figure = plt.figure(figsize =  (9, 5))
+        gs = GridSpec(1, 2, figure = figure, width_ratios = [4, 5])
+        ax = plt.subplot(gs[1])
+        ax.imshow(Y, cm, vmin=-0.5, vmax=0.5)
+        ax.set(adjustable='box', aspect='equal')
         self._pretty(lig_order, labels, divide, resname_size)
-        print('ComBind - Glide: {}'.format(diff.sum()))
+        print('ComBind - Glide: {}'.format(X.sum()))
 
     def _pretty(self, lig_order, resnames, divide, resname_size):
         for spine in plt.gca().spines.values():
@@ -298,7 +323,6 @@ class PredictStructs:
                    size = resname_size, fontname = 'monospace')
         plt.xticks(range(0, divide*len(lig_order), divide), lig_order,
                    rotation = 'vertical', size = resname_size, fontname = 'monospace')
-        plt.show()
 
     def _format_int(self, interaction):
         three_to_one = {
@@ -330,18 +354,19 @@ class PredictStructs:
         
         feature = [feature for feature, codes in feature_defs.items()
                    if interaction[0] in codes]
+
         if 'hbond' in feature:
             feature.remove('hbond')
         assert len(feature) == 1
         feature = feature[0]
 
-
-        
+        if 'hbond_' in feature:
+            feature = feature.replace('hbond_', '')
         return '{}{}:{}'.format(name, num, feature)
     
     def get_poses(self, cluster):
-        return {l:self.docking[l].poses[p] for l,p in cluster.items()}
+        return {l:self.ligands[l].poses[p] for l,p in cluster.items()}
 
     def get_rmsd(self, cluster):
-        tmp = [self.docking[l].poses[p].rmsd for l,p in cluster.items()]
+        tmp = [self.ligands[l].poses[p].rmsd for l,p in cluster.items()]
         return np.mean([r for r in tmp if r is not None])

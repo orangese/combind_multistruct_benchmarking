@@ -78,24 +78,7 @@ class DensityEstimate:
         and print a warning if self.out_of_bounds is None or else
         self.out_of_bounds.
         '''
-        if self.x is None: return 0
-        if x < self.x[0]:
-            print('Warning: value out of domain of function')
-            if self.out_of_bounds is None: return self.fx[0]
-            return self.out_of_bounds
-        if x > self.x[-1]:
-            print('Warning: value out of domain of function')
-            if self.out_of_bounds is None: return self.fx[-1]
-            return self.out_of_bounds
-
-        idx = 0 # One to right of x
-        while x > self.x[idx]: idx += 1 
-        
-        if not idx: return self.fx[0] # Avoid IndexError
-        
-        d = self.x[idx] - self.x[idx-1]
-        return (   self.fx[idx-1]  * (self.x[idx] - x)/d
-                 + self.fx[idx]    * (x - self.x[idx-1])/d)
+        return np.interp(x, self.x, self.fx)
 
     def _gauss(self, mean, x):
         '''
