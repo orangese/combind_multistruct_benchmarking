@@ -29,7 +29,7 @@ class ScoreContainer:
         tr = {}
         with open('{}/settings.py'.format(self.root)) as f:
             for line in f:
-                var,val = line.split('=')
+                var, val = line.split('=')
                 tr[var] = eval(val)
         return tr
 
@@ -76,21 +76,29 @@ class ScoreContainer:
         """
         with open(fname, 'w') as f:
             f.write('lig,combind_rank,combind_rmsd,glide_rank,glide_rmsd,best_rank,best_rmsd\n')
-            best_cluster = {}
+            glide_cluster, best_cluster = {}, {}
             for lig, combind_pose in sorted(cluster.items()):
                 poses = self.predict_data.docking[self.struct].ligands[lig].poses
                 best_rmsd = float('inf')
+                best_emodel = float('inf')
                 for i, pose in enumerate(poses[:self.settings['num_poses']]):
                     if pose.rmsd is not None and pose.rmsd < best_rmsd:
                         best_cluster[lig] = i
                         best_rmsd = pose.rmsd
+                    if pose.emodel < best_emodel:
+                        glide_cluster[lig] = i
+                        best_emodel = pose.emodel
+
+                glide_pose = 0 #glide_cluster[lig]
+                best_pose = best_cluster[lig] if lig in best_cluster else None
                 f.write(','.join(map(str, [lig,
                                            combind_pose, poses[combind_pose].rmsd,
-                                           0, poses[0].rmsd,
-                                           best_cluster[lig] if lig in best_cluster else None, best_rmsd]))+'\n')
+                                           glide_pose, poses[glide_pose].rmsd,
+                                           best_pose, best_rmsd
+                                           ]))+'\n')
             f.write('combind={},glide={},best={}\n'.format(
                     self.ps.log_posterior(cluster),
-                    self.ps.log_posterior({k:0 for k in cluster.keys()}),
+                    self.ps.log_posterior(glide_cluster),
                     self.ps.log_posterior(best_cluster) if len(best_cluster) == len(cluster) else 0))
 
     def read_results(self, fname):

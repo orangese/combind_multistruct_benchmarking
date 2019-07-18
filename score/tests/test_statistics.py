@@ -57,3 +57,25 @@ def test_merge_stats():
 	stats = {'native': {'hbond': [de1, de2, de3]}}
 	merged = merge_stats(stats, True)['native']['hbond']
 	assert np.all(merged.fx == np.array([1, 1]))
+
+
+def test_merge_stats_zero():
+	de1 = DensityEstimate(points = 2, domain = (0, 1), n_samples = 0)
+	assert de1.fx.shape == (2,)
+	de1.fx = np.array([0, 0])
+
+	de2 = DensityEstimate(points = 2, domain = (0, 1), n_samples = 2)
+	assert de2.fx.shape == (2,)
+	de2.fx = np.array([1, 1])
+
+	de3 = DensityEstimate(points = 2, domain = (0, 1), n_samples = 6)
+	assert de3.fx.shape == (2,)
+	de3.fx = np.array([2, 2])
+
+	stats = {'native': {'hbond': [de1, de2, de3]}}
+	merged = merge_stats(stats, False)['native']['hbond']
+	assert np.all(merged.fx == np.array([1.75, 1.75]))
+
+	stats = {'native': {'hbond': [de1, de2, de3]}}
+	merged = merge_stats(stats, True)['native']['hbond']
+	assert np.all(merged.fx == np.array([1.5, 1.5]))

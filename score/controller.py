@@ -24,15 +24,13 @@ from glob import glob
 from grouper import grouper
 
 group_size = 4
-num_ligs = [10, 20]
-alpha_factors = [1.0] # [0.1, 1.0, 1.5, 2.0]
-features = [#['mcss', 'pipi', 'contact', 'hbond', 'sb'],
-            ['mcss', 'contact', 'hbond', 'sb'],
-            #['mcss', 'hbond', 'sb'],
-            #['pipi', 'contact', 'hbond', 'sb'],
-            #['mcss', 'pipi', 'contact', 'sb'],
-            #['mcss', 'pipi', 'hbond', 'sb'],
-            #['mcss', 'pipi', 'contact', 'hbond'],
+num_ligs = [1, 3, 5, 10, 15, 20]
+alpha_factors = [0.1, 0.5, 1.0, 2.0]
+features = [['mcss', 'contact', 'hbond', 'sb'],
+            ['mcss'],
+            ['mcss', 'hbond', 'sb'],
+            #['mcss', 'contact', 'hbond'],
+            #['contact', 'hbond', 'sb']
             ]
 
 cmd = '$SCHRODINGER/run {0:}/main.py score {1:} {1:} {1:} {1:}'.format(
@@ -111,14 +109,16 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
     os.chdir('..')
 
 def compute_stats(protein, stats_root):
-    stats_prots = [p for p in proteins if p != protein.lm.protein]
+    stats_prots = [p for p in proteins if p != protein.lm.protein and p != 'DHFR']
 
     # Statistics computation.
     stats = statistics(stats_prots, feature_defs.keys())
     for dist, interactions in stats.items():
         for interaction, de in interactions.items():
-            with open('{}/{}_{}.txt'.format(stats_root, dist, interaction), 'w') as fp:
-                fp.write(str(de)+'\n')
+            fname = '{}/{}_{}.txt'.format(stats_root, dist, interaction)
+            if not os.path.exists(fname):
+                with open(fname, 'w') as fp:
+                    fp.write(str(de)+'\n')
 
 def run_pdb():
     for i, d in enumerate(proteins):
@@ -254,7 +254,7 @@ def merge_protein(mode, protein):
             _protein, _, version, pdb, params, settings, name = fname.split('/')[-7:]
             settings = settings.split('-')
             if len(settings) == 2:
-                settings =['0'] + settings
+                settings = ['0'] + settings
             assert _protein == protein
             assert version == shared_paths['stats']['version']
                 

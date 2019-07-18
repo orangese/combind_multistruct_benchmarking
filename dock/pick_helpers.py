@@ -1,12 +1,12 @@
 import os
 import sys
 
-def pick_helpers(lm, maxnum=21):
+def pick_helpers(lm, maxnum=20):
 
     parent = 'chembl/helpers'
     os.system('mkdir -p {}'.format(parent))
 
-    stereo_filter = lambda c,ci: ci[c].valid_stereo
+    stereo_filter = lambda c: lm.chembl_info[c].valid_stereo
 
     ki_sort = lambda c: lm.chembl_info[c].ki
 
@@ -21,7 +21,8 @@ def pick_helpers(lm, maxnum=21):
         fpath = '{}/{}'.format(parent, f)
         if not os.path.exists(fpath):
             print('picking chembl ligands', f)
-            chembl_ligs = lm.chembl()
+            chembl_ligs = [ligand for ligand in lm.chembl()
+                           if stereo_filter(ligand)]
             with open(fpath,'w') as fi:
                 for q in lm.get_xdocked_ligands(maxnum):
                     # sort and remove duplicates

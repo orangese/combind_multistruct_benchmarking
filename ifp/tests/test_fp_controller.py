@@ -28,9 +28,9 @@ class TestComputeFP:
 		
 		compute_fp(lm)
 
-		mock_exists.assert_any_call('ifp/ifp4/CHEMBL1_lig-to-5C1M-confgen_es11.fp')
-		mock_exists.assert_any_call('ifp/ifp4/CHEMBL2_lig-to-5C1M-confgen_es11.fp')
-		mock_exists.assert_any_call('ifp/ifp4/6DDF_lig-to-5C1M-confgen_es11.fp')
+		mock_exists.assert_any_call('ifp/ifp5/CHEMBL1_lig-to-5C1M-confgen_es11.fp')
+		mock_exists.assert_any_call('ifp/ifp5/CHEMBL2_lig-to-5C1M-confgen_es11.fp')
+		mock_exists.assert_any_call('ifp/ifp5/6DDF_lig-to-5C1M-confgen_es11.fp')
 		assert mock_exists.call_count == 3
 
 		mock_structure_fp.assert_called_with(lm)
