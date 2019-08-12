@@ -24,11 +24,11 @@ from glob import glob
 from grouper import grouper
 
 group_size = 4
-num_ligs = [1, 3, 5, 10, 15, 20]
-alpha_factors = [0.1, 0.5, 1.0, 2.0]
+num_ligs = [10] #, 30] #[1, 3, 5, 10, 15, 20]
+alpha_factors = [1.0] #0.1, 0.5, 1.0, 2.0]
 features = [['mcss', 'contact', 'hbond', 'sb'],
-            ['mcss'],
-            ['mcss', 'hbond', 'sb'],
+            #['mcss'],
+            #['mcss', 'hbond', 'sb'],
             #['mcss', 'contact', 'hbond'],
             #['contact', 'hbond', 'sb']
             ]

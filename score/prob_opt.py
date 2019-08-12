@@ -92,6 +92,7 @@ class PredictStructs:
         pose_cluster ({ligand_name: current pose number, })
         max_iterations (int)
         """
+        all_wrong = 0 # Set to -1 to allow possibility that all poses are wrong.
         iterations = 0
         update = True
         while update:
@@ -104,7 +105,7 @@ class PredictStructs:
             for query in np.random.permutation(list(pose_cluster.keys())):
                 best_score = self._partial_log_posterior(pose_cluster, query)
                 best_pose  = pose_cluster[query]
-                for pose in range(self._num_poses(query)):
+                for pose in range(all_wrong, self._num_poses(query)):
                     pose_cluster[query] = pose
                     score = self._partial_log_posterior(pose_cluster, query)
                     if score > best_score:
@@ -112,7 +113,21 @@ class PredictStructs:
                         update = True
                 pose_cluster[query] = best_pose
 
-        return self.log_posterior(pose_cluster), pose_cluster
+        output = {}
+        for query, pose in pose_cluster.items():
+            if pose != -1:
+                output[query] = pose
+            else:
+                best_score = -float('inf')
+                best_pose  = -1
+                for pose in range(self._num_poses(query)):
+                    pose_cluster[query] = pose
+                    score = self._partial_log_posterior(pose_cluster, query)
+                    if score > best_score:
+                        best_score, best_pose = score, pose
+                pose_cluster[query] = -1
+                output[query] = best_pose
+        return self.log_posterior(output), output
 
     # Methods to score sets of ligands
     def log_posterior(self, pose_cluster):
@@ -150,6 +165,9 @@ class PredictStructs:
         
         as the the sum of the log likelihoods of each of the k_list.
         """
+        if pose_cluster[ligname1] == -1 or pose_cluster[ligname2] == -1:
+            return 0
+
         pair_key = ((ligname1, ligname2, pose_cluster[ligname1], pose_cluster[ligname2])
                     if ligname1 < ligname2 else
                     (ligname2, ligname1, pose_cluster[ligname2], pose_cluster[ligname1]))
@@ -203,6 +221,8 @@ class PredictStructs:
         return self.lig_pairs[(ligname1, ligname2)].get_feature(feature, pose1, pose2)
 
     def _get_gscore(self, ligname, pose):
+        if pose == -1:
+            return -8.0
         return self.ligands[ligname].poses[pose].gscore
 
     def _num_poses(self, ligname):

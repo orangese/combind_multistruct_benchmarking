@@ -83,7 +83,7 @@ class Ligand:
     def load_crystal_pose(self):
         try:
             fps = parse_fp_file(self.crystal_fp_path)
-            self.poses = [Pose(0, 0, 0, fps[0])]
+            self.poses = [Pose(0, -1000, -1000, fps[0])]
         except IOError:
             pass
 
