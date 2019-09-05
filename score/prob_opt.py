@@ -18,11 +18,12 @@ class PredictStructs:
     max_poses (int): Maximum number of poses to consider.
     alpha (float): Factor to which to weight the glide scores.
     """
-    def __init__(self, ligands, mcss, stats, features, max_poses, alpha):
+    def __init__(self, ligands, mcss, stats, features, overlap, max_poses, alpha):
         self.ligands = ligands
         self.mcss = mcss
         self.stats = stats
         self.features = features
+        self.overlap = overlap
         self.max_poses = max_poses
         self.alpha = float(alpha)
 
@@ -216,7 +217,8 @@ class PredictStructs:
             self.lig_pairs[(ligname1, ligname2)] = LigPair(self.ligands[ligname1],
                                                            self.ligands[ligname2],
                                                            self.features, self.mcss,
-                                                           self.max_poses)
+                                                           self.max_poses
+                                                           self.overlap)
 
         return self.lig_pairs[(ligname1, ligname2)].get_feature(feature, pose1, pose2)
 

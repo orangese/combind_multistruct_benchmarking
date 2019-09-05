@@ -102,7 +102,8 @@ def statistics_lig_pair(protein, ligand1, ligand2, interactions):
                        docking.ligands[ligand2],
                        interactions,
                        lm.mcss if 'mcss' in interactions else None,
-                       shared_paths['stats']['max_poses'])
+                       shared_paths['stats']['max_poses'],
+                       shared_paths['stats']['metric'])
 
     # Compute all remaining statistics and write to files.
     for interaction in interactions:

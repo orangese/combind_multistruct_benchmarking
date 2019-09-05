@@ -23,7 +23,7 @@ class ScoreContainer:
         self.predict_data = Protein(prot)
         self.ps = PredictStructs({}, self.predict_data.lm.mcss, self.stats,
                                  self.settings['k_list'], self.settings['num_poses'],
-                                 self.settings['alpha'])
+                                 self.settings['alpha'], self.settings['metric'])
 
     def read_settings(self):
         tr = {}

@@ -4,19 +4,14 @@ from shared_paths import shared_paths, feature_defs
 class LigPair:
     """
     Computes and stores overlap scores for a ligand pair.
-
-    Importantly, this class normalizes the overlap scores
-    by dividing by the maximum value.
     """
-    def __init__(self, l1, l2, features, mcss, max_poses):
+    def __init__(self, l1, l2, features, mcss, max_poses, mode):
         self.l1 = l1
         self.l2 = l2
         self.max_poses = max_poses
         self.mcss = mcss
         self.features = features
-
-        if 'mcss' in features:
-            assert self.mcss is not None
+        self.mode = mode
 
         self.pose_pairs = self._init_pose_pairs()
         self.feat_map = self._init_feat_map()
@@ -26,16 +21,22 @@ class LigPair:
         Returns the overlap score for feature for the pose pair
         consisting of poses rank1 and rank2.
         """
-        feature_value = self.pose_pairs[(rank1,rank2)].get_feature(feature)
-        minimum, maximum = self.feat_map[feature]
-        
-        # Feature isn't present in any pose pair.
-        if not maximum or feature_value is None:
-            return None
-        
-        if feature == 'mcss':
-            return feature_value
-        return feature_value / max(maximum, 1.0)
+        if self.mode == 'maxoverlap':
+            feature_value = self.pose_pairs[(rank1,rank2)].get_feature(feature)
+            minimum, maximum = self.feat_map[feature]
+
+            # Feature isn't present in any pose pair.
+            if not maximum or feature_value is None:
+               return None
+
+            if feature == 'mcss':
+                return feature_value
+            return feature_value / max(maximum, 1.0)
+
+        elif self.mode == 'tanimoto':
+            return self.pose_pairs[(rank1,rank2)].tanimoto(feature)
+
+        assert False
 
     def _init_pose_pairs(self):
         """
@@ -58,8 +59,7 @@ class LigPair:
         """
         Compute the maximum and minimum value of each feature.
         """
-        feat_map = {feature: (float('inf'), -float('inf'))
-                    for feature in self.features}
+        feat_map = {feature: (float('inf'), -float('inf')) for feature in self.features}
         for key, pose_pair in self.pose_pairs.items():
             for feature in self.features:
                 pp_x = pose_pair.get_feature(feature)
@@ -87,6 +87,27 @@ class PosePair:
         """
         return int(    self.pose1.rmsd <= shared_paths['stats']['native_thresh']
                    and self.pose2.rmsd <= shared_paths['stats']['native_thresh'])
+
+    def tanimoto(self, feature):
+        if feature not in self.features:
+            overlap = 0
+            for (i, r) in self.pose1.fp:
+                if i in feature_defs[feature] and (i, r) in self.pose2.fp:
+                    overlap += (self.pose1.fp[(i,r)] * self.pose2.fp[(i,r)])**0.5
+
+            one = 0
+            for (i, r) in self.pose1.fp:
+                if i in feature_defs[feature]:
+                    one += self.pose1.fp[(i,r)]
+
+            two = 0
+            for (i, r) in self.pose2.fp:
+                if i in feature_defs[feature]:
+                    two += self.pose2.fp[(i,r)]
+
+            self.features[feature] = (1 + overlap) / (2 + one + two - overlap)
+
+        return self.features[feature]
 
     def get_feature(self, feature):
         """
