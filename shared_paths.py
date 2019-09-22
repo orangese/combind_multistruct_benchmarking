@@ -342,10 +342,10 @@ feature_defs = {
 
 shared_paths = { 
     'code'      : '~/combind',
-    'data'      : "/scratch/PI/rondror/combind/bpp_data",
+    'data'      : "/oak/stanford/groups/rondror/users/jpaggi/bpp_data",
     'docking'   : 'confgen_es4',
     'mcss'      : 'mcss16',
-    'stats'     : stats['stats22'],
+    'stats'     : stats['stats21'],
     'ifp'       : ifp['ifp5'],
     'pdb_order' : 'First'
 }

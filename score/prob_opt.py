@@ -17,8 +17,15 @@ class PredictStructs:
     features ([str, ]): Features to use when computing similarity scores.
     max_poses (int): Maximum number of poses to consider.
     alpha (float): Factor to which to weight the glide scores.
+    overlap (float): Overlap metric. Must match stats.
+    xtal_boost (float): Multiplier for pair scores involving xtal poses.
+    physics_score ('gscore' or 'emodel'): which physics score to use.
+    all_wrong (bool): Whether to allow possibility that all poses are wrong
+        and exclude the ligand from the optimization.
     """
-    def __init__(self, ligands, mcss, stats, features, overlap, max_poses, alpha):
+    def __init__(self, ligands, mcss, stats,
+                 features, max_poses, alpha, overlap='maxoverlap',
+                 xtal_boost=1.0, physics_score='gscore', all_wrong=False):
         self.ligands = ligands
         self.mcss = mcss
         self.stats = stats
@@ -26,6 +33,9 @@ class PredictStructs:
         self.overlap = overlap
         self.max_poses = max_poses
         self.alpha = float(alpha)
+        self.xtal_boost = xtal_boost
+        self.physics_score = physics_score
+        self.all_wrong = -1 if all_wrong else 0
 
         self.log_likelihood_ratio_cache = {}
         self.lig_pairs = {}
@@ -42,7 +52,7 @@ class PredictStructs:
                         self.mcss.get_rmsd(lig1, lig2, 0, 0)
                     except KeyError:
                         assert False
-        
+
         for feature in self.features:
             assert feature in self.stats['native']
             assert feature in self.stats['reference']
@@ -51,7 +61,7 @@ class PredictStructs:
         assert self.alpha >= 0
         assert self.max_poses > 0
 
-    def max_posterior(self, max_iterations = 1e6, restart = 500):
+    def max_posterior(self, max_iterations=1000000, restart=500):
         """
         Computes the pose cluster maximizing the posterior likelihood.
 
@@ -66,15 +76,17 @@ class PredictStructs:
         self._validate()
         best_score = -float('inf')
         for i in range(restart):
-            cluster = ({lig: 0 for lig in self.ligands}
-                       if i == 0 else
-                       {lig: np.random.randint(self._num_poses(lig)) for lig in self.ligands})
+            if i == 0:
+                cluster = {lig: 0 for lig in self.ligands}
+            else:
+                cluster = {lig: np.random.randint(self._num_poses(lig))
+                           for lig in self.ligands}
 
             score, cluster = self._optimize_cluster(cluster, max_iterations)
             if score > best_score:
                 best_score = score
                 best_cluster = cluster
-           
+
             print(cluster)
             print('cluster {}, score {}'.format(i, score))
 
@@ -93,42 +105,40 @@ class PredictStructs:
         pose_cluster ({ligand_name: current pose number, })
         max_iterations (int)
         """
-        all_wrong = 0 # Set to -1 to allow possibility that all poses are wrong.
-        iterations = 0
-        update = True
-        while update:
-            if iterations > max_iterations:
-                assert False, ('Warning: Reached maximum iterations'
-                               '({}) without convergence.'.format(max_iterations))
-            iterations += 1
-            
+
+        # Core coordinate ascent logic.
+        for _ in range(max_iterations):
             update = False
             for query in np.random.permutation(list(pose_cluster.keys())):
-                best_score = self._partial_log_posterior(pose_cluster, query)
-                best_pose  = pose_cluster[query]
-                for pose in range(all_wrong, self._num_poses(query)):
-                    pose_cluster[query] = pose
-                    score = self._partial_log_posterior(pose_cluster, query)
-                    if score > best_score:
-                        best_score, best_pose = score, pose
-                        update = True
-                pose_cluster[query] = best_pose
+                best_pose = self._best_pose(pose_cluster, query, self.all_wrong)
+                if best_pose != pose_cluster[query]:
+                    update = True
+                    pose_cluster[query] = best_pose
+            if not update:
+                break
 
+        # Assign all poses in optimal cluster to best real pose.
         output = {}
         for query, pose in pose_cluster.items():
             if pose != -1:
                 output[query] = pose
             else:
-                best_score = -float('inf')
-                best_pose  = -1
-                for pose in range(self._num_poses(query)):
-                    pose_cluster[query] = pose
-                    score = self._partial_log_posterior(pose_cluster, query)
-                    if score > best_score:
-                        best_score, best_pose = score, pose
-                pose_cluster[query] = -1
-                output[query] = best_pose
+                output[query] =self._best_pose(pose_cluster, query, 0)
         return self.log_posterior(output), output
+
+
+    def _best_pose(self, pose_cluster, query, all_wrong):
+        # Copy the pose cluster so that we don't have to worry
+        # about mutating it.
+        pose_cluster = {k:v for k, v in pose_cluster.items()}
+        best_score = -float('inf')
+        best_pose  = -1
+        for pose in range(all_wrong, self._num_poses(query)):
+            pose_cluster[query] = pose
+            score = self._partial_log_posterior(pose_cluster, query)
+            if score > best_score:
+                best_score, best_pose = score, pose
+        return best_pose
 
     # Methods to score sets of ligands
     def log_posterior(self, pose_cluster):
@@ -140,7 +150,7 @@ class PredictStructs:
         """
         log_prob = 0
         for ligname, pose in pose_cluster.items():
-            log_prob -= self._get_gscore(ligname, pose) * self.alpha
+            log_prob -= self._get_physics_score(ligname, pose) * self.alpha
         
         ligands = list(pose_cluster.keys())
         for i, ligname1 in enumerate(ligands):
@@ -153,9 +163,16 @@ class PredictStructs:
         Computes the partial contribution of ligand 'query' in 'pose' to the total log prob.
         This is simply - GlideScore(l_q)  / T + sum log_odds.
         """
-        log_odds = sum(self._log_likelihood_ratio_pair(pose_cluster, query, ligname)
-                       for ligname in pose_cluster if ligname != query)
-        log_prior = - self._get_gscore(query, pose_cluster[query]) * self.alpha
+        log_odds = 0
+        for ligname in pose_cluster:
+            if ligname == query: continue
+            lr = self._log_likelihood_ratio_pair(pose_cluster, query, ligname)
+            
+            lr *= self.xtal_boost if 'crystal' in ligname else 1.0
+            log_odds += lr
+        
+        log_prior = -self._get_physics_score(query, pose_cluster[query])
+        log_prior *= self.alpha * self._effective_number(pose_cluster, query)
         return log_odds + log_prior
 
     def _log_likelihood_ratio_pair(self, pose_cluster, ligname1, ligname2):
@@ -182,7 +199,7 @@ class PredictStructs:
                                                                                    ligname2)
                 # If either of these are 0, we will get infs or nans
                 # using a gKDE this should not happen, but if we ever switch
-                # to a compact kernel, this could be hard to debug
+                # to a compact kernel, this could be hard to debug.
                 assert p_x_native != 0.0
                 assert p_x != 0.0
 
@@ -205,6 +222,11 @@ class PredictStructs:
 
         return x, p_x_native, p_x
 
+    # Helpers
+    def _effective_number(self, pose_cluster, query):
+        return sum(1 for ligand, pose in pose_cluster.items()
+                   if pose != -1 and ligand != query)
+
     def _get_feature(self, feature, ligname1, ligname2, pose1, pose2):
         # Maintain the convention that ligname1 < ligname2, so that
         # we don't put duplicate entries in self.lig_pairs.
@@ -217,21 +239,30 @@ class PredictStructs:
             self.lig_pairs[(ligname1, ligname2)] = LigPair(self.ligands[ligname1],
                                                            self.ligands[ligname2],
                                                            self.features, self.mcss,
-                                                           self.max_poses
+                                                           self.max_poses,
                                                            self.overlap)
 
         return self.lig_pairs[(ligname1, ligname2)].get_feature(feature, pose1, pose2)
 
-    def _get_gscore(self, ligname, pose):
-        if pose == -1:
-            return -8.0
-        return self.ligands[ligname].poses[pose].gscore
+    def _get_physics_score(self, ligname, pose):
+        if self.physics_score == 'gscore':
+            if pose == -1:
+                return -8.0
+            return self.ligands[ligname].poses[pose].gscore
+        else:
+            if pose == -1:
+                return -80.0 # Not sure if this is right?
+            return self.ligands[ligname].poses[poses].emodel
 
     def _num_poses(self, ligname):
         return min(self.max_poses, len(self.ligands[ligname].poses))
 
-    ####################################################################################
-    # Methods important for figure making, but not execution.
+
+class PredictStructsFigures(PredictStructs):
+    """
+    Methods of this class are used for figure making. They are seperated
+    from the PredictStructs to prevent obscuring the core optimization logic.
+    """
     def likelihood_and_feature_matrix(self, pose_cluster, k, lig_order):
         """
         Returns the feature values and likelihood ratios, P(X|l)/P(X)

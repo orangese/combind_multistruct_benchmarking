@@ -39,37 +39,77 @@ def test_get_feature_empty():
 	pose2 = pose(fp={})
 	pp = PosePair(pose1, pose2, 0.0)
 
-	assert pp.get_feature('sb') == 0.0
-	assert pp.get_feature('hbond') == 0.0
-	assert pp.get_feature('contact') == 0.0
-	assert pp.get_feature('mcss') == 0.0
+	assert pp.overlap('sb') == 0.0
+	assert pp.overlap('hbond') == 0.0
+	assert pp.overlap('contact') == 0.0
+	assert pp.mcss_score == 0.0
 
 def test_get_feature_single():
 	pose1 = pose(fp={(1, 23): 1.0})
 	pose2 = pose(fp={(1, 23): 1.0})
 	pp = PosePair(pose1, pose2, 4.0)
 
-	assert pp.get_feature('sb') == 1.0
-	assert pp.get_feature('hbond') == 0.0
-	assert pp.get_feature('contact') == 0.0
-	assert pp.get_feature('mcss') == 4.0
+	assert pp.overlap('sb') == 1.0
+	assert pp.overlap('hbond') == 0.0
+	assert pp.overlap('contact') == 0.0
+	assert pp.mcss_score == 4.0
 
 def test_get_feature_mismatch():
 	pose1 = pose(fp={(1, 2): 1.0})
 	pose2 = pose(fp={(1, 23): 1.0})
 	pp = PosePair(pose1, pose2, 1.0)
 
-	assert pp.get_feature('sb') == 0.0
-	assert pp.get_feature('hbond') == 0.0
-	assert pp.get_feature('contact') == 0.0
-	assert pp.get_feature('mcss') == 1.0
+	assert pp.overlap('sb') == 0.0
+	assert pp.overlap('hbond') == 0.0
+	assert pp.overlap('contact') == 0.0
+	assert pp.mcss_score == 1.0
 
 def test_get_feature_multiple_of_same_type():
 	pose1 = pose(fp={(1, 2): 1.0, (1, 23): 1.0})
 	pose2 = pose(fp={(1, 2): 0.0, (1, 23): 1.0})
 	pp = PosePair(pose1, pose2, 0.0)
 
-	assert pp.get_feature('sb') == 1.0
-	assert pp.get_feature('hbond') == 0.0
-	assert pp.get_feature('contact') == 0.0
-	assert pp.get_feature('mcss') == 0.0
+	assert pp.overlap('sb') == 1.0
+	assert pp.overlap('hbond') == 0.0
+	assert pp.overlap('contact') == 0.0
+	assert pp.mcss_score == 0.0
+
+def test_tanimoto_empty():
+	pose1 = pose(fp={})
+	pose2 = pose(fp={})
+	pp = PosePair(pose1, pose2, 0.0)
+
+	assert pp.tanimoto('sb') == 1/2
+	assert pp.tanimoto('hbond') == 1/2
+	assert pp.tanimoto('contact') == 1/2
+	assert pp.mcss_score == 0.0
+
+def test_tanimoto_single():
+	pose1 = pose(fp={(1, 23): 1.0})
+	pose2 = pose(fp={(1, 23): 1.0})
+	pp = PosePair(pose1, pose2, 4.0)
+
+	assert pp.tanimoto('sb') == 2/3
+	assert pp.tanimoto('hbond') == 1/2
+	assert pp.tanimoto('contact') == 1/2
+	assert pp.mcss_score == 4.0
+
+def test_tanimoto_mismatch():
+	pose1 = pose(fp={(1, 2): 1.0})
+	pose2 = pose(fp={(1, 23): 1.0})
+	pp = PosePair(pose1, pose2, 1.0)
+
+	assert pp.tanimoto('sb') == 1/4
+	assert pp.tanimoto('hbond') == 1/2
+	assert pp.tanimoto('contact') == 1/2
+	assert pp.mcss_score == 1.0
+
+def test_tanimoto_multiple_of_same_type():
+	pose1 = pose(fp={(1, 2): 1.0, (1, 23): 1.0})
+	pose2 = pose(fp={(1, 2): 0.0, (1, 23): 1.0})
+	pp = PosePair(pose1, pose2, 0.0)
+
+	assert pp.tanimoto('sb') == 2/4
+	assert pp.tanimoto('hbond') == 1/2
+	assert pp.tanimoto('contact') == 1/2
+	assert pp.mcss_score == 0.0

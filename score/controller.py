@@ -24,11 +24,11 @@ from glob import glob
 from grouper import grouper
 
 group_size = 4
-num_ligs = [10] #, 30] #[1, 3, 5, 10, 15, 20]
-alpha_factors = [1.0] #0.1, 0.5, 1.0, 2.0]
+num_ligs = [1, 3, 5, 10, 15]
+alpha_factors = [1.0]
 features = [['mcss', 'contact', 'hbond', 'sb'],
             #['mcss'],
-            #['mcss', 'hbond', 'sb'],
+            ['mcss', 'hbond', 'sb'],
             #['mcss', 'contact', 'hbond'],
             #['contact', 'hbond', 'sb']
             ]
@@ -76,17 +76,15 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
     os.chdir(subdir)
 
     # Run specific settings.
-    if crystal:
-        settings['alpha'] = alpha_factor
-    elif chembl is not None:
-        settings['alpha'] = alpha_factor * (chembl[1] + use_crystal_pose)
+    if chembl is not None:
         settings['num_pred_chembl'] = chembl[1]
         settings['chembl_file'] = chembl[0] + '.txt'
-    else:
-        settings['alpha'] = alpha_factor * float(len(ligands) - 1 + use_crystal_pose)
+    
+    settings['chembl'] = chembl is not None
+    settings['alpha'] = alpha_factor
     settings['use_crystal_pose'] = use_crystal_pose
     settings['k_list'] = features
-    settings['chembl'] = chembl is not None
+    
     
     with open('settings.py', 'w') as f:
         for varname, var in settings.items():

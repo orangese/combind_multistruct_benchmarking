@@ -10,10 +10,10 @@
 
 . setup_combind
 echo enter $SLURM_ARRAY_TASK_ID
-data=/scratch/PI/rondror/combind/bpp_data
+data=/oak/stanford/groups/rondror/users/jpaggi/bpp_data
 end=$((4*SLURM_ARRAY_TASK_ID+4))
 for prot in $(ls $data | head -n $end | tail -n 4); do
-    mkdir -p $data/$prot/stats/stats20
+    mkdir -p $data/$prot/stats/stats21
     $SCHRODINGER/run $COMBINDHOME/main.py statistics $prot &
 done
 wait
