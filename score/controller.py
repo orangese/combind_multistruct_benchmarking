@@ -25,10 +25,10 @@ from grouper import grouper
 
 group_size = 4
 num_ligs = [1, 3, 5, 10, 15]
-alpha_factors = [1.0]
+alpha_factors = [0.5, 0.75, 1.0, 1.25, 1.5]
 features = [['mcss', 'contact', 'hbond', 'sb'],
             #['mcss'],
-            ['mcss', 'hbond', 'sb'],
+            #['mcss', 'hbond', 'sb'],
             #['mcss', 'contact', 'hbond'],
             #['contact', 'hbond', 'sb']
             ]
@@ -84,6 +84,8 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
     settings['alpha'] = alpha_factor
     settings['use_crystal_pose'] = use_crystal_pose
     settings['k_list'] = features
+    settings['all_wrong'] = False
+    settings['physics_score'] = 'gscore'
     
     
     with open('settings.py', 'w') as f:

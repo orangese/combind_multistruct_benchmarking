@@ -251,8 +251,9 @@ class PredictStructs:
             return self.ligands[ligname].poses[pose].gscore
         else:
             if pose == -1:
+                assert False
                 return -80.0 # Not sure if this is right?
-            return self.ligands[ligname].poses[poses].emodel
+            return self.ligands[ligname].poses[pose].emodel
 
     def _num_poses(self, ligname):
         return min(self.max_poses, len(self.ligands[ligname].poses))
