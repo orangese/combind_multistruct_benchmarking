@@ -200,7 +200,7 @@ class MCSSController:
         mcss = self.MCSSs["{}-{}".format(l1, l2)]
         return mcss.n_mcss_atoms, mcss.n_l1_atoms, mcss.n_l2_atoms
 
-    def get_mcss_size(self, l1, l2):
+    def get_mcss_size(self, l1, l2, compute=False):
         """
         Returns the fraction of the smaller of the ligands
         that composes the MCSS for l1 and l2.
@@ -208,12 +208,15 @@ class MCSSController:
         l1, l2: string, ligand names
         """
         if l1 > l2: l1, l2 = l2, l1
-        mcss = self.MCSSs["{}-{}".format(l1, l2)]
-
+        try:
+            mcss = self.MCSSs["{}-{}".format(l1, l2)]
+        except KeyError:
+            self._execute_init_on_the_fly(l1, l2)
+            mcss = self.MCSSs["{}-{}".format(l1, l2)]
         f = shared_paths['stats']['mcss_func']
         return mcss.n_mcss_atoms / float(f(mcss.n_l1_atoms, mcss.n_l2_atoms))
 
-    def load_mcss(self, temp_init_files = None):
+    def load_mcss(self, temp_init_files=None):
         """
         Read MCSSs both from directories and from collated file. Does not
         load rmsds! Do this with load_rmsd method.
@@ -235,13 +238,16 @@ class MCSSController:
             temp_init_files = glob('{}/*.init.csv'.format(self.root))
         
         for temp in temp_init_files:
-            with open(temp) as fp:
-                try:
-                    mcss = MCSS.from_string(fp.readline().strip())
-                except ValueError:
-                    assert False, temp
-                if mcss is not None:
-                    self.MCSSs[mcss.name] = mcss
+            self._load_temp(temp)
+
+    def _load_temp(self, temp):
+        with open(temp) as fp:
+            try:
+                mcss = MCSS.from_string(fp.readline().strip())
+            except ValueError:
+                assert False, temp
+            if mcss is not None:
+                self.MCSSs[mcss.name] = mcss
 
     # All of below are relevant for computation only
     def compute_mcss(self, chembl = True, pick_helpers={}):
@@ -385,13 +391,24 @@ class MCSSController:
             self.no_mcss_small.add((l1, l2))
 
     # Methods to execute computation
+    def _execute_init_on_the_fly(self, l1, l2):
+        """
+        """
+        print('Initializing mcss for {}-{} on-the-fly.'.format(l1, l2))
+        previous_cwd = os.getcwd()
+        os.chdir(self.root)
+        self._add(l1, l2, False)
+        self._execute_init(inline=True)
+        self._load_temp(self.init_file.format('{}-{}'.format(l1, l2)))
+        os.chdir(previous_cwd)
+
     def _execute(self):
         """
         Execute all incomplete computations.
         """
         if self.no_mcss:
             print(len(self.no_mcss), 'mcss init pairs left')
-            self._execute_init()
+            self._execute_init(inline=inline)
         if self.no_rmsd:
             print(len(self.no_rmsd), 'mcss rmsd pairs left')
             self._execute_rmsd()
@@ -399,7 +416,7 @@ class MCSSController:
             print(len(self.no_mcss_small), 'small mcss init pairs left')
             self._execute_init(small = True)
 
-    def _execute_init(self, small = False):
+    def _execute_init(self, small = False, inline=False):
         for i, pairs in enumerate(grouper(self.INIT_GROUP_SIZE,
                                           self.no_mcss_small if small else self.no_mcss)):
             script = 'init{}.sh'.format(i)
@@ -413,7 +430,13 @@ class MCSSController:
                     contents += ' small\n'
             with open(script, 'w') as f:
                 f.write(self.TEMPLATE.format(contents))
-            os.system('sbatch {}'.format(script))
+            
+            if inline:
+                os.system('sh {} 2>&1 > /dev/null'.format(script))
+            else:
+                os.system('sbatch {}'.format(script))
+        self.no_mcss = set([])
+        self.no_mcss_small = set([])
 
     def _execute_rmsd(self):
         for i, pairs in enumerate(grouper(self.RMSD_GROUP_SIZE, self.no_rmsd)):
@@ -431,3 +454,4 @@ class MCSSController:
             with open(script, 'w') as f:
                 f.write(self.TEMPLATE.format(contents))
             os.system('sbatch {}'.format(script))
+        self.no_rmsd = set([])

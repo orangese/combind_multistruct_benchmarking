@@ -12,7 +12,6 @@ from dock.dock import dock, verify_dock
 
 from dock.chembl_sort import get_ligands, proc_ligands
 from dock.chembl_props import write_props
-from dock.pick_helpers import pick_helpers, load_helpers
 
 from shared_paths import shared_paths, proteins
 from ifp.fp_controller import compute_fp
@@ -77,8 +76,8 @@ def main(args):
 
         # 3. decide what ligands to use and prepare them
         if task == '3':
-            pick_helpers(lm)         # Picks chembl ligands for use in scoring
-            dock(lm, load_helpers()) # Dock chembl ligands to be used in scoring
+            lm.pick_helpers()         # Picks chembl ligands for use in scoring
+            dock(lm, lm.load_helpers()) # Dock chembl ligands to be used in scoring
             compute_fp(lm)           # Fingerprints for docked ligands and pdb structures
             lm.mcss.compute_mcss(True, load_helpers())
         
