@@ -305,18 +305,24 @@ class LigandManager:
 
     def load_helpers(self):
         fpath = 'chembl/helpers'
-        if dirpath is not None:
-            fpath = '{}/{}'.format(dirpath, fpath)
-
         helpers = {}
-        for fname in os.listdir(fpath):
+        for fname in os.listdir('{}/{}'.format(self.root, fpath)):
             if fname[0] == '.' or fname.split('.')[-1] != 'txt': continue
             helpers[fname] = {}
-            with open('{}/{}'.format(fpath, fname)) as f:
+            with open('{}/{}/{}'.format(self.root, fpath, fname)) as f:
                 for line in f:
                     q, chembl = line.strip().split(':')
                     helpers[fname][q] = chembl.split(',')
         return helpers
+
+    def get_helpers(self, query, fname, num=10, struct=None):
+        if struct is None: struct = self.st
+        if fname not in self.helpers:
+            self.helpers[fname] = self.load_helpers()[fname]
+            for q in self.helpers[fname]:
+                self.helpers[fname][q] = self.docked(self.helpers[fname][q], struct)
+        return self.helpers[fname][query][:num]
+
 
     def get_grids(self):
         return self.grids

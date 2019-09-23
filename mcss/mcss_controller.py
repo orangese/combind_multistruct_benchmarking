@@ -408,7 +408,7 @@ class MCSSController:
         """
         if self.no_mcss:
             print(len(self.no_mcss), 'mcss init pairs left')
-            self._execute_init(inline=inline)
+            self._execute_init()
         if self.no_rmsd:
             print(len(self.no_rmsd), 'mcss rmsd pairs left')
             self._execute_rmsd()
