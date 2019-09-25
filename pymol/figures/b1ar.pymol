@@ -12,7 +12,7 @@ set opaque_background, 0
 set cartoon_color, white
 set ray_trace_mode, 1
 set ray_shadow, 0
-set dash_width, 10
+set dash_width, 6
 set surface_cavity_mode, 2
 hide lines
 util.cbaw
@@ -27,7 +27,7 @@ hide sticks, name o+n+c
 color grey, crystal* and element c
 color chartreuse, combind* and element c
 color hotpink, glide* and element c
-set stick_transparency, 0.5, crystal*
+set stick_transparency, 0.0, crystal*
 color manganese, grid* and element c
 
 # Show binding pocket residues
