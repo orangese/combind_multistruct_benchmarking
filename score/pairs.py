@@ -4,38 +4,40 @@ from shared_paths import shared_paths, feature_defs
 class LigPair:
     """
     Computes and stores overlap scores for a ligand pair.
-
-    Importantly, this class normalizes the overlap scores
-    by dividing by the maximum value.
     """
-    def __init__(self, l1, l2, features, mcss, max_poses):
+    def __init__(self, l1, l2, features, mcss, max_poses, mode='maxoverlap'):
         self.l1 = l1
         self.l2 = l2
         self.max_poses = max_poses
         self.mcss = mcss
         self.features = features
-
-        if 'mcss' in features:
-            assert self.mcss is not None
+        self.mode = mode
 
         self.pose_pairs = self._init_pose_pairs()
-        self.feat_map = self._init_feat_map()
+        
+        if mode == 'maxoverlap':
+            self.feat_map = self._init_feat_map()
 
     def get_feature(self, feature, rank1, rank2):
         """
         Returns the overlap score for feature for the pose pair
         consisting of poses rank1 and rank2.
         """
-        feature_value = self.pose_pairs[(rank1,rank2)].get_feature(feature)
-        minimum, maximum = self.feat_map[feature]
-        
-        # Feature isn't present in any pose pair.
-        if not maximum or feature_value is None:
-            return None
-        
         if feature == 'mcss':
-            return feature_value
-        return feature_value / max(maximum, 1.0)
+            return self.pose_pairs[(rank1,rank2)].mcss_score
+
+        if self.mode == 'maxoverlap':
+            feature_value = self.pose_pairs[(rank1,rank2)].overlap(feature)
+            minimum, maximum = self.feat_map[feature]
+
+            # Feature isn't present in any pose pair.
+            if not maximum or feature_value is None:
+               return None
+            return feature_value / max(maximum, 1.0)
+
+        elif self.mode == 'tanimoto':
+            return self.pose_pairs[(rank1, rank2)].tanimoto(feature)
+        assert False
 
     def _init_pose_pairs(self):
         """
@@ -60,9 +62,12 @@ class LigPair:
         """
         feat_map = {feature: (float('inf'), -float('inf'))
                     for feature in self.features}
-        for key, pose_pair in self.pose_pairs.items():
+        for pp in self.pose_pairs.values():
             for feature in self.features:
-                pp_x = pose_pair.get_feature(feature)
+                if feature == 'mcss':
+                    pp_x = pp.mcss_score
+                else:
+                    pp_x = pp.overlap(feature)
                 if pp_x is None: continue
                 feat_map[feature] = (min(feat_map[feature][0], pp_x),
                                      max(feat_map[feature][1], pp_x))
@@ -70,38 +75,40 @@ class LigPair:
 
 class PosePair:
     """
-    Computes and stores overlap scores for pose1 and pose2.
-
-    This class defines the feature overlap scores as the sum of
-    the geometric mean of the fingerprint values for each residue.
+    Computes overlap scores for a pair of poses.
     """
     def __init__(self, pose1, pose2, mcss_score):
         self.pose1 = pose1
         self.pose2 = pose2
-        self.features = {'mcss': mcss_score}
+        self.mcss_score = mcss_score
 
     def correct(self):
-        """
-        Returns 1 if both poses are at most 2 A RMSD from their
-        crystallographic pose.
-        """
         return int(    self.pose1.rmsd <= shared_paths['stats']['native_thresh']
                    and self.pose2.rmsd <= shared_paths['stats']['native_thresh'])
 
-    def get_feature(self, feature):
-        """
-        Get the value of feature for this pose pair.
+    def overlap(self, feature):
+        overlap = 0
+        for (i, r) in self.pose1.fp:
+            if i in feature_defs[feature] and (i, r) in self.pose2.fp:
+                overlap += self._residue_level_overlap(self.pose1.fp[(i,r)],
+                                                      self.pose2.fp[(i,r)])
+        return overlap
 
-        Specifically, computes residue level scores by taking the geometric
-        mean of the fingerprint values, then sums them to get a target level score.
-        """
-        if feature not in self.features:
-            assert feature in feature_defs, feature
-            score = 0
-            # (feature_index, residue)
-            for (i, r) in self.pose1.fp:
-                if i in feature_defs[feature] and (i, r) in self.pose2.fp:
-                    # Geometric mean
-                    score += (self.pose1.fp[(i,r)]*self.pose2.fp[(i,r)])**0.5
-            self.features[feature] = score
-        return self.features[feature]
+    def tanimoto(self, feature, pseudo_hits=1, pseudo_misses=1):
+        overlap = pseudo_hits + self.overlap(feature)
+        total = (2*pseudo_hits+pseudo_misses) + self._total(feature)
+        return overlap / (total - overlap)
+
+    def _residue_level_overlap(self, fp1, fp2):
+        return (fp1*fp2)**0.5
+
+    def _total(self, feature):
+        total = 0
+        for (i, r) in self.pose1.fp:
+            if i in feature_defs[feature]:
+                total += self.pose1.fp[(i,r)]
+
+        for (i, r) in self.pose2.fp:
+            if i in feature_defs[feature]:
+                total += self.pose2.fp[(i,r)]
+        return total

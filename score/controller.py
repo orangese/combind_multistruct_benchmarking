@@ -24,12 +24,14 @@ from glob import glob
 from grouper import grouper
 
 group_size = 4
-num_ligs = [1, 3, 5, 10, 15, 20]
-alpha_factors = [0.1, 0.5, 1.0, 2.0]
+num_ligs = [20]
+alpha_factors = [0.01, 0.1, 0.5, 0.75, 1.0, 1.25, 1.5]
 features = [['mcss', 'contact', 'hbond', 'sb'],
-            ['mcss'],
-            ['mcss', 'hbond', 'sb'],
+            #['mcss'],
+            #['mcss', 'contact', 'hbond_donor', 'hbond_acceptor', 'sb'],
+            #['mcss', 'hbond', 'sb'],
             #['mcss', 'contact', 'hbond'],
+            #['mcss', 'contact', 'sb'],
             #['contact', 'hbond', 'sb']
             ]
 
@@ -76,17 +78,16 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
     os.chdir(subdir)
 
     # Run specific settings.
-    if crystal:
-        settings['alpha'] = alpha_factor
-    elif chembl is not None:
-        settings['alpha'] = alpha_factor * (chembl[1] + use_crystal_pose)
+    if chembl is not None:
         settings['num_pred_chembl'] = chembl[1]
         settings['chembl_file'] = chembl[0] + '.txt'
-    else:
-        settings['alpha'] = alpha_factor * float(len(ligands) - 1 + use_crystal_pose)
+    
+    settings['chembl'] = chembl is not None
+    settings['alpha'] = alpha_factor
     settings['use_crystal_pose'] = use_crystal_pose
     settings['k_list'] = features
-    settings['chembl'] = chembl is not None
+    settings['all_wrong'] = False
+    settings['physics_score'] = 'gscore'
     
     with open('settings.py', 'w') as f:
         for varname, var in settings.items():
@@ -290,11 +291,6 @@ def merge(mode, inline):
                                                      mode)
         log = '{}/{}.log'.format(directory, mode)
         print(protein)
-        if os.path.exists(log):
-            print('{} exists:'.format(log))
-            with open(log) as fp:
-                print(fp.read())
-            continue
         print('executing:')
         os.system('mkdir -p {}'.format(directory))
         if inline:

@@ -12,7 +12,6 @@ from dock.dock import dock, verify_dock
 
 import dock.chembl_sort as chembl_sort
 from dock.chembl_props import write_props
-from dock.pick_helpers import pick_helpers, load_helpers
 
 from shared_paths import shared_paths, proteins
 from ifp.fp_controller import compute_fp
@@ -53,15 +52,8 @@ def main(args):
             lm.mcss.compute_mcss() # Computes MCSS, for use in pick_helpers
 
         if task == 'p':
-            #dock(lm)
-            #dock(lm, mode = 'confgen_es1')
-            dock(lm, mode = 'confgen_es4')
-            #dock(lm, mode = 'confgen_es4_soft')
-            #dock(lm, mode = 'confgen_es4_nocanon')
-            #dock(lm, mode = 'inplace')
-            #dock(lm, mode = 'mininplace')
-            dock(lm, mode = 'XP')
-            #dock(lm, mode = 'expanded')
+            dock(lm, mode='confgen_es4')
+            dock(lm, mode='XP')
             lm.mcss.compute_mcss(False)
             compute_fp(lm, raw = 'raw' in shared_paths['ifp']['version'])
 
@@ -82,10 +74,10 @@ def main(args):
 
         # 3. decide what ligands to use and prepare them
         if task == '3':
-            pick_helpers(lm)         # Picks chembl ligands for use in scoring
-            dock(lm, load_helpers()) # Dock chembl ligands to be used in scoring
+            lm.pick_helpers()         # Picks chembl ligands for use in scoring
+            dock(lm, lm.load_helpers()) # Dock chembl ligands to be used in scoring
             compute_fp(lm)           # Fingerprints for docked ligands and pdb structures
-            lm.mcss.compute_mcss(True, load_helpers())
+            lm.mcss.compute_mcss(True, lm.load_helpers())
         
         # 3m. same as 3, except we have multiple mutant receptors to dock to
         if task == '3m':

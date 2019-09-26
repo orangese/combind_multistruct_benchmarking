@@ -22,7 +22,6 @@ import numpy as np
 from shared_paths import shared_paths
 from ifp.fp_controller import parse_fp_file
 from dock.parse_chembl import load_chembl_proc
-from dock.pick_helpers import load_helpers
 from dock.chembl_props import read_duplicates
 from mcss.mcss_controller import MCSSController
 
@@ -83,7 +82,7 @@ class Ligand:
     def load_crystal_pose(self):
         try:
             fps = parse_fp_file(self.crystal_fp_path)
-            self.poses = [Pose(0, 0, 0, fps[0])]
+            self.poses = [Pose(0, -1000, -1000, fps[0])]
         except IOError:
             pass
 
@@ -228,7 +227,8 @@ class LigandManager:
             filters = [
                 lambda x,ci: ci[x].ki is not None and ci[x].ki <= 1000,
                 lambda x,ci: ci[x].mw is not None and ci[x].mw <= 800,
-                lambda x,ci: ci[x].macrocycle is not None and not ci[x].macrocycle
+                lambda x,ci: ci[x].macrocycle is not None and not ci[x].macrocycle,
+                lambda x,ci: ci[x].valid_stereo is not None and ci[x].valid_stereo
             ]
             return all(f(l, self.chembl_info) for f in filters)
         return [l for l in self.all_ligs if l in self.chembl_info and valid(l)]
@@ -256,13 +256,73 @@ class LigandManager:
                 print('uh oh, ligand not found in unique or duplicates...', l)
         return unique_ligs
 
+    def pick_helpers(self, maxnum=20, num_chembl=20):
+        parent = 'chembl/helpers'
+        os.system('mkdir -p {}'.format(parent))
+        ki_sort = lambda c: self.chembl_info[c].ki
+
+        # filters
+        all_options = [
+            'best_affinity.txt',
+            'best_mcss.txt',
+            'best_affinity_diverse.txt'
+        ]
+
+        for f in all_options:
+            fpath = '{}/{}'.format(parent, f)
+            if not os.path.exists(fpath):
+                print('picking chembl ligands', f)
+                chembl_ligs = sorted(self.chembl())
+                with open(fpath, 'w') as fi:
+                    for q in self.get_xdocked_ligands(maxnum):
+                        print(q)
+                        if 'mcss' in f:
+                            self.mcss.load_mcss()
+                            sorted_helpers = sorted(chembl_ligs, key=ki_sort)
+                            sorted_helpers = self.mcss.sort_by_mcss(q, sorted_helpers)
+                        elif 'affinity' in f:
+                            sorted_helpers = sorted(chembl_ligs, key=ki_sort)
+
+                        unique = self.unique([q]+sorted_helpers)
+
+                        if f == 'best_affinity_diverse.txt':
+                            self.mcss.load_mcss()
+                            _unique = []
+                            for helper in unique:
+                                for _helper in _unique:
+                                    not_query = _helper != q
+                                    sim = self.mcss.get_mcss_size(helper, _helper,compute=True) > 0.8
+                                    if sim and not_query:
+                                        break
+                                else:
+                                    _unique += [helper]
+
+                                print(len(_unique))
+                                if len(_unique) == num_chembl+1:
+                                    break
+                            unique = _unique
+                        fi.write('{}:{}\n'.format(q, ','.join(unique[1:num_chembl+1])))
+
+    def load_helpers(self):
+        fpath = 'chembl/helpers'
+        helpers = {}
+        for fname in os.listdir('{}/{}'.format(self.root, fpath)):
+            if fname[0] == '.' or fname.split('.')[-1] != 'txt': continue
+            helpers[fname] = {}
+            with open('{}/{}/{}'.format(self.root, fpath, fname)) as f:
+                for line in f:
+                    q, chembl = line.strip().split(':')
+                    helpers[fname][q] = chembl.split(',')
+        return helpers
+
     def get_helpers(self, query, fname, num=10, struct=None):
         if struct is None: struct = self.st
         if fname not in self.helpers:
-            self.helpers[fname] = load_helpers(self.root)[fname]
+            self.helpers[fname] = self.load_helpers()[fname]
             for q in self.helpers[fname]:
                 self.helpers[fname][q] = self.docked(self.helpers[fname][q], struct)
         return self.helpers[fname][query][:num]
+
 
     def get_grids(self):
         return self.grids

@@ -23,7 +23,9 @@ class ScoreContainer:
         self.predict_data = Protein(prot)
         self.ps = PredictStructs({}, self.predict_data.lm.mcss, self.stats,
                                  self.settings['k_list'], self.settings['num_poses'],
-                                 self.settings['alpha'])
+                                 self.settings['alpha'], self.sp['stats']['metric'],
+                                 all_wrong=self.settings['all_wrong'],
+                                 physics_score=self.settings['physics_score'])
 
     def read_settings(self):
         tr = {}
@@ -89,7 +91,11 @@ class ScoreContainer:
                         glide_cluster[lig] = i
                         best_emodel = pose.emodel
 
-                glide_pose = 0 #glide_cluster[lig]
+                if self.settings['physics_score'] == 'gscore':
+                    glide_pose = 0
+                elif self.settings['physics_score'] == 'emodel':
+                    glide_pose = glide_cluster[lig]
+                
                 best_pose = best_cluster[lig] if lig in best_cluster else None
                 f.write(','.join(map(str, [lig,
                                            combind_pose, poses[combind_pose].rmsd,

@@ -61,16 +61,16 @@ def three_ligands():
 	stats['native']['sb'].fx = np.linspace(0.01, 2, stats['native']['sb'].fx.shape[0])
 	stats['reference']['sb'].fx = np.linspace(2, 0.01, stats['native']['sb'].fx.shape[0])
 	features = ['sb']
-	return PredictStructs(ligands, None, stats, features, 3, 1.0)
+	return PredictStructs(ligands, None, stats, features, 3, 2.0)
 
 #############################################################################
 
 def test_get():
 	ps = basic_ps()
-	assert ps._get_gscore('lig1', 0) == -2.0
-	assert ps._get_gscore('lig1', 1) == -1.5
-	assert ps._get_gscore('lig2', 0) == -10.0
-	assert ps._get_gscore('lig2', 1) == -3.5
+	assert ps._get_physics_score('lig1', 0) == -2.0
+	assert ps._get_physics_score('lig1', 1) == -1.5
+	assert ps._get_physics_score('lig2', 0) == -10.0
+	assert ps._get_physics_score('lig2', 1) == -3.5
 	assert ps._num_poses('lig1') == 2
 	assert ps._num_poses('lig2') == 2
 	with pytest.raises(KeyError):
@@ -213,10 +213,3 @@ def test_max_three():
 	assert ps.max_posterior() == opt
 	assert ps.max_posterior() == opt
 	assert ps.max_posterior() == opt
-
-def test_max_iterations():
-	ps = three_ligands()
-
-	opt = {'lig1':1, 'lig2':0, 'lig3': 1}
-	with pytest.raises(AssertionError):
-		ps.max_posterior(max_iterations=1)
