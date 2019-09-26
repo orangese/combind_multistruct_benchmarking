@@ -100,5 +100,5 @@ def load(version, helpers, mcss):
 
     data = data.set_index(['version', 'helpers', 'mode', 'features', 'alpha', 'n_ligs',
                            'family', 'protein', 'ligand']).sort_index()
-
+    data.loc[data.index.get_level_values('protein') == 'TRPV1', 'mcss'] = 0
     return data

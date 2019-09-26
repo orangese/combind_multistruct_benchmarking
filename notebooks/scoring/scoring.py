@@ -24,10 +24,13 @@ def load(prot, stats, scores, fname, struct):
     for name, ligand in sc.ps.ligands.items():
         best_rmsd, best_pose = float('inf'), -1
         for i, pose in enumerate(ligand.poses[:100]):
-            if pose.rmsd < best_rmsd:
-                best_rmsd = pose.rmsd
+            if pose.rmsd and pose.rmsd < best_rmsd:
                 best_pose = i
-        if best_rmsd < 2:
+                best_rmsd = pose.rmsd
+            if pose.rmsd and pose.rmsd < 2.0:
+                best_cluster[name] = i
+                break
+        if name not in best_cluster:
             best_cluster[name] = best_pose
     
     return cluster, glide_cluster, best_cluster, sc
