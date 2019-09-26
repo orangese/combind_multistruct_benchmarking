@@ -23,15 +23,16 @@ from score.statistics import statistics
 from glob import glob
 from grouper import grouper
 
-group_size = 20
-num_ligs = [1, 3, 5, 10, 15, 20]
-alpha_factors = [0.5, 0.75, 1.0, 1.25, 1.5]
+group_size = 4
+num_ligs = [20]
+alpha_factors = [0.01, 0.1, 0.5, 0.75, 1.0, 1.25, 1.5]
 features = [['mcss', 'contact', 'hbond', 'sb'],
-            # ['mcss'],
-            # ['mcss', 'hbond', 'sb'],
-            # ['mcss', 'contact', 'hbond'],
-            # ['mcss', 'contact', 'sb'],
-            # ['contact', 'hbond', 'sb']
+            #['mcss'],
+            #['mcss', 'contact', 'hbond_donor', 'hbond_acceptor', 'sb'],
+            #['mcss', 'hbond', 'sb'],
+            #['mcss', 'contact', 'hbond'],
+            #['mcss', 'contact', 'sb'],
+            #['contact', 'hbond', 'sb']
             ]
 
 cmd = '$SCHRODINGER/run {0:}/main.py score {1:} {1:} {1:} {1:}'.format(
