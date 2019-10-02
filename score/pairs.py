@@ -15,7 +15,7 @@ class LigPair:
 
         self.pose_pairs = self._init_pose_pairs()
         
-        if mode == 'maxoverlap':
+        if mode != 'tanimoto':
             self.feat_map = self._init_feat_map()
 
     def get_feature(self, feature, rank1, rank2):
@@ -26,7 +26,7 @@ class LigPair:
         if feature == 'mcss':
             return self.pose_pairs[(rank1,rank2)].mcss_score
 
-        if self.mode == 'maxoverlap':
+        if self.mode == 'maxoverlap' or (self.mode == 'hybrid' and feature == 'contact'):
             feature_value = self.pose_pairs[(rank1,rank2)].overlap(feature)
             minimum, maximum = self.feat_map[feature]
 
@@ -35,8 +35,19 @@ class LigPair:
                return None
             return feature_value / max(maximum, 1.0)
 
-        elif self.mode == 'tanimoto':
+        elif self.mode == 'tanimoto' or (self.mode == 'hybrid' and feature != 'contact'):
             return self.pose_pairs[(rank1, rank2)].tanimoto(feature)
+
+        elif self.mode == 'tanimoto-maxoverlap':
+            minimum, maximum = self.feat_map[feature]
+            return self.pose_pairs[(rank1, rank2)].tanimoto(feature,
+                                                            maxoverlap=maximum)
+        elif self.mode == 'tanimoto-maxoverlap-exclude':
+            minimum, maximum = self.feat_map[feature]
+            if maximum == 0:
+                return None
+            return self.pose_pairs[(rank1, rank2)].tanimoto(feature,
+                                                            maxoverlap=maximum)
         assert False
 
     def _init_pose_pairs(self):
@@ -91,12 +102,12 @@ class PosePair:
         for (i, r) in self.pose1.fp:
             if i in feature_defs[feature] and (i, r) in self.pose2.fp:
                 overlap += self._residue_level_overlap(self.pose1.fp[(i,r)],
-                                                      self.pose2.fp[(i,r)])
+                                                       self.pose2.fp[(i,r)])
         return overlap
 
-    def tanimoto(self, feature, pseudo_hits=1, pseudo_misses=1):
+    def tanimoto(self, feature, pseudo_hits=1, pseudo_misses=1, maxoverlap=float('inf')):
         overlap = pseudo_hits + self.overlap(feature)
-        total = (2*pseudo_hits+pseudo_misses) + self._total(feature)
+        total = (2*pseudo_hits+pseudo_misses) + min(self._total(feature), 2*maxoverlap)
         return overlap / (total - overlap)
 
     def _residue_level_overlap(self, fp1, fp2):

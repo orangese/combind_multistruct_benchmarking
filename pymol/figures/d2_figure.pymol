@@ -14,10 +14,12 @@ hide lines
 util.cbaw
 
 
-
-color chartreuse, combind* and element c
-color hotpink, glide* and element c
 color manganese, grid* and element c
+
+color green, (combind_pimozide or glide_pimozide) and element c
+color cyan, (combind_benperidol or glide_benperidol) and element c
+color orange, (combind_spiperone or glide_spiperone) and element c
+color yellow, (combind_mespiperone or glide_mespiperone) and element c
 
 
 show sticks, resid 91+100+193+386+114
@@ -35,8 +37,25 @@ set_view (\
      8.932823181,    7.206665516,  -10.440477371,\
     50.921798706,   78.908416748,  -20.000000000 )
 
+set_view (\
+    -0.220545456,   -0.621102691,    0.752052486,\
+    -0.969542861,    0.223768577,   -0.099520758,\
+    -0.106476113,   -0.751098335,   -0.651532829,\
+     0.000115577,   -0.000225677,  -64.958099365,\
+     8.932823181,    7.206665516,  -10.440477371,\
+    50.921798706,   78.908416748,  -20.000000000 )
+
+
+set_view (\
+    -0.306212306,   -0.687293589,    0.658677816,\
+    -0.951736450,    0.235832676,   -0.196374685,\
+    -0.020374276,   -0.687025011,   -0.726337135,\
+     0.000115577,   -0.000225677,  -64.958099365,\
+     8.932823181,    7.206665516,  -10.440477371,\
+    50.921798706,   78.908416748,  -20.000000000 )
 
 disable *
+
 enable grid
 enable grid_pimozide
 enable glide

@@ -1,5 +1,5 @@
 # Load Data
-results B1AR/scores/stats6/pdb/standard/1.0-mcss_contact_hbond_sb/pdb.sc, B1AR, 2VT4, confgen_es4
+results B1AR/scores/stats26/pdb/standard/1.0-mcss_contact_hbond_sb/pdb.sc, B1AR, 2VT4, confgen_es4
 
 load_complexes B1AR, 20
 
@@ -25,8 +25,6 @@ hide sticks, name o+n+c
 
 # Color coding
 color grey, crystal* and element c
-color chartreuse, combind* and element c
-color hotpink, glide* and element c
 set stick_transparency, 0.0, crystal*
 color manganese, grid* and element c
 
@@ -50,6 +48,9 @@ set_view (\
 
 # 5A8E
 
+color cyan, element c and combind_5A8E_lig
+color cyan, element c and glide_5A8E_lig
+
 disable *; enable combind or grid or glide or grid_3ZPR_lig or combind_5A8E_lig or crystal_5A8E
 delete dist*
 dist 121/od2, combind_5A8E_lig and element n and (121/od2 expand 4)
@@ -69,6 +70,9 @@ ray
 png ~/Downloads/combind_code/pymol/figures/b1ar_panels/glide_5A8E.png
 
 # 3ZPQ
+
+color green, element c and combind_3ZPQ_lig
+color green, element c and glide_3ZPQ_lig
 
 disable *; enable combind or grid or glide or grid_3ZPR_lig or combind_3ZPQ_lig or crystal_3ZPQ
 delete dist*
@@ -90,6 +94,9 @@ ray
 png ~/Downloads/combind_code/pymol/figures/b1ar_panels/glide_3ZPQ.png
 
 # 4AMJ
+
+color yellow, element c and combind_4AMJ_lig
+color yellow, element c and glide_4AMJ_lig
 
 disable *; enable combind or grid or glide or grid_3ZPR_lig or combind_4AMJ_lig or crystal_4AMJ
 delete dist*

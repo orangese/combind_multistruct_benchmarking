@@ -5,7 +5,6 @@ from grouper import grouper
 from schrodinger.structure import StructureReader, StructureWriter
 
 from dock.parse_chembl import load_chembl_raw, load_chembl_proc
-from dock.pick_helpers import load_helpers
 
 queue = 'owners'
 group_size = 10
@@ -183,6 +182,7 @@ def get_needed_chembl():
     Get the needed chembl objects
     :return: (list of chembl objects)
     '''
+    assert False, "I refactored load helpers into LigandManager."
     helpers = load_helpers()
     # get all relevent chembl ligand ids
     needed_chembl_ids = []

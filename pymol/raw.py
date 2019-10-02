@@ -2,10 +2,12 @@ from pymol import cmd
 from glob import glob
 
 def raw(protein):
-    for prot in sorted(glob('{}/structures/aligned/*'.format(protein))):
+    print(protein)
+    for prot in sorted(glob('{}/structures/aligned_files/*'.format(protein))):
         pdb = prot.split('/')[-1]
         load_crystal_protein(protein, pdb)
         load_crystal_pose(protein, pdb)
+        print(pdb)
         
     cmd.util.cbao("prot_*")
     cmd.util.cbay("het and crystal_*")
@@ -20,11 +22,11 @@ def raw(protein):
     cmd.hide('everything', 'name H')
 
 def load_crystal_protein(protein, ligand):
-    cmd.load('{0}/structures/aligned/{1}/{1}_prot.mae'.format(protein, ligand))
+    cmd.load('{0}/structures/aligned_files/{1}/{1}_prot.mae'.format(protein, ligand))
     cmd.set_name('{}_prot'.format(ligand), 'prot_{}'.format(ligand))
 
 def load_crystal_pose(protein, ligand):
-    cmd.load('{0}/structures/aligned/{1}/{1}_lig.mae'.format(protein, ligand))
+    cmd.load('{0}/structures/aligned_files/{1}/{1}_lig.mae'.format(protein, ligand))
     cmd.set_name('{}_lig'.format(ligand), 'crystal_{}'.format(ligand))
 
 def ambiguous(protein):

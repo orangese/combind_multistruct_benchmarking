@@ -1,15 +1,15 @@
 
 #load_complexes A2AR, 20
-load A2AR/docking/confgen_es4/3EML_lig-to-2YDO/3EML_lig-to-2YDO_pv.maegz
-load A2AR/docking/confgen_es4/4UHR_lig-to-2YDO/4UHR_lig-to-2YDO_pv.maegz
+load BRD4/docking/confgen_es4/3U5J_lig-to-2YEL/3U5J_lig-to-2YEL_pv.maegz
+load BRD4/docking/confgen_es4/3P5O_lig-to-2YEL/3P5O_lig-to-2YEL_pv.maegz
 
 set_view (\
-     0.296490192,   -0.104729645,    0.949271142,\
-     0.275718540,    0.961029410,    0.019910989,\
-    -0.914366126,    0.255829573,    0.313810468,\
-    -0.000153530,   -0.000016991,  -47.932552338,\
-   -30.465457916,    5.377783298,  -22.136383057,\
-    42.381752014,   53.662754059,  -20.000000000 )
+     0.954938829,   -0.277474076,   -0.105339125,\
+    -0.216119379,   -0.406830907,   -0.887570083,\
+     0.203423381,    0.870338857,   -0.448468059,\
+     0.000035480,   -0.000043665,  -36.569145203,\
+   -11.952777863,   -5.009457588,    2.591383696,\
+    27.434934616,   45.708122253,  -20.000000000 )
 
 bg_color white
 set cartoon_transparency, 0
@@ -24,32 +24,32 @@ hide lines
 util.cbaw
 hide labels
 show cartoon
-hide cartoon, resid 247-251
+
+hide cartoon, resid 85-97
+hide cartoon, resid -45
 
 hide sticks
 show sticks, het
 hide sticks, element H and not (element N+O extend 1)
 
-color cyan,    3EML_lig-to-2YDO_pv.3EML_lig and element c
-color magenta, 4UHR_lig-to-2YDO_pv.4UHR_lig and element c
-color cyan,    3EML_lig-to-2YDO_pv.3EML_lig_63 and element c
-color magenta, 4UHR_lig-to-2YDO_pv.4UHR_lig_01 and element c
+color green,    3P5O_lig-to-2YEL_pv.3P5O_lig* and element c
+color cyan, 3U5J_lig-to-2YEL_pv.3U5J_lig* and element c
 
-select 3EML_mcss, 3EML_lig-to-2YDO_pv.* and name C9+HN10+N10+N19+C18+N12+C11+N13+H152+H151+N15+C14+N16+N17+C20+C1+C2+C3+C4+C5+C6+C7+C8
-select 4UHR_mcss, 4UHR_lig-to-2YDO_pv.* and name C13+C12+HN6+N6+H4+N4+C10+N5+C11+N7+C23+C9+N3+C8+N2+"H4 2"+"H4 1"+C21+C17+C16+C15+C22+C14
+select 3P5O_mcss, 3P5O_lig-to-2YEL_pv.3P5O_lig* and name N2+N3+N4+C5+N5+C6+C7+C8+C9+C10+C11+C12+C13+C14+C15+C17+C18+C19+C20+C21+C22
+select 3U5J_mcss, 3U5J_lig-to-2YEL_pv.3U5J_lig* and name CAA+CAC+CAD+CAE+CAF+CAG+CAH+CAI+CAJ+CAK+CAO+CAP+CAQ+CAR+CAS+CAT+CAU+NAL+NAM+NAN+NAV
 
 set stick_radius, 0.15
-set stick_radius, 0.25, 4UHR_mcss or 3EML_mcss
+set stick_radius, 0.25, 3U5J_mcss or 3P5O_mcss
 
 set stick_transparency, 0.5
-set stick_transparency, 0, 4UHR_mcss or 3EML_mcss
+set stick_transparency, 0, 3U5J_mcss or 3P5O_mcss
 
 
-disable *; enable 3EML_lig-to-2YDO_pv or 4UHR_lig-to-2YDO_pv or 3EML_lig-to-2YDO_pv.3EML_lig or 4UHR_lig-to-2YDO_pv.4UHR_lig or 3EML_lig-to-2YDO_pv.2YDO_prot
+disable *; enable 3U5J_lig-to-2YEL_pv.2YEL_prot or 3P5O_lig-to-2YEL_pv or 3U5J_lig-to-2YEL_pv or 3U5J_lig-to-2YEL_pv.3U5J_lig or 3P5O_lig-to-2YEL_pv.3P5O_lig
 ray
 png ~/Downloads/combind_code/pymol/figures/fig2_panels/mcss_ref.png
 
-disable *; enable 3EML_lig-to-2YDO_pv or 4UHR_lig-to-2YDO_pv or 3EML_lig-to-2YDO_pv.3EML_lig_63 or 4UHR_lig-to-2YDO_pv.4UHR_lig_01 or 3EML_lig-to-2YDO_pv.2YDO_prot
+disable *; enable 3U5J_lig-to-2YEL_pv.2YEL_prot or 3P5O_lig-to-2YEL_pv or 3U5J_lig-to-2YEL_pv or 3U5J_lig-to-2YEL_pv.3U5J_lig_03 or 3P5O_lig-to-2YEL_pv.3P5O_lig
 ray
 png ~/Downloads/combind_code/pymol/figures/fig2_panels/mcss_nat.png
 
