@@ -12,7 +12,7 @@ pd.set_option("display.max_rows", 75)
 mcss = '../../../mcss_sizes.pkl'
 
 families = {
-    'GPCR': ['5HT2B', 'A2AR', 'B1AR', 'B2AR', 'CHRM3','SMO', 'MGLUR5'],
+    'GPCR': ['5HT2B', 'A2AR', 'B1AR', 'B2AR', 'SMO', 'MGLUR5'],
     'Kinase': ['BRAF', 'CDK2', 'CHK1', 'JAK2', 'PLK1', 'MAPK14', 'MEK1'],
     #'Ion Channel': ['TRPV1'],
     'Transporter': ['SLC6A4', 'GLUT1', 'DAT'],
@@ -82,12 +82,12 @@ def filter_to_ubiquitous_ligands(data):
                                  for name, group in data.groupby(level=level)])
     return data[data.index.get_level_values(-1).isin(ligands)]
 
-def get_data(helpers, versions):
+def get_data(helpers, versions, best=True):
     data = pd.concat(load(version, helpers, mcss) for version in versions)
     data = add_correct(data, thresh = 2.0)
     data = data[(data.index.get_level_values('protein') != 'A2AR')]
     data = data[data.mcss < 0.5]
-    data = data[data.best_correct]
+    if best: data = data[data.best_correct]
     return data
 
 def results(data, helpers, alpha=1.0, method='standard',
@@ -103,7 +103,7 @@ def results(data, helpers, alpha=1.0, method='standard',
     perf = drug_average(family)
     return perf['glide_correct'][0], perf['combind_correct'][0]
 
-def load(version, helpers, mcss):
+def load(version, helpers, mcss=mcss):
     fnames = ('{}/{}/scores/{}/summary/{}.tsv'.format(shared_paths['data'], protein, version, helpers)
              for protein in proteins)
     data = pd.concat(pd.read_csv(fname, sep='\t')
