@@ -16,7 +16,7 @@ solvent = [x.lower() for x in solvent]
 ignore_ligands = solvent + ['', 'dtt', 'epe', 'mes', 'tla', 'tar', 'nmm', 
                  'eu','au','edt', 'ola','olb','olc','css', 'cso', 'clr', 'pg0', 'srt', 'cxs', 'tpo', 'sog',
                  'ccs','cme','ben','glc','mli','ocs','aly','sgm','ptr','csd','kcx','ste','cit','iod','hto',
-                 'hez','jzr','cps','bog','acp','anp','adp','atp','ags']
+                 'hez','jzr','cps','bog','acp','anp','adp','atp','ags', 'glu']
 
 ignore_titles = ['mutant', 'mutation', 't877a', 'w741l', 'cryptic']#, 'fragment']#, 'allosteric']
 

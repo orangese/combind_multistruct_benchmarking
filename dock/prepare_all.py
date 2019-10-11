@@ -75,7 +75,7 @@ def main(args):
         # 3. decide what ligands to use and prepare them
         if task == '3':
             lm.pick_helpers()         # Picks chembl ligands for use in scoring
-            dock(lm, lm.load_helpers()) # Dock chembl ligands to be used in scoring
+            dock(lm, lm.load_helpers(), mode=shared_paths['docking']) # Dock chembl ligands to be used in scoring
             compute_fp(lm)           # Fingerprints for docked ligands and pdb structures
             lm.mcss.compute_mcss(True, lm.load_helpers())
         

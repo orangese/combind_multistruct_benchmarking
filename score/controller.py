@@ -19,13 +19,13 @@ stats_version/
 import os
 from shared_paths import shared_paths, proteins, feature_defs
 from containers import Protein
-from score.statistics import statistics
+from score.statistics import Statistics
 from glob import glob
 from grouper import grouper
 
-group_size = 4
+group_size = 1
 num_ligs = [20]
-alpha_factors = [0.01, 0.1, 0.5, 0.75, 1.0, 1.25, 1.5]
+alpha_factors = [1.0]
 features = [['mcss', 'contact', 'hbond', 'sb'],
             #['mcss'],
             #['mcss', 'contact', 'hbond_donor', 'hbond_acceptor', 'sb'],
@@ -110,11 +110,11 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
     os.chdir('..')
 
 def compute_stats(protein, stats_root):
-    stats_prots = [p for p in proteins if p != protein.lm.protein and p != 'DHFR']
+    stats_prots = [p for p in proteins if p != protein.lm.protein]
 
     # Statistics computation.
-    stats = statistics(stats_prots, feature_defs.keys())
-    for dist, interactions in stats.items():
+    stats = Statistics(stats_prots, feature_defs.keys(), shared_paths['stats'], shared_paths['data'])
+    for dist, interactions in stats.stats.items():
         for interaction, de in interactions.items():
             fname = '{}/{}_{}.txt'.format(stats_root, dist, interaction)
             if not os.path.exists(fname):
@@ -151,21 +151,21 @@ def run_pdb():
                       False, alpha_factor, feature)
         os.chdir('..')
 
-        # Crystal.
-        os.chdir('crystal')
-        for alpha_factor in alpha_factors:
-            for feature in features:
-                score(stats_root, protein.lm.st, protein.lm.protein, ligands,
-                      True, alpha_factor, feature)
-        os.chdir('..')
+        # # Crystal.
+        # os.chdir('crystal')
+        # for alpha_factor in alpha_factors:
+        #     for feature in features:
+        #         score(stats_root, protein.lm.st, protein.lm.protein, ligands,
+        #               True, alpha_factor, feature)
+        # os.chdir('..')
 
-        # Crystal only.
-        os.chdir('only_crystal')
-        for alpha_factor in alpha_factors:
-            for feature in features:
-                score(stats_root, protein.lm.st, protein.lm.protein, ligands,
-                      True, alpha_factor, feature, crystal = True)
-        os.chdir('..')
+        # # Crystal only.
+        # os.chdir('only_crystal')
+        # for alpha_factor in alpha_factors:
+        #     for feature in features:
+        #         score(stats_root, protein.lm.st, protein.lm.protein, ligands,
+        #               True, alpha_factor, feature, crystal = True)
+        # os.chdir('..')
 
 def run_chembl(helpers):
     for i, d in enumerate(proteins):
@@ -197,13 +197,13 @@ def run_chembl(helpers):
         os.chdir('..')
 
         # Crystal.
-        os.chdir('crystal')
-        for num_lig in num_ligs:
-            for alpha_factor in alpha_factors:
-                for feature in features:
-                    score(stats_root, protein.lm.st, protein.lm.protein, ligands,
-                          True, alpha_factor, feature, chembl = (helpers, num_lig))
-        os.chdir('..')
+        # os.chdir('crystal')
+        # for num_lig in num_ligs:
+        #     for alpha_factor in alpha_factors:
+        #         for feature in features:
+        #             score(stats_root, protein.lm.st, protein.lm.protein, ligands,
+        #                   True, alpha_factor, feature, chembl = (helpers, num_lig))
+        # os.chdir('..')
 
 def check(mode):
 

@@ -4,11 +4,6 @@ Core optimization code.
 
 import numpy as np
 from score.pairs import LigPair
-from matplotlib import colors
-from matplotlib.gridspec import GridSpec
-from matplotlib.colors import LinearSegmentedColormap
-import matplotlib.pyplot as plt
-from shared_paths import feature_defs
 
 class PredictStructs:
     """
@@ -93,6 +88,30 @@ class PredictStructs:
 
         return best_cluster
 
+    def _anneal_cluster(self, pose_cluster, iterations):
+        iterations = 1000
+
+        def T(i):
+            T0 = 10
+            return T0 * (0.99**i)
+
+        for i in range(iterations):
+            for query in np.random.permutation(list(pose_cluster.keys())):
+                current_pose = pose_cluster[query]
+                current_plp = self._partial_log_posterior(pose_cluster, query)
+
+                candidate_pose = np.random.randint(self._num_poses(query))
+                pose_cluster[query] = candidate_pose
+                candidate_plp = self._partial_log_posterior(pose_cluster, query)
+
+                acceptance = np.exp((candidate_plp - current_plp) / T(i))
+
+                if (1 - acceptance) < np.random.random():
+                    pose_cluster[query] = candidate_pose
+                else:
+                    pose_cluster[query] = current_pose
+        return self.log_posterior(pose_cluster), pose_cluster
+
     def _optimize_cluster(self, pose_cluster, max_iterations):
         """
         Maximizes
@@ -151,7 +170,8 @@ class PredictStructs:
         """
         log_prob = 0
         for ligname, pose in pose_cluster.items():
-            log_prob -= self._get_physics_score(ligname, pose) * self.alpha
+            log_prob -= (self._get_physics_score(ligname, pose) * self.alpha
+                         * self._effective_number(pose_cluster, ''))
         
         ligands = list(pose_cluster.keys())
         for i, ligname1 in enumerate(ligands):
@@ -259,6 +279,13 @@ class PredictStructs:
     def _num_poses(self, ligname):
         return min(self.max_poses, len(self.ligands[ligname].poses))
 
+################################################################################
+
+from matplotlib import colors
+from matplotlib.gridspec import GridSpec
+from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.pyplot as plt
+from shared_paths import feature_defss
 
 class PredictStructsFigures(PredictStructs):
     """

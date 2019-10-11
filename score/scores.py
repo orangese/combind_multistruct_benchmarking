@@ -2,9 +2,10 @@ import os
 import sys
 
 from containers import Protein
-from score.statistics import statistics
+from score.statistics import Statistics
 from score.prob_opt import PredictStructs
 from score.density_estimate import DensityEstimate
+from shared_paths import feature_defs
 
 class ScoreContainer:
     """
@@ -21,6 +22,7 @@ class ScoreContainer:
         self.read_stats(stats_root)
  
         self.predict_data = Protein(prot)
+        features = {feature: feature_defs[feature] for feature in self.settings['k_list']}
         self.ps = PredictStructs({}, self.predict_data.lm.mcss, self.stats,
                                  self.settings['k_list'], self.settings['num_poses'],
                                  self.settings['alpha'], self.sp['stats']['metric'],

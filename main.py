@@ -12,7 +12,6 @@ import ifp.fp
 import mcss.mcss
 import score.controller
 import score.scores
-import score.statistics
 
 
 if sys.argv[1] == 'prepare':
@@ -26,9 +25,6 @@ elif sys.argv[1] == 'score_controller':
 
 elif sys.argv[1] == 'mcss':
 	mcss.mcss.main(sys.argv[1:])
-
-elif sys.argv[1] == 'statistics':
-	score.statistics.main(sys.argv[1:])
 
 elif sys.argv[1] == 'score':
 	score.scores.main(sys.argv[1:])

@@ -1,22 +1,21 @@
 import numpy as np
-from shared_paths import shared_paths, feature_defs
 
 class LigPair:
     """
     Computes and stores overlap scores for a ligand pair.
     """
-    def __init__(self, l1, l2, features, mcss, max_poses, mode='maxoverlap'):
+    def __init__(self, l1, l2, features, mcss, max_poses,
+                 mode='maxoverlap', native_thresh=2.0):
         self.l1 = l1
         self.l2 = l2
         self.max_poses = max_poses
         self.mcss = mcss
         self.features = features
         self.mode = mode
+        self.native_thresh = native_thresh
 
         self.pose_pairs = self._init_pose_pairs()
-        
-        if mode != 'tanimoto':
-            self.feat_map = self._init_feat_map()
+        self.feat_map = self._init_feat_map()
 
     def get_feature(self, feature, rank1, rank2):
         """
@@ -26,29 +25,20 @@ class LigPair:
         if feature == 'mcss':
             return self.pose_pairs[(rank1,rank2)].mcss_score
 
-        if self.mode == 'maxoverlap' or (self.mode == 'hybrid' and feature == 'contact'):
-            feature_value = self.pose_pairs[(rank1,rank2)].overlap(feature)
-            minimum, maximum = self.feat_map[feature]
-
-            # Feature isn't present in any pose pair.
-            if not maximum or feature_value is None:
-               return None
-            return feature_value / max(maximum, 1.0)
-
-        elif self.mode == 'tanimoto' or (self.mode == 'hybrid' and feature != 'contact'):
-            return self.pose_pairs[(rank1, rank2)].tanimoto(feature)
-
-        elif self.mode == 'tanimoto-maxoverlap':
-            minimum, maximum = self.feat_map[feature]
-            return self.pose_pairs[(rank1, rank2)].tanimoto(feature,
-                                                            maxoverlap=maximum)
-        elif self.mode == 'tanimoto-maxoverlap-exclude':
+        if 'exclude' in self.mode or 'maxoverlap' in self.mode:
             minimum, maximum = self.feat_map[feature]
             if maximum == 0:
                 return None
-            return self.pose_pairs[(rank1, rank2)].tanimoto(feature,
-                                                            maxoverlap=maximum)
-        assert False
+
+        if self.mode == 'maxoverlap' or (self.mode == 'hybrid' and feature == 'contact'):
+            feature_value = self.pose_pairs[(rank1,rank2)].overlap(feature)
+            minimum, maximum = self.feat_map[feature]
+            return feature_value / max(maximum, 1.0)
+        elif 'tanimoto-maxoverlap' in self.mode:
+            minimum, maximum = self.feat_map[feature]
+            return self.pose_pairs[(rank1, rank2)].tanimoto(feature, maxoverlap=maximum)
+        else:
+            return self.pose_pairs[(rank1, rank2)].tanimoto(feature)
 
     def _init_pose_pairs(self):
         """
@@ -64,7 +54,9 @@ class LigPair:
                     mcss_score = None
                 pairs[(rank1, rank2)] = PosePair(self.l1.poses[rank1],
                                                  self.l2.poses[rank2],
-                                                 mcss_score)
+                                                 mcss_score,
+                                                 self.features,
+                                                 self.native_thresh)
         return pairs
 
     def _init_feat_map(self):
@@ -88,19 +80,20 @@ class PosePair:
     """
     Computes overlap scores for a pair of poses.
     """
-    def __init__(self, pose1, pose2, mcss_score):
+    def __init__(self, pose1, pose2, mcss_score, features, native_thresh):
         self.pose1 = pose1
         self.pose2 = pose2
         self.mcss_score = mcss_score
+        self.features = features
+        self.native_thresh = native_thresh
 
     def correct(self):
-        return int(    self.pose1.rmsd <= shared_paths['stats']['native_thresh']
-                   and self.pose2.rmsd <= shared_paths['stats']['native_thresh'])
+        return int(max(self.pose1.rmsd,self.pose2.rmsd) <= self.native_thresh)
 
     def overlap(self, feature):
         overlap = 0
         for (i, r) in self.pose1.fp:
-            if i in feature_defs[feature] and (i, r) in self.pose2.fp:
+            if i in self.features[feature] and (i, r) in self.pose2.fp:
                 overlap += self._residue_level_overlap(self.pose1.fp[(i,r)],
                                                        self.pose2.fp[(i,r)])
         return overlap
@@ -116,10 +109,10 @@ class PosePair:
     def _total(self, feature):
         total = 0
         for (i, r) in self.pose1.fp:
-            if i in feature_defs[feature]:
+            if i in self.features[feature]:
                 total += self.pose1.fp[(i,r)]
 
         for (i, r) in self.pose2.fp:
-            if i in feature_defs[feature]:
+            if i in self.features[feature]:
                 total += self.pose2.fp[(i,r)]
         return total

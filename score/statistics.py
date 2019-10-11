@@ -1,165 +1,207 @@
 import numpy as np
 from score.density_estimate import DensityEstimate
 from score.pairs import LigPair
-from containers import Protein
-from shared_paths import shared_paths, feature_defs
+from glob import glob
 
-# Helper Functions
-def merge_dicts_of_lists(d1, d2):
-    assert (type(d1) == dict) == (type(d2) == dict)
-    if type(d1) == dict:
-        return {key: merge_dicts_of_lists(d1[key] if key in d1 else [],
-                                          d2[key] if key in d2 else [])
-                for key in set(d1.keys()).union(set(d2.keys()))}
-    if type(d1) != list: d1 = [d1]
-    if type(d2) != list: d2 = [d2]
-    return d1 + d2
+class Statistics:
+    def __init__(self, proteins, interactions, settings, path=None):
+        self.proteins = proteins
+        self.interactions = interactions
+        self.settings = settings
+        self.distributions = ['native', 'reference']
+        self.path = path
 
-def merge_stats(stats, weight):
-    for d, interactions in stats.items():
-        for i, des in interactions.items():
-            stats[d][i] = DensityEstimate.merge(des, weight)
-    return stats
+        if 'reference_poses' not in settings:
+            settings['reference_poses'] = settings['max_poses']
+        if 'native_poses' not in settings:
+            settings['native_poses'] = settings['max_poses']
 
-# I/O
-def get_fname(protein, ligand1, ligand2):
-    '''
-    protein, ligand1, ligand2 (str): names of protein and ligands
-    for protein level stats, set ligand1 and ligand2 to None.
+        assert settings['max_poses'] >= settings['reference_poses']
+        assert settings['max_poses'] >= settings['native_poses']
 
-    Returns path to where statistics files should be read/written.
-    '''
-    assert (ligand1 is None) == (ligand2 is None)
-    if ligand1 is None and ligand2 is None:
-        ID = protein
-    else:
-        ID = '{}-{}'.format(ligand1, ligand2)
-    version = shared_paths['stats']['version']
-    return "{}/{}/stats/{}/{}-{}-{}.de".format(shared_paths['data'],
-                                               protein, version, ID,
-                                               '{}', '{}')
+        self.stats = self._load()
 
-def read_stats(fname, interactions):
-    '''
-    fname (str): output from get_fname(...)
-    interactions [interaction (str),  ...]: interactions to read from files.
-    '''
-    stats = {'native':{}, 'reference':{}}
-    for d in stats:
-        for i in interactions:
-            try: 
-                stats[d][i] = DensityEstimate.read(fname.format(i, d))
-            except:
-                pass
-    return stats
+    @classmethod
+    def read(cls, path, ligands_equal, considered_proteins=None):
+        proteins = set()
+        interactions = set()
+        settings = {'ligands_equal': ligands_equal, 'max_poses': 100}
+        stats = {}
+        for fname in glob(path.format('*', '*', '*')):
+            ID = fname.split('/')[-1].split('.')[0]
+            protein, interaction, distribution = ID.split('-')
+            if considered_proteins and protein not in considered_proteins:
+                continue
+            proteins.add(protein)
+            interactions.add(interaction)
+            if distribution not in stats:
+                stats[distribution] = {}
+            if interaction not in stats[distribution]:
+                stats[distribution][interaction] = []
+            stats[distribution][interaction] += [DensityEstimate.read(fname)]
 
-# Core stats computation
-def get_interaction(lig_pair, interaction):
-    '''
-    lig_pair (LigPair): ligand pair for which to get features
-    interaction (str): interaction to get scores for
-    
-    Returns X_native: features for native poses
-            X_ref:    features for all poses
-    '''
-    X_native, X_ref = [], []
-    for (r1,r2), pp in lig_pair.pose_pairs.items():
-        if max(r1, r2) > shared_paths['stats']['max_poses']: continue
-        pp_x = lig_pair.get_feature(interaction, r1, r2)
-        if pp_x is not None:
-            if pp.correct():
-                X_native += [pp_x]
-            X_ref += [pp_x]
-    return np.array(X_native), np.array(X_ref)
+        self = cls(list(proteins), list(interactions), settings, path=path)
+        self.stats = self._merge(stats, ligands_equal)
+        return self
 
-def statistics_lig_pair(protein, ligand1, ligand2, interactions):
-    '''
-    protein (str):  protein name
-    ligand1,2 (str): names of ligands for which to compute statistics
-    interactions [interaction (str), ...]: interactions for which to compute
-        statistics
-    pnative (function): Maps glide scores to probability correct. Use a
-        DensityEstimate if you wish to weight by glide score, else pass
-        lambda x: 1
-    sd (float): standard deviation for density estimate.
-    '''
-    # If all statistics have already been computed, just read and return.
-    fname = get_fname(protein, ligand1, ligand2)
-    stats = read_stats(fname, interactions)
-    if all(    interaction in stats['native']
-           and interaction in stats['reference']
-           for interaction in interactions):
+    @classmethod
+    def read_proteins(cls, path):
+        stats = {}
+        for fname in glob(path.format('*', '*', '*')):
+            ID = fname.split('/')[-1].split('.')[0]
+            protein, interaction, distribution = ID.split('-')
+            if distribution not in stats:
+                stats[distribution] = {}
+            if interaction not in stats[distribution]:
+                stats[distribution][interaction] = []
+            stats[distribution][interaction] += [DensityEstimate.read(fname)]
         return stats
-    
-    print('Computing statistics for:', protein, ligand1, ligand2)
-    # Load relevant data.
-    prot = Protein(protein)
-    prot.load_docking([ligand1, ligand2],
-                      load_fp = True, load_mcss = 'mcss' in interactions)
-    lm = prot.lm
-    docking = prot.docking[lm.st]
-    lig_pair = LigPair(docking.ligands[ligand1],
-                       docking.ligands[ligand2],
-                       interactions,
-                       lm.mcss if 'mcss' in interactions else None,
-                       shared_paths['stats']['max_poses'],
-                       shared_paths['stats']['metric'])
 
-    # Compute all remaining statistics and write to files.
-    for interaction in interactions:
-        if (    interaction in stats['native']
-            and interaction in stats['reference']):
-            continue
+    def likelihood(self, interaction, distribution, x):
+        return self.stats[distribution][interaction](x)
 
-        X_native, X_ref = get_interaction(lig_pair, interaction)
+    def likelihood_ratio(self, interaction, x):
+        n = self.likelihood(interaction, 'native', x)
+        r = self.likelihood(interaction, 'reference', x)
+        return n / r
 
-        for d, X in [('native', X_native), ('reference', X_ref)]:
+    def domain(self, interaction):
+        n = self.stats['native'][interaction].x[[0, -1]]
+        r = self.stats['reference'][interaction].x[[0, -1]]
+        assert np.all(n == r)
+        return n
+
+    def trace(self, interaction, points=100):
+        low, high = self.domain(interaction)
+        x = np.linspace(low, high, points)
+        n = self.likelihood(interaction, 'native', x)
+        r = self.likelihood(interaction, 'reference', x)
+        return x, n, r
+
+    def data_loglikelihood(self, protein):
+        loglikelihood = {d: {i:0 for i in self.interactions}
+                         for d in self.distributions}
+        prot = Protein(protein)
+        ligands = prot.lm.get_xdocked_ligands(self.settings['n_ligs'])
+        prot.load_docking(ligands, load_fp=True, load_mcss=True)
+        for j, ligand1 in enumerate(ligands):
+            for ligand2 in ligands[j+1:]:
+                lig_pair = LigPair(prot.docking[prot.lm.st].ligands[ligand1],
+                                   prot.docking[prot.lm.st].ligands[ligand2],
+                                   self.interactions, prot.lm.mcss,
+                                   self.settings['max_poses'], self.settings['metric'])
+                for i in self.interactions:
+                    X_native, X_ref = self._get_interaction_scores(lig_pair, i)
+                    loglikelihood['native'][i] += self.stats['native'][i].data_loglikelihood(X_native)
+                    loglikelihood['reference'][i] += self.stats['reference'][i].data_loglikelihood(X_native)
+        
+        if self.settings['ligands_equal']:
+            # Note that poses_equal is not implemented.
+            n = len(ligands) * (len(ligands) - 1) / 2
+            for distribution, interactions in loglikelihood.items():
+                for interaction, _loglikelihood in interaction.items():
+                    loglikelihood[distribution][interaction] = _loglikelihood / n
+        return loglikelihood
+
+    ############################################################################
+
+    def _load(self):
+        stats = {d: {i:[] for i in self.interactions}
+                 for d in self.distributions}
+        for protein in self.proteins:
+            protein_stats = self._load_protein(protein)
+            for d in self.distributions:
+                for i in self.interactions:
+                    stats[d][i] += [protein_stats[d][i]]
+        return self._merge(stats, self.settings['ligands_equal'])
+
+    def _load_protein(self, protein):
+        if self.path is not None:
+            stats = self._read_protein(protein)
+            if stats:
+                return stats
+
+        print('Computing stats for {}'.format(protein))
+        from containers import Protein
+        prot = Protein(protein)
+        ligands = prot.lm.get_xdocked_ligands(self.settings['n_ligs'])
+        print(ligands)
+        prot.load_docking(ligands, load_fp=True, load_mcss='mcss' in self.interactions)
+
+        stats = {d: {i: [] for i in self.interactions}
+                 for d in self.distributions}
+        for j, ligand1 in enumerate(ligands):
+            for ligand2 in ligands[j+1:]:
+                ligand_stats = self._load_ligand_pair(prot, protein, ligand1, ligand2)
+                for d in self.distributions:
+                    for i in self.interactions:
+                        stats[d][i] += [ligand_stats[d][i]]
+        stats = self._merge(stats, self.settings['poses_equal'])
+
+        if self.path is not None:
+            self._write_protein(protein, stats)
+        return stats
+
+    def _read_protein(self, protein):
+        stats = {}
+        for distribution in self.distributions:
+            stats[distribution] = {}
+            for interaction in self.interactions:
+                fname = self.path.format(protein, interaction, distribution)
+                try:
+                    stats[distribution][interaction] = DensityEstimate.read(fname)
+                except:
+                    return {}
+        return stats
+
+    def _write_protein(self, protein, stats):
+        if self.path is None:
+            return
+
+        for distribution, interactions in stats.items():
+            for interaction, density_estimate in interactions.items():
+                fname = self.path.format(protein, interaction, distribution)
+                density_estimate.write(fname)
+
+    def _load_ligand_pair(self, prot, protein, ligand1, ligand2):
+        lig_pair = LigPair(prot.docking[prot.lm.st].ligands[ligand1],
+                           prot.docking[prot.lm.st].ligands[ligand2],
+                           self.interactions,
+                           prot.lm.mcss if 'mcss' in self.interactions else None,
+                           self.settings['max_poses'],
+                           self.settings['metric'])
+
+        stats = {d: {} for d in self.distributions}
+        for interaction in self.interactions:
+            X_native, X_ref = self._get_interaction_scores(lig_pair, interaction)
             domain = (0, 15) if interaction == 'mcss' else (0, 1)
-            sd = shared_paths['stats']['stats_sd']*(domain[1]-domain[0])
+            sd = self.settings['stats_sd']*(domain[1]-domain[0])
 
-            stats[d][interaction] = DensityEstimate(domain=domain, sd=sd, reflect=True)
-            stats[d][interaction].fit(X)
-            stats[d][interaction].write(fname.format(interaction, d))
-    return stats
-
-def statistics_protein(protein, interactions):
-    fname = get_fname(protein, None, None)
-    stats = read_stats(fname, interactions)
-    if all(    i in stats['native']
-           and i in stats['reference']
-           for i in interactions):
+            stats['native'][interaction] = DensityEstimate(domain=domain, sd=sd, reflect=True)
+            stats['reference'][interaction] = DensityEstimate(domain=domain, sd=sd, reflect=True)
+            stats['native'][interaction].fit(X_native)
+            stats['reference'][interaction].fit(X_ref)
         return stats
-    
-    print('Computing statistics for:', protein)
-    ligands = Protein(protein).lm.get_xdocked_ligands(shared_paths['stats']['n_ligs'])
-    print(ligands)
 
-    for j, ligand1 in enumerate(ligands):
-        for ligand2 in ligands[j+1:]:
-            ligand_stats = statistics_lig_pair(protein, ligand1, ligand2, interactions)
-            stats = merge_dicts_of_lists(stats, ligand_stats)
+    def _get_interaction_scores(self, lig_pair, interaction):
+        X_native = []
+        for (r1,r2), pp in lig_pair.pose_pairs.items():
+            if max(r1, r2) >= self.settings['native_poses']: continue
+            pp_x = lig_pair.get_feature(interaction, r1, r2)
+            if pp_x is not None and pp.correct():
+                X_native += [pp_x]
+        X_ref = []
+        for (r1,r2), pp in lig_pair.pose_pairs.items():
+            if max(r1, r2) >= self.settings['reference_poses']: continue
+            pp_x = lig_pair.get_feature(interaction, r1, r2)
+            if pp_x is not None:
+                X_ref += [pp_x]
+        return np.array(X_native), np.array(X_ref)
 
-    stats = merge_stats(stats, shared_paths['stats']['poses_equal'])
-    
-    for d, interactions in stats.items():
-        for i, de in interactions.items():
-            de.write(fname.format(i, d))
-    return stats
-
-def statistics(data, interactions):
-    '''
-    data    {protein (str): [ligand (str), ...]}
-    interactions {name (str): [code (int), ...]}
-
-    Returns DensityEstimate's representing the native and reference
-    distribution of the statistics for all proteins, ligands in data.
-    '''
-    stats = {'native': {}, 'reference':{}}
-    for protein in data:
-        protein_stats = statistics_protein(protein, interactions)
-        stats = merge_dicts_of_lists(stats, protein_stats)
-    return merge_stats(stats, shared_paths['stats']['ligands_equal'])
-
-def main(args):
-    assert len(args) == 2
-    statistics([args[1]], feature_defs.keys())
+    def _merge(self, stats, weight):
+        merged = {}
+        for d, interactions in stats.items():
+            merged[d] = {}
+            for i, des in interactions.items():
+                merged[d][i] = DensityEstimate.merge(des, weight)
+        return merged
