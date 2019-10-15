@@ -1,10 +1,9 @@
 import os
 import sys
 from grouper import grouper
-from shared_paths import shared_paths
 from schrodinger.structure import StructureReader
 
-XGLIDE_IN = '''GRIDFILE   ../../grids/{}/{}.zip
+GLIDE_ES2 = '''GRIDFILE   ../../grids/{}/{}.zip
 LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
 DOCKING_METHOD   confgen
 CANONICALIZE   True
@@ -105,8 +104,8 @@ PRECISION   SP
 '''
 
 modes = {'confgen':{
-                       'name':     shared_paths['docking'],
-                       'template': XGLIDE_IN},
+                       'name':     'confgen',
+                       'template': GLIDE_ES2},
         'confgen_es1':{
                        'name':     'confgen_es1',
                        'template': GLIDE_ES1},
@@ -231,22 +230,3 @@ def dock(lm, chembl=None, mutants=False, maxnum=30, mode = 'confgen'):
         proc_all(to_rmsd, rmsd=True)
 
     os.chdir('../..')
-
-def verify_dock(lm):
-    for ligand in lm.docked(lm.all_ligs):
-        prepared = "{0:}/ligands/prepared_ligands/{1:}/{1:}.mae".format(lm.root, ligand)
-        docked = "{0:}/docking/{1:}/{2:}-to-{3:}/{2:}-to-{3:}_pv.maegz".format(lm.root,
-                                                                               shared_paths['docking'],
-                                                                               ligand,
-                                                                               lm.st)
-        
-        if not os.path.exists(prepared) and os.path.exists(docked):
-            print('Ligand or docking files do not exist for:')
-            print(prepared)
-            print(docked)
-            continue
-
-        prepared = next(StructureReader(prepared))
-        docked = list(StructureReader(docked))[1]
-        if not prepared.isEquivalent(docked):
-            print('{} is not the same in glide output and prepared ligands.'.format(ligand))

@@ -1,19 +1,18 @@
 from schrodinger.structutils.measure import measure_distance
 from schrodinger.structutils.analyze import center_of_mass
-from shared_paths import shared_paths
-params = shared_paths['ifp']
 
 class PiPi_Container:
-    def __init__(self, lig, ind):
+    def __init__(self, lig, ind, settings):
         self.lig = lig
         self.ind = ind
+        self.settings = settings
         self.all_pipi = {}
 
     def add_residue(self, resnum, res):
         self.all_pipi[resnum] = []
         for i1, r1 in enumerate(res.aro):
             for i2, r2 in enumerate(self.lig.aro):
-                self.all_pipi[resnum].append(PiPi(r1, (i1, resnum), r2, i2))
+                self.all_pipi[resnum].append(PiPi(r1, (i1, resnum), r2, i2, self.settings))
 
     def filter_int(self):
         pass
@@ -27,16 +26,6 @@ class PiPi_Container:
                 all_scores[key] += p.score()
         return all_scores
 
-    def raw(self):
-        all_raw = {}
-        for r, pipi_list in self.all_pipi.items():
-            for p in pipi_list:
-                if not p.score(): continue
-                key = (self.ind[0], r, '')
-                if key not in all_raw: all_raw[key] = []
-                all_raw[key] += [p.dist]
-        return all_raw
-
 class PiPi:
     """
     Assesses the potential for Pi-Pi interaction between the substructures
@@ -48,12 +37,13 @@ class PiPi:
     The input rings are expected to be generated through the AtomGroup.fuse_rings
     method.
     """
-    def __init__(self, r1, i1, r2, i2): # type = structure
+    def __init__(self, r1, i1, r2, i2, settings): # type = structure
         self.r1 = r1
         self.r2 = r2
 
         self.i1 = i1 # protein ring unique id
         self.i2 = i2 # ligand ring unique id
+        self.settings = settings
 
         self.dist = self.get_dist()
 
@@ -68,13 +58,12 @@ class PiPi:
         return dist
 
     def score(self):
-        if self.dist <= params['pipi_dist_opt']:
+        if self.dist <= self.settings['pipi_dist_opt']:
             return 1
-        elif self.dist <= params['pipi_dist_cut']:
-            return ((params['pipi_dist_cut'] - self.dist)
-                    / (params['pipi_dist_cut'] - params['pipi_dist_opt']))
-        else:
-            return 0
+        elif self.dist <= self.settings['pipi_dist_cut']:
+            return ((self.settings['pipi_dist_cut'] - self.dist)
+                    / (self.settings['pipi_dist_cut'] - self.settings['pipi_dist_opt']))
+        return 0
 
     def __str__(self):
         str1= '\nPiPi:\nscore: ' + str(self.score())+'\n'

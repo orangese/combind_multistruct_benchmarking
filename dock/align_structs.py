@@ -1,8 +1,6 @@
 import os
 import sys
 from schrodinger.structure import StructureReader, StructureWriter
-
-from shared_paths import shared_paths
 from dock.renumber import renumber
 
 out_dir = 'structures/aligned_files'

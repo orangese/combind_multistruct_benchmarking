@@ -17,11 +17,11 @@ stats_version/
 """
 
 import os
-from shared_paths import shared_paths, proteins, feature_defs
+from settings import proteins, feature_defs, paths, stats
 from containers import Protein
 from score.statistics import Statistics
 from glob import glob
-from grouper import grouper
+from utils import grouper
 
 group_size = 1
 num_ligs = [20]
@@ -36,14 +36,10 @@ features = [['mcss', 'contact', 'hbond', 'sb'],
             ]
 
 cmd = '$SCHRODINGER/run {0:}/main.py score {1:} {1:} {1:} {1:}'.format(
-                                   shared_paths['code'], '{}')
-settings = {
-    'num_poses' : 100,
-    'shared_paths': shared_paths
-}
+                                   paths['CODE'], '{}')
 
 def score(stats_root, struct, protein, ligands, use_crystal_pose,
-          alpha_factor, features, crystal = False, chembl = None):
+          alpha_factor, features, stats, crystal = False, chembl = None):
     """
     stats_root: Absolute path to statistics files.
     struct: Docking structure, likely lm.st
@@ -77,6 +73,10 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
     os.mkdir(subdir)
     os.chdir(subdir)
 
+    settings = {}
+    settings['num_poses'] = 100
+    settings['stats'] = stats
+
     # Run specific settings.
     if chembl is not None:
         settings['num_pred_chembl'] = chembl[1]
@@ -106,14 +106,15 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
             f.write('#!/bin/bash\n')
             f.write(cmd.format(stats_root, struct, protein, ' '.join(ligands))+'\n')
     
-        os.system('sbatch -t 05:00:00 -p owners run.sh')
+        os.system('sbatch -t 01:00:00 -p owners run.sh')
     os.chdir('..')
 
-def compute_stats(protein, stats_root):
+def compute_stats(protein, stats_root, stats, paths):
     stats_prots = [p for p in proteins if p != protein.lm.protein]
+    path = paths['STATS'] + '/' + stats['version'] + '/{}-{}-{}.de'
 
     # Statistics computation.
-    stats = Statistics(stats_prots, feature_defs.keys(), shared_paths['stats'], shared_paths['data'])
+    stats = Statistics(stats_prots, feature_defs, stats, paths, path)
     for dist, interactions in stats.stats.items():
         for interaction, de in interactions.items():
             fname = '{}/{}_{}.txt'.format(stats_root, dist, interaction)
@@ -121,13 +122,14 @@ def compute_stats(protein, stats_root):
                 with open(fname, 'w') as fp:
                     fp.write(str(de)+'\n')
 
-def run_pdb():
+def run_pdb(stats):
     for i, d in enumerate(proteins):
         print(d, i)
-        os.chdir('{}/{}'.format(shared_paths['data'], d))
+        os.chdir(paths['ROOT'].format(protein=d))
         os.system('mkdir -p {}'.format('scores'))
-        root = '{}/{}/{}/{}'.format(shared_paths['data'], d, 'scores',
-                                    shared_paths['stats']['version'])
+        
+        root = '{}/{}/{}'.format(paths['ROOT'].format(protein=d), 'scores',
+                                 stats['version'])
         stats_root = '{}/{}'.format(root, 'stats')
         scores_root = '{}/{}'.format(root, 'pdb')
 
@@ -135,20 +137,20 @@ def run_pdb():
         os.system('mkdir -p {}'.format(stats_root))
         os.system('mkdir -p {}'.format(scores_root))
         os.system('mkdir -p {}/{}'.format(scores_root, 'standard'))
-        os.system('mkdir -p {}/{}'.format(scores_root, 'crystal'))
-        os.system('mkdir -p {}/{}'.format(scores_root, 'only_crystal'))
+        #os.system('mkdir -p {}/{}'.format(scores_root, 'crystal'))
+        #os.system('mkdir -p {}/{}'.format(scores_root, 'only_crystal'))
 
-        protein = Protein(d)
+        protein = Protein(d, stats, paths)
         ligands = protein.lm.get_xdocked_ligands(20)
-        compute_stats(protein, stats_root)
-
+        compute_stats(protein, stats_root, stats, paths)
+        
         # Standard.
         os.chdir(scores_root)
         os.chdir('standard')
         for alpha_factor in alpha_factors:
             for feature in features:
-                score(stats_root, protein.lm.st, protein.lm.protein, ligands,
-                      False, alpha_factor, feature)
+                score(stats_root, protein.lm.st, d, ligands,
+                      False, alpha_factor, feature, stats)
         os.chdir('..')
 
         # # Crystal.
@@ -167,13 +169,13 @@ def run_pdb():
         #               True, alpha_factor, feature, crystal = True)
         # os.chdir('..')
 
-def run_chembl(helpers):
+def run_chembl(stats, helpers):
     for i, d in enumerate(proteins):
         print(d, i)
-        os.chdir('{}/{}'.format(shared_paths['data'], d))
+        os.chdir('{}/{}'.format(paths['DATA'], d))
         os.system('mkdir -p {}'.format('scores'))
-        root = '{}/{}/{}/{}'.format(shared_paths['data'], d, 'scores',
-                                 shared_paths['stats']['version'])
+        root = '{}/{}/{}/{}'.format(paths['DATA'], d, 'scores',
+                                    stats['version'])
         stats_root = '{}/{}'.format(root, 'stats')
         scores_root = '{}/{}'.format(root, helpers)
 
@@ -183,17 +185,17 @@ def run_chembl(helpers):
         os.system('mkdir -p {}/{}'.format(scores_root, 'standard'))
         os.system('mkdir -p {}/{}'.format(scores_root, 'crystal'))
 
-        protein = Protein(d)
+        protein = Protein(d, stats, paths)
         ligands = protein.lm.get_xdocked_ligands(20)
-        compute_stats(protein, stats_root)
+        compute_stats(protein, stats_root, stats, paths)
         # Standard.
         os.chdir(scores_root)
         os.chdir('standard')
         for num_lig in num_ligs:
             for alpha_factor in alpha_factors:
                 for feature in features:
-                    score(stats_root, protein.lm.st, protein.lm.protein, ligands,
-                          False, alpha_factor, feature, chembl = (helpers, num_lig))
+                    score(stats_root, protein.lm.st, d, ligands,
+                          False, alpha_factor, feature, stats, chembl = (helpers, num_lig))
         os.chdir('..')
 
         # Crystal.
@@ -205,10 +207,10 @@ def run_chembl(helpers):
         #                   True, alpha_factor, feature, chembl = (helpers, num_lig))
         # os.chdir('..')
 
-def check(mode):
+def check(stats_version, mode):
 
-    template = '{}/*/scores/{}/{}/*/*/'.format(shared_paths['data'],
-                                               shared_paths['stats']['version'],
+    template = '{}/*/scores/{}/{}/*/*/'.format(paths['DATA'],
+                                               stats_version,
                                                mode)
     print(template)
     errors = []
@@ -229,23 +231,17 @@ def check(mode):
     print('{} scoring scripts'.format(len(glob(template+'run*.sh'))))
     print(' '.join(errors))
 
-def merge_protein(mode, protein):
-    """
-    Unlike the other functions here merge acts on only one protein.
-    Doing all proteins at once simply takes too long.
-    """
-    template = '{}/{}/scores/{}/{}/*/*/*.sc'.format(shared_paths['data'],
+def merge_protein(stats_version, mode, protein):
+    template = '{}/{}/scores/{}/{}/*/*/*.sc'.format(paths['DATA'],
                                                     protein,
-                                                    shared_paths['stats']['version'],
+                                                    stats_version,
                                                     mode)
-
     print(template)
-
-    out_fname = '{}/{}/scores/{}/summary/{}.tsv'.format(shared_paths['data'],
+    out_fname = '{}/{}/scores/{}/summary/{}.tsv'.format(paths['DATA'],
                                                         protein,
-                                                        shared_paths['stats']['version'],
+                                                        stats_version,
                                                         mode)
-    
+
     with open(out_fname, 'w') as out:
         out.write('\t'.join(['mode', 'protein', 'ligand', 'n_ligs', 'alpha', 'features',
                              'combind_rank', 'combind_rmsd',
@@ -257,8 +253,8 @@ def merge_protein(mode, protein):
             if len(settings) == 2:
                 settings = ['0'] + settings
             assert _protein == protein
-            assert version == shared_paths['stats']['version']
-                
+            assert version == stats_version
+
             with open(fname) as fp:
                 fp.readline()
                 for line in fp:
@@ -283,55 +279,15 @@ def merge_protein(mode, protein):
                                          best_rank, best_rmsd
                                         ]) + '\n')
 
-def merge(mode, inline):
+def merge(stats_version, mode):
     for protein in proteins:
-        directory = '{}/{}/scores/{}/summary'.format(shared_paths['data'],
+        directory = '{}/{}/scores/{}/summary'.format(paths['DATA'],
                                                      protein,
-                                                     shared_paths['stats']['version'],
+                                                     stats_version,
                                                      mode)
-        log = '{}/{}.log'.format(directory, mode)
         print(protein)
-        print('executing:')
         os.system('mkdir -p {}'.format(directory))
-        if inline:
-            merge_protein(mode, protein)
-            with open(log, 'w') as fp:
-                pass
-        else:
-            os.system('sbatch -p owners -t 01:00:00 --out={} '
-                      '--wrap="python {}/score/score_controller.py '
-                      'merge_protein {} {}"'.format(log, shared_paths['code'], mode, protein))
-
-def archive(mode):
-    template = '{}/*/scores/{}/{}'.format(shared_paths['data'],
-                                          shared_paths['stats']['version'],
-                                          mode)
-    paths = glob(template)
-    for path in paths:
-        print(path)
-    if input('Archive all of the above directories? (yes)') != 'yes':
-        return
-
-    for path in glob(template):
-        os.system('tar -zcvf {0:}.tar.gz {0:}'.format(path))
-        os.system('rm -rd {}'.format(path))
-
-def inflate(mode):
-    template = '{}/*/scores/{}/{}.tar.gz'.format(shared_paths['data'],
-                                                 shared_paths['stats']['version'],
-                                                 mode)
-    paths = glob(template)
-    for path in paths:
-        print(path)
-    if input('Inflate all of the above tarballs? (yes)') != 'yes':
-        return
-
-    for path in glob(template):
-        if os.path.exists(path.replace('.tar.gz', '')):
-            print(path)
-            continue
-        os.system('tar -xzf {}'.format(path))
-        os.system('rm {}'.format(path))
+        merge_protein(stats_version, mode, protein)
 
 def main(args):
     print('There are {} total PDB jobs.'.format(  len(alpha_factors)
@@ -343,19 +299,15 @@ def main(args):
                                                    * len(features)
                                                    * len(proteins)
                                                    * 2))
-    if   args[1] == 'run_pdb':
-        run_pdb()
-    elif args[1] == 'run_chembl':
-        run_chembl(args[2])
-    elif args[1] == 'check':
-        check(args[2])
-    elif args[1] == 'merge':
-        merge(args[2], len(args) == 4 and args[3] == 'inline')
-    elif args[1] == 'merge_protein':
-        merge_protein(args[2], args[3])
-    elif args[1] == 'archive':
-        archive(args[2])
-    elif args[1] == 'inflate':
-        inflate(args[2])
+    mode, stats_version = args[:2]
+    name = args[2] if len(args) == 3 else None
+    if   mode == 'run_pdb':
+        run_pdb(stats[stats_version])
+    elif mode == 'run_chembl':
+        run_chembl(stats[stats_version], name)
+    elif mode == 'check':
+        check(stats_version, name)
+    elif mode == 'merge':
+        merge(stats_version, name)
     else:
         assert False

@@ -1,8 +1,7 @@
 import os
 from glob import glob
 
-from grouper import grouper
-from shared_paths import shared_paths
+from utils import grouper
 from mcss.mcss import MCSS
 
 class MCSSController:
@@ -52,8 +51,8 @@ class MCSSController:
 
 
     def __init__(self, lm):
-        self.st = lm.st
-        self.pdb = lm.get_xdocked_ligands(shared_paths['stats']['n_ligs'])
+        self.lm = lm
+        self.pdb = lm.get_xdocked_ligands(lm.params['n_ligs'])
         self.chembl = lm.chembl()
         self.docked  = set(lm.docked(self.pdb+self.chembl))
 
@@ -63,21 +62,17 @@ class MCSSController:
         self.no_mcss_small = set([])
 
         # File paths. Remaining '{}' is ligand pair name.
-        self.root = "{}/mcss/{}".format(lm.root, shared_paths['mcss'])
-        self.atom_types = '{}/mcss/custom_types/{}.typ'.format(shared_paths['code'],
-                                                               shared_paths['mcss'])
+        self.root = lm.path('MCSS')
+        self.atom_types = '{}/mcss/custom_types/{}.typ'.format(lm.path('CODE'),
+                                                               lm.params['mcss_version'])
         self.mcss_file = "{}/mcss.csv".format(self.root)
         self.init_file = "{}/{}.init.csv".format(self.root, '{}')
 
         self.rmsd_file = "{}/{}-{}-{}.csv".format(self.root, '{}',
-                                                  self.st, shared_paths['docking'])
+                                                  self.lm.st, lm.params['docking_version'])
 
-        self.lig_template = '{0:}/ligands/prepared_ligands/{1:}/{1:}.mae'.format(lm.root, '{0:}')
-        self.crystal_template = '{0:}/structures/ligands/{1:}.mae'.format(lm.root, '{0:}')
-        self.pv_template = '{0:}/docking/{1:}/{2:}-to-{3:}/{2:}-to-{3:}_pv.maegz'.format(
-                                lm.root, shared_paths['docking'], '{0:}', lm.st)
         self.init_command, self.rmsd_command = self._construct_commands(
-                                                    shared_paths['stats']['max_poses'])
+                                                    lm.params['max_poses'])
 
         assert not any('CHEMBL' in ligand for ligand in self.pdb)
 
@@ -89,13 +84,13 @@ class MCSSController:
             '{0:},{1:}' ligand1,ligand2, '{2:},{3:}' poses1,poses2 '{4:}' str(MCSS).
         """
         
-        init_command =  '$SCHRODINGER/run {0:}/main.py mcss INIT '.format(shared_paths['code'])
+        init_command =  '$SCHRODINGER/run {0:}/main.py mcss INIT '.format(self.lm.path('CODE'))
         init_command += '{0:} {1:} {2:} {3:} ' # ligand names
         init_command += self.init_file.format('{0:}-{1:}') + ' '
         init_command += self.atom_types + ' '
         init_command += '\n'
         
-        rmsd_command = '$SCHRODINGER/run {0:}/main.py mcss RMSD '.format(shared_paths['code'])
+        rmsd_command = '$SCHRODINGER/run {0:}/main.py mcss RMSD '.format(self.lm.path('CODE'))
         rmsd_command += '{0:} {1:} {2:} {3:} '
         rmsd_command += self.init_file.format('{0:}-{1:}') + ' '
         rmsd_command += self.atom_types + ' '
@@ -118,7 +113,7 @@ class MCSSController:
             l1, l2 = l2, l1
             pose1, pose2 = pose2, pose1
         mcss = self.MCSSs["{}-{}".format(l1, l2)]
-        if not mcss.is_valid(): return None
+        if not self.is_valid(mcss): return None
         if (pose1, pose2) not in mcss.rmsds: return None
         return mcss.rmsds[(pose1, pose2)]
 
@@ -140,9 +135,9 @@ class MCSSController:
                     l1, l2 = _l1, _l2
                 name = "{}-{}".format(l1, l2)
                 assert name in self.MCSSs, name
-                if self.MCSSs[name].is_valid():
-                    poseviewer_paths = {l1: self.pv_template.format(l1),
-                                        l2: self.pv_template.format(l2)}
+                if self.is_valid(self.MCSSs[name]):
+                    poseviewer_paths = {l1: self.lm.path('DOCK_PV', {'ligand': l1}),
+                                        l2: self.lm.path('DOCK_PV', {'ligand': l2})}
                     self.MCSSs[name].load_rmsds(self.rmsd_file.format(name),
                                                 poseviewer_paths, max_poses)
 
@@ -161,7 +156,7 @@ class MCSSController:
         self.load_mcss()
         for name, mcss in self.MCSSs.items():
             rmsd_file_exists = os.path.exists(self.rmsd_file.format(name))
-            if rmsd_file_exists and mcss.is_valid():
+            if rmsd_file_exists and self.is_valid(mcss):
                 poseviewer_paths = {mcss.l1: self.pv_template.format(mcss.l1),
                                     mcss.l2: self.pv_template.format(mcss.l2)}
                 if not self.MCSSs[name].verify_rmsds(self.rmsd_file.format(name),
@@ -213,8 +208,23 @@ class MCSSController:
         except KeyError:
             self._execute_init_on_the_fly(l1, l2)
             mcss = self.MCSSs["{}-{}".format(l1, l2)]
-        f = shared_paths['stats']['mcss_func']
+        f = self.lm.params['mcss_func']
         return mcss.n_mcss_atoms / float(f(mcss.n_l1_atoms, mcss.n_l2_atoms))
+
+    def is_valid(self, mcss):
+        """
+        Decides if the mcss is large enough to include in calculations.
+        
+        (It would be problematic if small MCSSs were taken into account
+        because the score is based solely on RMSD).
+        """
+        f = self.lm.params['mcss_func']
+        r = self.lm.params['mcss_rel_min']
+        rel_thresh = r * f(mcss.n_l1_atoms, mcss.n_l2_atoms)
+        
+        abs_thresh = self.lm.params['mcss_abs_min']
+
+        return mcss.n_mcss_atoms > max(rel_thresh, abs_thresh)
 
     def load_mcss(self, temp_init_files=None):
         """
@@ -329,9 +339,9 @@ class MCSSController:
 
     def _add_crystal(self):
         compute_rmsds = True
-        crystal_lig = self.st + '_crystal_lig'
+        crystal_lig = self.lm.st + '_crystal_lig'
         for ligand in self.pdb:
-            if ligand == self.st + '_lig': continue 
+            if ligand == self.lm.st + '_lig': continue 
             self._add(crystal_lig, ligand, compute_rmsds)
 
     def _add_pdb_to_allchembl(self):
@@ -355,7 +365,7 @@ class MCSSController:
         pick_helpers: {pick_helpers_filename: {query_pdb: [chembl, ...]}}
         """
         compute_rmsds = True
-        crystal_lig = self.st + '_crystal_lig'
+        crystal_lig = self.lm.st + '_crystal_lig'
         for fname, queries in pick_helpers.items():
             for query, chembl_ligands in queries.items():
                 for i, l1 in enumerate(chembl_ligands):
@@ -381,7 +391,7 @@ class MCSSController:
         elif (    compute_rmsd
               and (l1 in self.docked or 'crystal' in l1)
               and (l2 in self.docked or 'crystal' in l2)
-              and self.MCSSs[name].is_valid()
+              and self.is_valid(self.MCSSs[name])
               and not os.path.exists(self.rmsd_file.format(name))):
             self.no_rmsd.add((l1, l2))
         elif (compute_small

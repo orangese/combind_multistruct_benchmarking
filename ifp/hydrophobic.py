@@ -1,13 +1,12 @@
 from schrodinger.structutils.measure import measure_distance
-from shared_paths import shared_paths
-params = shared_paths['ifp']
 
 class Hydrophobic_Container:
-    def __init__(self, lig, ind):
+    def __init__(self, lig, ind, settings):
         self.radii = {'H': 1.2, 'C':1.7, 'F':1.47, 'Cl':1.75, 'I':1.98, 'Br':1.85}
 
         self.lig = lig
         self.ind = ind
+        self.settings = settings
 
         self.all_scores = {}
 
@@ -17,14 +16,14 @@ class Hydrophobic_Container:
 
                 vdw_radius = self.radii[res_atom.element] + self.radii[lig_atom.element]
                 r = measure_distance(res_atom, lig_atom)
-                if r >= params['contact_scale_cut']*vdw_radius: continue
+                if r >= self.settings['contact_scale_cut']*vdw_radius: continue
    
                 score = 0
-                if r <= params['contact_scale_opt']*vdw_radius:
+                if r <= self.settings['contact_scale_opt']*vdw_radius:
                     score = 1
                 else:
-                    score = ((params['contact_scale_cut']*vdw_radius - r)
-                             / ((params['contact_scale_cut'] - params['contact_scale_opt'])
+                    score = ((self.settings['contact_scale_cut']*vdw_radius - r)
+                             / ((self.settings['contact_scale_cut'] - self.settings'contact_scale_opt'])
                                 * vdw_radius))
             
                 if lig_atom in self.lig.nonpolar1 and res_atom in res.nonpolar1:

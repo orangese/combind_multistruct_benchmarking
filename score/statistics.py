@@ -4,11 +4,12 @@ from score.pairs import LigPair
 from glob import glob
 
 class Statistics:
-    def __init__(self, proteins, interactions, settings, path=None):
+    def __init__(self, proteins, interactions, settings, paths, path=None):
         self.proteins = proteins
         self.interactions = interactions
         self.settings = settings
         self.distributions = ['native', 'reference']
+        self.paths = paths
         self.path = path
 
         if 'reference_poses' not in settings:
@@ -22,7 +23,7 @@ class Statistics:
         self.stats = self._load()
 
     @classmethod
-    def read(cls, path, ligands_equal, considered_proteins=None):
+    def read(cls, path, paths, ligands_equal, considered_proteins=None):
         proteins = set()
         interactions = set()
         settings = {'ligands_equal': ligands_equal, 'max_poses': 100}
@@ -40,7 +41,7 @@ class Statistics:
                 stats[distribution][interaction] = []
             stats[distribution][interaction] += [DensityEstimate.read(fname)]
 
-        self = cls(list(proteins), list(interactions), settings, path=path)
+        self = cls(list(proteins), list(interactions), settings, paths, path=path)
         self.stats = self._merge(stats, ligands_equal)
         return self
 
@@ -123,7 +124,7 @@ class Statistics:
 
         print('Computing stats for {}'.format(protein))
         from containers import Protein
-        prot = Protein(protein)
+        prot = Protein(protein, self.settings, self.paths)
         ligands = prot.lm.get_xdocked_ligands(self.settings['n_ligs'])
         print(ligands)
         prot.load_docking(ligands, load_fp=True, load_mcss='mcss' in self.interactions)
@@ -164,8 +165,8 @@ class Statistics:
                 density_estimate.write(fname)
 
     def _load_ligand_pair(self, prot, protein, ligand1, ligand2):
-        lig_pair = LigPair(prot.docking[prot.lm.st].ligands[ligand1],
-                           prot.docking[prot.lm.st].ligands[ligand2],
+        lig_pair = LigPair(prot.docking[prot.lm.st][ligand1],
+                           prot.docking[prot.lm.st][ligand2],
                            self.interactions,
                            prot.lm.mcss if 'mcss' in self.interactions else None,
                            self.settings['max_poses'],
@@ -205,3 +206,11 @@ class Statistics:
             for i, des in interactions.items():
                 merged[d][i] = DensityEstimate.merge(des, weight)
         return merged
+
+def main(args):
+    from settings import feature_defs, paths, stats
+    import sys
+    version, protein, path = args
+    path += '/{}-{}-{}.de'
+    Statistics([protein], feature_defs, stats[version], paths, path=path)
+

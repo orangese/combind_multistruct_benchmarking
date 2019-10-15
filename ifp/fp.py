@@ -4,6 +4,8 @@ import sys
 from schrodinger.structure import StructureReader
 from schrodinger.structutils.measure import get_shortest_distance
 
+from settings import IFP
+
 from ifp.hbond import HBond_Container
 from ifp.saltbridge import SB_Container
 from ifp.pipi import PiPi_Container
@@ -90,6 +92,8 @@ class FP:
         self.set_user_params(args)
         self.protein = {}
 
+        self.settings = IFP[self.params['version']]
+
         if self.params['mode'] == 'pv':
             self.fp = self.fingerprint_pose_viewer()
             self.write_fp()
@@ -101,10 +105,10 @@ class FP:
         lig = AtomGroup(lig_st, 'lig')
 
         interactions = {
-            'hbond': HBond_Container(lig, [2,3]),
-            'saltbridge': SB_Container(lig, [1]),
-            'pipi': PiPi_Container(lig, [6]),
-            'hydrophobic': Hydrophobic_Container(lig, [10,11])
+            'hbond': HBond_Container(lig, [2,3], self.settings),
+            'saltbridge': SB_Container(lig, [1], self.settings),
+            'pipi': PiPi_Container(lig, [6], self.settings),
+            'hydrophobic': Hydrophobic_Container(lig, [10,11], self.settings)
         }
 
         fp = {}
@@ -161,8 +165,6 @@ class FP:
                 assert key in self.params, "Key name {} is invalid".format(key)
                 if key == 'poses':
                     value = int(args[index+1])
-                elif key == 'raw':
-                    value = args[index+1] == 'True'
                 else:
                     value = args[index+1]
                 self.params[key] = value

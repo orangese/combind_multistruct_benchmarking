@@ -1,14 +1,13 @@
 import math
 from schrodinger.structutils.measure import measure_distance, measure_bond_angle
-from shared_paths import shared_paths
-params = shared_paths['ifp']
 
 class HBond_Container:
-    def __init__(self, lig, ind):
+    def __init__(self, lig, ind, settings):
         self.lig = lig
         self.ind = ind
         self.all_hdon = {}
         self.all_hacc = {}
+        self.settings = settings
 
     def add_residue(self, resnum, res_st):
         self.all_hdon[resnum] = []
@@ -18,7 +17,7 @@ class HBond_Container:
             for lig_atom in self.lig.hacc:
                 for hydrogen in res_atom.bonded_atoms:
                     if hydrogen.element != 'H': continue
-                    hbond = HBond(res_atom, lig_atom, hydrogen, resnum, True)
+                    hbond = HBond(res_atom, lig_atom, hydrogen, resnum, True, self.settings)
                     if hbond.score():
                         self.all_hdon[resnum] += [hbond]
 
@@ -26,7 +25,7 @@ class HBond_Container:
             for lig_atom in self.lig.hdon:
                 for hydrogen in lig_atom.bonded_atoms:
                     if hydrogen.element != 'H': continue
-                    hbond = HBond(lig_atom, res_atom, hydrogen, resnum, False)
+                    hbond = HBond(lig_atom, res_atom, hydrogen, resnum, False, self.settings)
                     if hbond.score():
                         self.all_hacc[resnum] += [hbond]
 
@@ -61,51 +60,35 @@ class HBond_Container:
                 key = (self.ind[1], r, '')
                 if key not in all_scores: all_scores[key] = 0
                 all_scores[key] += hb.score()
-                
         return all_scores
 
-    def raw(self):
-        all_raw = {}
-        for r, hb_list in self.all_hdon.items():
-            for hb in hb_list:
-                if not hb.score(): continue
-                key = (self.ind[0], r, '')
-                if key not in all_raw: all_raw[key] = []
-                all_raw[key] += [(hb.dist, hb.DHA_angle)]
-        for r, hb_list in self.all_hacc.items():
-            for hb in hb_list:
-                if not hb.score(): continue
-                key = (self.ind[1], r, '')
-                if key not in all_raw: all_raw[key] = []
-                all_raw[key] += [(hb.dist, hb.DHA_angle)]
-        return all_raw
-
 class HBond:
-    def __init__(self, donor, acceptor, h, r_ind, resIsHDonor): # D - H ... A - X
+    def __init__(self, donor, acceptor, h, r_ind, resIsHDonor, settings): # D - H ... A - X
         self.d = donor # h donor, \in {N,O}
         self.a = acceptor # h acceptor, \in {N,O}
         self.h = h # covalently bound to the donor
         self.resIsHDonor = resIsHDonor
         self.r_ind = r_ind
+        self.settings = settings
 
         self.dist = measure_distance(h, acceptor) # angstroms
         self.DHA_angle = 180 - measure_bond_angle(self.d, self.h, self.a) # degrees
 
     def dist_score(self):
-        if self.dist <= params['hbond_dist_opt']:
+        if self.dist <= self.settings['hbond_dist_opt']:
             return 1
-        elif self.dist <= params['hbond_dist_cut']:
-            return ((params['hbond_dist_cut'] - self.dist)
-                    / (params['hbond_dist_cut'] - params['hbond_dist_opt']))
+        elif self.dist <= self.settings['hbond_dist_cut']:
+            return ((self.settings['hbond_dist_cut'] - self.dist)
+                    / (self.settings['hbond_dist_cut'] - self.settings['hbond_dist_opt']))
         else:
             return 0
 
     def angle_score(self):
-        if self.DHA_angle <= params['hbond_angle_opt']:
+        if self.DHA_angle <= self.settings['hbond_angle_opt']:
             return 1
-        elif self.DHA_angle <= params['hbond_angle_cut']:
-            return ((params['hbond_angle_cut'] - self.DHA_angle)
-                    / (params['hbond_angle_cut'] - params['hbond_angle_opt']))
+        elif self.DHA_angle <= self.settings['hbond_angle_cut']:
+            return ((self.settings['hbond_angle_cut'] - self.DHA_angle)
+                    / (self.settings['hbond_angle_cut'] - self.settings['hbond_angle_opt']))
         else:
             return 0
 

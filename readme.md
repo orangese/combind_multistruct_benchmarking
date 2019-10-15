@@ -14,10 +14,6 @@ workflow is below.
 
 Before the code is run, you should source setup_combind.
 
-Inside the code global constants are stored in shared_paths.py.
-You should never pass the shared_paths dictionary
-as an argument, as this is unncessary and confusing.
-
 ## Testing
 
 Tests are located in each directory. They largely fall into two categories

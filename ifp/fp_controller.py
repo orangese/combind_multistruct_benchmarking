@@ -1,15 +1,15 @@
 import os
 import sys
-from grouper import grouper
-from shared_paths import shared_paths
+from utils import grouper
+from settings import paths
 
 queue = 'owners'
 group_size = 10
 
-pv_cmd = '$SCHRODINGER/run {}/main.py ifp -mode pv -input_file {} -output_file {} -raw {} -poses {}\n'
-st_cmd = '$SCHRODINGER/run {}/main.py ifp -mode st -output_file {}\n'
+pv_cmd = '$SCHRODINGER/run {}/main.py ifp -version {} -mode pv -input_file {} -output_file {} -poses {}\n'
+st_cmd = '$SCHRODINGER/run {}/main.py ifp -version {} -mode st -output_file {}\n'
 
-def get_fp(lm, fp_list, raw):
+def get_fp(lm, fp_list):
     if len(fp_list) > 0:
         print(len(fp_list), 'fp left')
     for i, names in enumerate(grouper(group_size, fp_list)):
@@ -17,11 +17,10 @@ def get_fp(lm, fp_list, raw):
             f.write('#!/bin/bash\n')
             for name in names:
                 if name is None: continue
-                input_file = '../../docking/{}/{}/{}_pv.maegz'.format(shared_paths['docking'],
-                                                                      name, name)
-                output_file = '{}-{}.fp'.format(name, shared_paths['docking'])
-                f.write(pv_cmd.format(shared_paths['code'], input_file, output_file,
-                                      raw, shared_paths['stats']['max_poses']))
+                input_file = lm.path('PV', {'ligand': name})
+                output_file = lm.path('IFP', {'ligand': name})
+                f.write(pv_cmd.format(lm.path('CODE'), input_file, output_file,
+                                      lm.params['max_poses']))
             f.write('wait\n')
         os.system('sbatch --cpus-per-task=1 --time=02:00:00 -p {} {}fp.sh'.format(queue, i))
 
@@ -33,27 +32,23 @@ def structure_fp(lm):
         print ('structure fp', pdb)
         with open('{}.sh'.format(pdb), 'w') as f:
             f.write('#!/bin/bash\n')
-            f.write(st_cmd.format(shared_paths['code'], output_file)) 
+            f.write(st_cmd.format(paths['CODE'], output_file)) 
         os.system('sbatch --time=00:10:00 -n 1 -p {} {}.sh'.format(queue, pdb))
 
-def compute_fp(lm, raw = False, pdb = False):
+def compute_fp(lm, pdb=False):
     os.system('mkdir -p ifp')
-    os.system('mkdir -p ifp/{}'.format(shared_paths['ifp']['version']))
-    ligands = lm.pdb
-    if not raw: ligands += lm.chembl()
+    os.system('mkdir -p ifp/{}'.format(lm.path['IFP_ROOT']))
+    ligands = lm.pdb + lm.chembl()
     unfinished = []
-    for lig in lm.docked(ligands):
+    for ligand in lm.docked(ligands):
         if pdb and 'CHEMBL' in lig: continue
-        name = '{}-to-{}'.format(lig, lm.st, shared_paths['docking'])
-        output_file = 'ifp/{}/{}-{}.fp'.format(shared_paths['ifp']['version'],
-                                               name, shared_paths['docking'])
-        if not os.path.exists(output_file):
-            unfinished.append(name)
+        if not os.path.exists(lm.path('IFP', {'ligand': name})):
+            unfinished.append(ligand)
     
-    os.chdir('ifp/{}'.format(shared_paths['ifp']['version'])) 
-    if not raw: structure_fp(lm)
+    os.chdir(lm.path('IFP_ROOT')) 
+    structure_fp(lm)
     get_fp(lm, unfinished, raw)
-    os.chdir('../..')
+    os.chdir(lm.path('ROOT'))
 
 def parse_fp_file(fp_file):
     ifps = {}

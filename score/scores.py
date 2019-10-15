@@ -5,7 +5,7 @@ from containers import Protein
 from score.statistics import Statistics
 from score.prob_opt import PredictStructs
 from score.density_estimate import DensityEstimate
-from shared_paths import feature_defs
+from settings import feature_defs, paths
 
 class ScoreContainer:
     """
@@ -15,17 +15,18 @@ class ScoreContainer:
         self.prot = prot
         self.struct = struct
         self.root = root
+
       
         self.settings = self.read_settings()
-        self.sp = self.settings['shared_paths']
-
-        self.read_stats(stats_root)
+        self.stats = self.read_stats(stats_root)
  
-        self.predict_data = Protein(prot)
+        self.predict_data = Protein(prot, self.settings['stats'], paths)
         features = {feature: feature_defs[feature] for feature in self.settings['k_list']}
-        self.ps = PredictStructs({}, self.predict_data.lm.mcss, self.stats,
-                                 self.settings['k_list'], self.settings['num_poses'],
-                                 self.settings['alpha'], self.sp['stats']['metric'],
+        self.ps = PredictStructs({}, self.predict_data.lm.mcss,
+                                 self.stats, features,
+                                 self.settings['num_poses'],
+                                 self.settings['alpha'],
+                                 self.settings['stats']['metric'],
                                  all_wrong=self.settings['all_wrong'],
                                  physics_score=self.settings['physics_score'])
 
@@ -38,12 +39,13 @@ class ScoreContainer:
         return tr
 
     def read_stats(self, stats_root):
-        self.stats = {'native':{}, 'reference':{}}
-        for dist in self.stats:
+        stats = {'native':{}, 'reference':{}}
+        for dist in stats:
             for interaction in self.settings['k_list']:
                 fname = '{}/{}_{}.txt'.format(stats_root, dist, interaction)
                 assert os.path.exists(fname), fname
-                self.stats[dist][interaction] = DensityEstimate.read(fname)
+                stats[dist][interaction] = DensityEstimate.read(fname)
+        return stats
 
     def compute_results_chembl(self, query):
         assert self.settings['chembl']
@@ -60,13 +62,13 @@ class ScoreContainer:
         if 'use_crystal_pose' in self.settings and self.settings['use_crystal_pose']:
             crystal_lig = '{}_crystal_lig'.format(self.predict_data.lm.st)
             if crystal_lig not in queries: queries += [crystal_lig]
-            self.predict_data.load_docking([crystal_lig], load_crystal = True,
-                                           load_fp = True,
+            self.predict_data.load_docking([crystal_lig], load_crystal=True,
+                                           load_fp=True,
                                            load_mcss = 'mcss' in self.settings['k_list'],
-                                           st = self.struct)
+                                           st=self.struct)
 
         # Set ligands and optimize!
-        self.ps.ligands = {lig: self.predict_data.docking[self.struct].ligands[lig]
+        self.ps.ligands = {lig: self.predict_data.docking[self.struct][lig]
                            for lig in queries}
         best_cluster = self.ps.max_posterior()
         return best_cluster
@@ -82,7 +84,7 @@ class ScoreContainer:
             f.write('lig,combind_rank,combind_rmsd,glide_rank,glide_rmsd,best_rank,best_rmsd\n')
             glide_cluster, best_cluster = {}, {}
             for lig, combind_pose in sorted(cluster.items()):
-                poses = self.predict_data.docking[self.struct].ligands[lig].poses
+                poses = self.predict_data.docking[self.struct][lig].poses
                 best_rmsd = float('inf')
                 best_emodel = float('inf')
                 for i, pose in enumerate(poses[:self.settings['num_poses']]):

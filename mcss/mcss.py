@@ -3,8 +3,6 @@ from schrodinger.structure import StructureReader, StructureWriter
 from schrodinger.structutils.analyze import evaluate_smarts_canvas
 from schrodinger.structutils.rmsd import ConformerRmsd
 
-from shared_paths import shared_paths
-
 class MCSS:
     """
     Reads and writes MCSS features for a ligand pair.
@@ -60,21 +58,6 @@ class MCSS:
             self.n_l1_atoms, self.n_l2_atoms, self.n_mcss_atoms, self.n_mcss_bonds,
             ';'.join(self.smarts_l1), ';'.join(self.smarts_l2), self.tried_small]
             ))
-
-    def is_valid(self):
-        """
-        Decides if the mcss is large enough to include in calculations.
-        
-        (It would be problematic if small MCSSs were taken into account
-        because the score is based solely on RMSD).
-        """
-        f = shared_paths['stats']['mcss_func']
-        r = shared_paths['stats']['mcss_rel_min']
-        rel_thresh = r * f(self.n_l1_atoms, self.n_l2_atoms)
-        
-        abs_thresh = shared_paths['stats']['mcss_abs_min']
-        
-        return self.n_mcss_atoms > max(rel_thresh, abs_thresh)
     
     # Constructors
     @classmethod

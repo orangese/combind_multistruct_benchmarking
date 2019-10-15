@@ -285,7 +285,7 @@ from matplotlib import colors
 from matplotlib.gridspec import GridSpec
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.pyplot as plt
-from shared_paths import feature_defss
+from settings import feature_defs
 
 class PredictStructsFigures(PredictStructs):
     """
