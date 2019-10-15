@@ -549,6 +549,8 @@ stats = {'stats5': {'version'         : 'stats5',
                     'stats_points'    : 100},
          }
 
+# for stats in stats32 stats33 stats34 stats35 stats36 stats37 stats38 stats39 stats40; do ./main.py score_controller run_pdb $stats; done;
+
 IFP = {'ifp3': {'version': 'ifp3',
                 'hbond_dist_opt': 2.5,
                 'hbond_dist_cut': 3.0,

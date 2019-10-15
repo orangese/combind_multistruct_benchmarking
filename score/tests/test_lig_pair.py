@@ -8,7 +8,7 @@ from containers import Ligand, Pose
 
 
 def create_ligand(name, fps):
-	ligand = Ligand(name, '', '', '')
+	ligand = Ligand(name, {}, {})
 	ligand.poses = []
 	for fp in fps:
 		ligand.poses += [Pose(0, 0, 0, fp)]
@@ -18,7 +18,7 @@ def test_empty():
 	lig1 = create_ligand('lig1', [{}]*5)
 	lig2 = create_ligand('lig2', [{}]*5)
 
-	lp = LigPair(lig1, lig2, ['sb', 'hbond'], None, 4)
+	lp = LigPair(lig1, lig2, {'sb': [1], 'hbond': [2]}, None, 4)
 
 	assert len(lp.pose_pairs) == 16
 	assert lp.feat_map == {'sb': (0.0, 0.0),
@@ -35,7 +35,7 @@ def test_max_one():
 	lig1 = create_ligand('lig1', [{(1, 23): 1.0}, {(1, 23): 0.5}, {}])
 	lig2 = create_ligand('lig2', [{}, {(1, 23): 0.5}, {(1, 23): 1.0}])
 
-	lp = LigPair(lig1, lig2, ['sb', 'hbond'], None, 4)
+	lp = LigPair(lig1, lig2, {'sb': [1], 'hbond': [2]}, None, 4)
 
 	assert len(lp.pose_pairs) == 9
 	assert lp.feat_map == {'sb': (0.0, 1.0),
@@ -61,7 +61,7 @@ def test_max_less_than_one():
 	lig1 = create_ligand('lig1', [{(1, 23): 0.9}, {(1, 23): 0.5}, {}])
 	lig2 = create_ligand('lig2', [{}, {(1, 23): 0.5}, {(1, 23): 1.0}])
 
-	lp = LigPair(lig1, lig2, ['sb', 'hbond'], None, 4)
+	lp = LigPair(lig1, lig2, {'sb': [1], 'hbond': [2]}, None, 4)
 
 	assert len(lp.pose_pairs) == 9
 	assert lp.feat_map == {'sb': (0.0, 0.9**0.5),
@@ -87,7 +87,7 @@ def test_max_greater_than_one():
 	lig1 = create_ligand('lig1', [{(1, 23): 1.0, (1, 20): 1.0}, {(1, 23): 0.5}, {(1, 20): 1.0}])
 	lig2 = create_ligand('lig2', [{}, {(1, 23): 0.5}, {(1, 23): 1.0, (1, 20): 1.0}])
 
-	lp = LigPair(lig1, lig2, ['sb', 'hbond'], None, 4)
+	lp = LigPair(lig1, lig2, {'sb': [1], 'hbond': [2]}, None, 4)
 
 	assert len(lp.pose_pairs) == 9
 	assert lp.feat_map == {'sb': (0.0, 2.0),
@@ -113,7 +113,7 @@ def test_mcss_is_none():
 	lig1 = create_ligand('lig1', [{(1, 23): 1.0, (1, 20): 1.0}, {(1, 23): 0.5}, {(1, 20): 1.0}])
 	lig2 = create_ligand('lig2', [{}, {(1, 23): 0.5}, {(1, 23): 1.0, (1, 20): 1.0}])
 
-	lp = LigPair(lig1, lig2, ['sb', 'hbond'], None, 4)
+	lp = LigPair(lig1, lig2, {'sb': [1], 'hbond': [2]}, None, 4)
 
 	assert len(lp.pose_pairs) == 9
 	assert lp.feat_map == {'sb': (0.0, 2.0),
@@ -139,7 +139,7 @@ def test_empty_tanimoto():
 	lig1 = create_ligand('lig1', [{}]*5)
 	lig2 = create_ligand('lig2', [{}]*5)
 
-	lp = LigPair(lig1, lig2, ['sb', 'hbond'], None, 4, mode='tanimoto')
+	lp = LigPair(lig1, lig2, {'sb': [1], 'hbond': [2]}, None, 4, mode='tanimoto')
 
 	assert len(lp.pose_pairs) == 16
 
@@ -152,7 +152,7 @@ def test_max_one_tanimoto():
 	lig1 = create_ligand('lig1', [{(1, 23): 1.0}, {(1, 23): 0.5}, {}])
 	lig2 = create_ligand('lig2', [{}, {(1, 23): 0.5}, {(1, 23): 1.0}])
 
-	lp = LigPair(lig1, lig2, ['sb', 'hbond'], None, 4, mode='tanimoto')
+	lp = LigPair(lig1, lig2, {'sb': [1], 'hbond': [2]}, None, 4, mode='tanimoto')
 
 	assert len(lp.pose_pairs) == 9
 
@@ -174,7 +174,7 @@ def test_max_less_than_one_tanimoto():
 	lig1 = create_ligand('lig1', [{(1, 23): 0.9}, {(1, 23): 0.5}, {}])
 	lig2 = create_ligand('lig2', [{}, {(1, 23): 0.5}, {(1, 23): 1.0}])
 
-	lp = LigPair(lig1, lig2, ['sb', 'hbond'], None, 4, mode='tanimoto')
+	lp = LigPair(lig1, lig2, {'sb': [1], 'hbond': [2]}, None, 4, mode='tanimoto')
 
 	assert len(lp.pose_pairs) == 9
 
@@ -200,7 +200,7 @@ def test_max_greater_than_one_tanimoto():
 	                     		  {(1, 23): 0.5},
 	                     		  {(1, 23): 1.0, (1, 20): 1.0}])
 
-	lp = LigPair(lig1, lig2, ['sb', 'hbond'], None, 4, mode='tanimoto')
+	lp = LigPair(lig1, lig2, {'sb': [1], 'hbond': [2]}, None, 4, mode='tanimoto')
 
 	assert len(lp.pose_pairs) == 9
 

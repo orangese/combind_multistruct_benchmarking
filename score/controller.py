@@ -23,7 +23,7 @@ from score.statistics import Statistics
 from glob import glob
 from utils import grouper
 
-group_size = 1
+group_size = 5
 num_ligs = [20]
 alpha_factors = [1.0]
 features = [['mcss', 'contact', 'hbond', 'sb'],
@@ -39,7 +39,7 @@ cmd = '$SCHRODINGER/run {0:}/main.py score {1:} {1:} {1:} {1:}'.format(
                                    paths['CODE'], '{}')
 
 def score(stats_root, struct, protein, ligands, use_crystal_pose,
-          alpha_factor, features, stats, crystal = False, chembl = None):
+          alpha_factor, features, stats, crystal=False, chembl = None):
     """
     stats_root: Absolute path to statistics files.
     struct: Docking structure, likely lm.st

@@ -171,7 +171,7 @@ class PredictStructs:
         log_prob = 0
         for ligname, pose in pose_cluster.items():
             log_prob -= (self._get_physics_score(ligname, pose) * self.alpha
-                         * self._effective_number(pose_cluster, ''))
+                         * self._effective_number(pose_cluster, ligname))
         
         ligands = list(pose_cluster.keys())
         for i, ligname1 in enumerate(ligands):

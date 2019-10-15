@@ -13,7 +13,7 @@ from containers import Ligand, Pose
 # Create PredictStructs objects
 
 def create_ligand(name, rmsds, gscores, emodels, fps):
-	ligand = Ligand(name, '', '', '')
+	ligand = Ligand(name, {}, {})
 	ligand.poses = []
 	for r, g, e, f in zip(rmsds, gscores, emodels, fps):
 		ligand.poses += [Pose(r, g, e, f)]
@@ -26,9 +26,11 @@ def basic_ps():
 						'hbond': DensityEstimate(domain = (0, 1))},
 			 'reference': {'sb': DensityEstimate(domain = (0, 1)),
 			 			   'hbond': DensityEstimate(domain = (0, 1))}}
-	stats['native']['sb'].fx = np.linspace(0.01, 2, stats['native']['sb'].fx.shape[0])
-	stats['reference']['sb'].fx = np.linspace(2, 0.01, stats['native']['sb'].fx.shape[0])
-	features = ['sb', 'hbond']
+	stats['native']['sb'].x = np.linspace(0, 1, 100)
+	stats['reference']['sb'].x = np.linspace(0, 1, 100)
+	stats['native']['sb'].fx = np.linspace(0.01, 2, 100)
+	stats['reference']['sb'].fx = np.linspace(2, 0.01, 100)
+	features = {'sb': [1], 'hbond': [2, 3]}
 	return PredictStructs(ligands, None, stats, features, 3, 1.0)
 
 def two_interaction_ps():
@@ -40,11 +42,16 @@ def two_interaction_ps():
 						'hbond': DensityEstimate(domain = (0, 1))},
 			 'reference': {'sb': DensityEstimate(domain = (0, 1)),
 			 			   'hbond': DensityEstimate(domain = (0, 1))}}
-	stats['native']['sb'].fx = np.linspace(0.01, 2, stats['native']['sb'].fx.shape[0])
-	stats['reference']['sb'].fx = np.linspace(2, 0.01, stats['native']['sb'].fx.shape[0])
-	stats['native']['hbond'].fx = np.linspace(0, 2, stats['native']['sb'].fx.shape[0])
-	stats['reference']['hbond'].fx = np.linspace(1.0, 1.0, stats['native']['sb'].fx.shape[0])
-	features = ['sb', 'hbond']
+	stats['native']['sb'].x = np.linspace(0, 1, 100)
+	stats['reference']['sb'].x = np.linspace(0, 1, 100)
+	stats['native']['sb'].fx = np.linspace(0.01, 2, 100)
+	stats['reference']['sb'].fx = np.linspace(2, 0.01, 100)
+
+	stats['native']['hbond'].x = np.linspace(0, 1, 100)
+	stats['reference']['hbond'].x = np.linspace(0, 1, 100)
+	stats['native']['hbond'].fx = np.linspace(0, 2, 100)
+	stats['reference']['hbond'].fx = np.linspace(1.0, 1.0, 100)
+	features = {'sb': [1], 'hbond': [2, 3]}
 	return PredictStructs(ligands, None, stats, features, 3, 1.0)
 
 def three_ligands():
@@ -58,9 +65,11 @@ def three_ligands():
 						'hbond': DensityEstimate(domain = (0, 1))},
 			 'reference': {'sb': DensityEstimate(domain = (0, 1)),
 			 			   'hbond': DensityEstimate(domain = (0, 1))}}
-	stats['native']['sb'].fx = np.linspace(0.01, 2, stats['native']['sb'].fx.shape[0])
-	stats['reference']['sb'].fx = np.linspace(2, 0.01, stats['native']['sb'].fx.shape[0])
-	features = ['sb']
+	stats['native']['sb'].x = np.linspace(0, 1, 100)
+	stats['reference']['sb'].x = np.linspace(0, 1, 100)
+	stats['native']['sb'].fx = np.linspace(0.01, 2, 100)
+	stats['reference']['sb'].fx = np.linspace(2, 0.01, 100)
+	features = {'sb': [1]}
 	return PredictStructs(ligands, None, stats, features, 3, 2.0)
 
 #############################################################################
