@@ -86,7 +86,7 @@ class FP:
             'input_file': '',
             'output_file': '',
             'poses': 105,
-            'raw': False
+            'version': '',
         }
 
         self.set_user_params(args)
@@ -125,10 +125,7 @@ class FP:
                 interactions[i_type].add_residue(res_key, self.protein[res_key])
             
             interactions[i_type].filter_int()
-            if self.params['raw']:
-                i_scores = interactions[i_type].raw()
-            else:
-                i_scores = interactions[i_type].score()
+            i_scores = interactions[i_type].score()
             for sc_key, sc in i_scores.items(): 
                 fp[sc_key] = sc
         return fp
@@ -176,5 +173,5 @@ class FP:
                 for sc_key in sorted(ifp.keys()):
                     i,r,ss = sc_key
                     sc = ifp[sc_key]
-                    if self.params['raw'] or sc >= 0:
+                    if sc > 0:
                         f.write('{}-{}-{}={}\n'.format(i,r,ss, sc))

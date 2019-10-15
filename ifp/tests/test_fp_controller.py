@@ -2,14 +2,25 @@ import pytest
 import os
 import sys
 
-from shared_paths import shared_paths
-from ifp.fp_controller import compute_fp, structure_fp, get_fp
+from ifp.fp_controller import compute_fp, _structure_fp, _compute_fp
 
 
 class MockLigandManager:
-	def __init__(self):
+	def __init__(self, tmpdir):
 		self.pdb = ['6DDF_lig']
 		self.st = '5C1M'
+		self.params = {'ifp_version': 'ifp5',
+		               'max_poses': 1}
+		self.tmpdir = tmpdir
+
+	def path(self, name, extras=None):
+		if name == 'IFP':
+			return self.tmpdir+'ifp/ifp5/{ligand}-to-5C1M-confgen_es11.fp'.format(**extras)
+
+		elif name == 'IFP_ROOT':
+			return self.tmpdir+'ifp/ifp5'
+		elif name == 'DOCK_PV':
+			return self.tmpdir+'confgen_es11/{ligand}-to-5C1M'.format(**extras)
 
 	def chembl(self):
 		return ['CHEMBL1_lig', 'CHEMBL2_lig']
@@ -20,57 +31,42 @@ class MockLigandManager:
 class TestComputeFP:
 	def test_compute_fp_absent(self, tmpdir, mocker):
 		os.chdir(tmpdir)
-		lm = MockLigandManager()
-		mocker.patch.dict(shared_paths, {'docking': 'confgen_es11'})
+		lm = MockLigandManager(tmpdir)
 		mock_exists = mocker.patch('os.path.exists')
-		mock_structure_fp = mocker.patch('ifp.fp_controller.structure_fp')
-		mock_get_fp = mocker.patch('ifp.fp_controller.get_fp')
+		mock_structure_fp = mocker.patch('ifp.fp_controller._structure_fp')
+		mock_compute_fp = mocker.patch('ifp.fp_controller._compute_fp')
 		
 		compute_fp(lm)
 
-		mock_exists.assert_any_call('ifp/ifp5/CHEMBL1_lig-to-5C1M-confgen_es11.fp')
-		mock_exists.assert_any_call('ifp/ifp5/CHEMBL2_lig-to-5C1M-confgen_es11.fp')
-		mock_exists.assert_any_call('ifp/ifp5/6DDF_lig-to-5C1M-confgen_es11.fp')
+		mock_exists.assert_any_call(tmpdir+'ifp/ifp5/CHEMBL1_lig-to-5C1M-confgen_es11.fp')
+		mock_exists.assert_any_call(tmpdir+'ifp/ifp5/CHEMBL2_lig-to-5C1M-confgen_es11.fp')
+		mock_exists.assert_any_call(tmpdir+'ifp/ifp5/6DDF_lig-to-5C1M-confgen_es11.fp')
 		assert mock_exists.call_count == 3
 
 		mock_structure_fp.assert_called_with(lm)
-		mock_get_fp.assert_called_with(lm, [], False)
+		mock_compute_fp.assert_called_with(lm, [])
 
 	def test_compute_fp_present(self, tmpdir, mocker):
 		os.chdir(tmpdir)
-		lm = MockLigandManager()
+		lm = MockLigandManager(tmpdir)
 		mocker.patch('os.path.exists', lambda x: False)
-		mock_structure_fp = mocker.patch('ifp.fp_controller.structure_fp')
-		mock_get_fp = mocker.patch('ifp.fp_controller.get_fp')
+		mock_structure_fp = mocker.patch('ifp.fp_controller._structure_fp')
+		mock_compute_fp = mocker.patch('ifp.fp_controller._compute_fp')
 		compute_fp(lm)
 
 		mock_structure_fp.assert_called_with(lm)
-		mock_get_fp.assert_called_with(lm, ['6DDF_lig-to-5C1M',
-		                               	    'CHEMBL1_lig-to-5C1M',
-		                                    'CHEMBL2_lig-to-5C1M'
-		                                    ], False)
-
-	def test_compute_fp_raw(self, tmpdir, mocker):
-		os.chdir(tmpdir)
-		lm = MockLigandManager()
-		mocker.patch('os.path.exists', lambda x: False)
-		mock_structure_fp = mocker.patch('ifp.fp_controller.structure_fp')
-		mock_get_fp = mocker.patch('ifp.fp_controller.get_fp')
-		compute_fp(lm, True)
-
-		mock_structure_fp.assert_not_called()
-		mock_get_fp.assert_called_with(lm, ['6DDF_lig-to-5C1M'], True)
-
+		mock_compute_fp.assert_called_with(lm, ['6DDF_lig',
+		                               	    'CHEMBL1_lig',
+		                                    'CHEMBL2_lig'
+		                                    ])
 
 class TestGetFP:
-	def test_get_fp(self, tmpdir, mocker):
+	def test__compute_fp(self, tmpdir, mocker):
 		os.chdir(tmpdir)
-		lm = MockLigandManager()
+		lm = MockLigandManager(tmpdir)
 		mock_system = mocker.patch('os.system')
-		mocker.patch.dict(shared_paths, {'docking': 'confgen_es11'})
 		
-		get_fp(lm, ["{}-to-{}".format(lig, lm.st)
-		            for lig in lm.pdb+lm.chembl()], False)
+		_compute_fp(lm, lm.pdb+lm.chembl())
 
 		assert mock_system.call_count == 1
 		assert os.path.exists('0fp.sh')

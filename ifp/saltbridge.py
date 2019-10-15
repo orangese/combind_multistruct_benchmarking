@@ -48,7 +48,7 @@ class SB:
         
         if self.dist <= self.settings['sb_dist_opt']:
             return 1
-        elif self.dist <= params['sb_dist_cut']:
+        elif self.dist <= self.settings['sb_dist_cut']:
             return ((self.settings['sb_dist_cut'] - self.dist)
                     / (self.settings['sb_dist_cut'] - self.settings['sb_dist_opt']))
         else:

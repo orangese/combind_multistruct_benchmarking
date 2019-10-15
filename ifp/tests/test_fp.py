@@ -7,7 +7,7 @@ import ifp.fp
 
 def _test(name, terms):
 	root = '{}/ifp/tests'.format(os.environ['COMBINDHOME'])
-	args = ('ifp -poses 1 -mode pv '
+	args = ('ifp -poses 1 -version ifp5 -mode pv '
 	        '-input_file {0:}/inputs/{1:}.maegz '
 	        '-output_file {0:}/outputs/{1:}.fp').format(root, name)
 	ifp.fp.FP(args.split())

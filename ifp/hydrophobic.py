@@ -23,7 +23,7 @@ class Hydrophobic_Container:
                     score = 1
                 else:
                     score = ((self.settings['contact_scale_cut']*vdw_radius - r)
-                             / ((self.settings['contact_scale_cut'] - self.settings'contact_scale_opt'])
+                             / ((self.settings['contact_scale_cut'] - self.settings['contact_scale_opt'])
                                 * vdw_radius))
             
                 if lig_atom in self.lig.nonpolar1 and res_atom in res.nonpolar1:

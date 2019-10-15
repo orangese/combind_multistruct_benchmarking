@@ -13,7 +13,7 @@ def zero(interaction, ifp):
 		assert val == 0
 
 def test():
-	fp = FP([])
+	fp = FP(['-version', 'ifp5'])
 	fp.params['mode'] = 'pv'
 	fp.params['input_file'] = base + 'inputs/1K21_lig-to-1A4W_pv.maegz'
 	fp.params['poses'] = 1
@@ -29,7 +29,7 @@ def test():
 
 
 def test_unique():
-	fp = FP([])
+	fp = FP(['-version', 'ifp5'])
 	fp.params['mode'] = 'pv'
 	fp.params['input_file'] = base + 'inputs/5EQH_lig-to-5EQG_pv.maegz'
 	fp.params['poses'] = 20
