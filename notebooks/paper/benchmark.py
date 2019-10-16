@@ -4,14 +4,15 @@ import matplotlib.pyplot as plt
 import pickle
 import os
 import sys
-
 sys.path.append('/Users/jpaggi/Documents/combind/combind')
 from shared_paths import proteins, shared_paths
 
 pd.set_option("display.max_rows", 75)
 
+mcss = '../../../mcss_sizes.pkl'
+
 families = {
-    'GPCR': ['5HT2B', 'A2AR', 'B1AR', 'B2AR', 'CHRM3','SMO', 'MGLUR5'],
+    'GPCR': ['5HT2B', 'A2AR', 'B1AR', 'B2AR', 'SMO', 'MGLUR5'],
     'Kinase': ['BRAF', 'CDK2', 'CHK1', 'JAK2', 'PLK1', 'MAPK14', 'MEK1'],
     #'Ion Channel': ['TRPV1'],
     'Transporter': ['SLC6A4', 'GLUT1', 'DAT'],
@@ -66,6 +67,8 @@ def drug_average(family):
     weighted = family * weights.reshape(-1, 1)
     return weighted.groupby(level=level).sum()
 
+################################################################################
+
 def add_correct(data, thresh = 2.0):
     data = data.copy()
     for col in data:
@@ -79,7 +82,28 @@ def filter_to_ubiquitous_ligands(data):
                                  for name, group in data.groupby(level=level)])
     return data[data.index.get_level_values(-1).isin(ligands)]
 
-def load(version, helpers, mcss):
+def get_data(helpers, versions, best=True):
+    data = pd.concat(load(version, helpers, mcss) for version in versions)
+    data = add_correct(data, thresh = 2.0)
+    data = data[(data.index.get_level_values('protein') != 'A2AR')]
+    data = data[data.mcss < 0.5]
+    if best: data = data[data.best_correct]
+    return data
+
+def results(data, helpers, alpha=1.0, method='standard',
+            features='mcss_contact_hbond_sb', ligs=20, aggregate='ligand'):
+    ligand = data.xs((helpers, method, ligs, features, alpha),
+                      level=('helpers', 'mode', 'n_ligs', 'features', 'alpha')).filter(regex='rmsd|correct')
+    target = ligand.groupby(level=list(range(len(ligand.index.levels)-1))).mean().dropna()
+    print(ligand.shape[0])
+    if aggregate == 'target':
+        family = target.groupby(level=list(range(len(target.index.levels)-1))).mean()
+    elif aggregate == 'ligand':
+        family = ligand.groupby(level=list(range(len(ligand.index.levels)-2))).mean()
+    perf = drug_average(family)
+    return perf['glide_correct'][0], perf['combind_correct'][0]
+
+def load(version, helpers, mcss=mcss):
     fnames = ('{}/{}/scores/{}/summary/{}.tsv'.format(shared_paths['data'], protein, version, helpers)
              for protein in proteins)
     data = pd.concat(pd.read_csv(fname, sep='\t')
