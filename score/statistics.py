@@ -175,7 +175,9 @@ class Statistics:
         stats = {d: {} for d in self.distributions}
         for interaction in self.interactions:
             X_native, X_ref = self._get_interaction_scores(lig_pair, interaction)
-            domain = (0, 15) if interaction == 'mcss' else (0, 1)
+            if 'mcss_domain' not in self.settings:
+                self.settings['mcss_domain'] = (0, 15)
+            domain = self.settings['mcss_domain'] if interaction == 'mcss' else (0, 1)
             sd = self.settings['stats_sd']*(domain[1]-domain[0])
 
             stats['native'][interaction] = DensityEstimate(domain=domain, sd=sd, reflect=True)

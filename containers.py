@@ -234,13 +234,21 @@ class LigandManager:
                     helpers[fname][q] = chembl.split(',')
         return helpers
 
-    def get_helpers(self, query, fname, num=10, struct=None):
+    def get_helpers(self, query, fname, num=10, struct=None, randomize=False):
         if struct is None: struct = self.st
         if fname not in self.helpers:
             self.helpers[fname] = self.load_helpers()[fname]
             for q in self.helpers[fname]:
                 self.helpers[fname][q] = self.docked(self.helpers[fname][q], struct)
-        return self.helpers[fname][query][:num]
+        if randomize:
+            # This is probably overkill, but I don't want random noise as
+            # I'm optimizing parameters.
+            numpy.random.seed(hash(self.protein)//(2**32 - 1))
+            idx = np.random.permutation(len(self.helpers[fname][query]))
+            helpers = self.helpers[fname][query][idx]
+        else:
+            helpers = self.helpers[fname][query]
+        return helpers[:num]
 
     def path(self, name, extras = {}):
         extras.update(self.params)

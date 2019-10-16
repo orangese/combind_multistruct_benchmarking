@@ -49,9 +49,11 @@ class ScoreContainer:
 
     def compute_results_chembl(self, query):
         assert self.settings['chembl']
+        randomize = self.settings['randomize'] if 'randomize' in self.settings else False
         chembl_ligs = self.predict_data.lm.get_helpers(query, self.settings['chembl_file'],
                                           num=self.settings['num_pred_chembl'],
-                                          struct=self.struct)
+                                          struct=self.struct,
+                                          randomize=randomize)
         return self.compute_results([query]+chembl_ligs)
 
     def compute_results(self, queries):
