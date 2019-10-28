@@ -27,8 +27,8 @@ def main(args):
     
     for i, d in enumerate(datasets):
         print(d, i)
-        os.chdir('{}/{}'.format(paths['data'], d))
-        protein = Protein(d, params['pdb_order'])
+        os.chdir('{}/{}'.format(paths['DATA'], d))
+        protein = Protein(d, params, paths)
 
         if task == '0':
             sort_downloads()
@@ -49,7 +49,7 @@ def main(args):
             chembl_sort.check_chembl_prep_complete(paths['data']+'/'+d)
 
         if task == 'm':
-            lm.mcss.compute_mcss() # Computes MCSS, for use in pick_helpers
+            protein.lm.mcss.compute_mcss() # Computes MCSS, for use in pick_helpers
 
         if task == 'p':
             dock(protein.lm, mode=params['docking_version'])
@@ -67,11 +67,11 @@ def main(args):
 
         # 3. decide what ligands to use and prepare them
         if task == '3':
-            lm.pick_helpers()
+            protein.lm.pick_helpers()
             dock(protein.lm, protein.lm.load_helpers(),
                  mode=params['docking_version'])
             compute_fp(protein.lm)
-            lm.mcss.compute_mcss(True, protein.lm.load_helpers())
+            protein.lm.mcss.compute_mcss(True, protein.lm.load_helpers())
         
         # 3m. same as 3, except we have multiple mutant receptors to dock to
         if task == '3m':

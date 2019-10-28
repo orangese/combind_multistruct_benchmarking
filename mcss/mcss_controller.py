@@ -36,10 +36,10 @@ class MCSSController:
         versus docking performance.
     """
 
-    INIT_GROUP_SIZE = 500
-    RMSD_GROUP_SIZE = 15
+    INIT_GROUP_SIZE = 50
+    RMSD_GROUP_SIZE = 5
 
-    QUEUE = 'owners'
+    QUEUE = 'rondror'
     
     TEMPLATE = ('#!/bin/bash\n'
                 '#SBATCH -p {}\n'
@@ -294,6 +294,7 @@ class MCSSController:
         self._collate_mcss()
         self._add_pdb_to_pdb()
         self._add_crystal()
+        self._add_crystal_to_crystal()
         if chembl:
             self._add_pdb_to_allchembl()
             self._add_pick_helpers(pick_helpers)
@@ -343,6 +344,15 @@ class MCSSController:
         for ligand in self.pdb:
             if ligand == self.lm.st + '_lig': continue 
             self._add(crystal_lig, ligand, compute_rmsds)
+
+    def _add_crystal_to_crystal(self):
+        compute_rmsds = True
+        for i, ligand1 in enumerate(self.pdb):
+            for ligand2 in self.pdb[i+1:]:
+                if ligand1 == ligand2: continue
+                self._add(ligand1.replace('_lig', '_crystal_lig'),
+                          ligand2.replace('_lig', '_crystal_lig'),
+                          compute_rmsds)
 
     def _add_pdb_to_allchembl(self):
         """
@@ -432,8 +442,8 @@ class MCSSController:
             script = 'init{}.sh'.format(i)
             contents = 'export SCHRODINGER_CANVAS_MAX_MEM=1e+12\n'
             for l1, l2 in pairs:
-                poses1 = self.lig_template.format(l1.replace('_crystal', ''))
-                poses2 = self.lig_template.format(l2.replace('_crystal', ''))
+                poses1 = self.lm.path('PREPARED', {'ligand': l1.replace('_crystal', '')})
+                poses2 = self.lm.path('PREPARED', {'ligand': l2.replace('_crystal', '')})
                 contents += self.init_command.format(l1, l2, poses1, poses2)
                 if small:
                     contents = contents[:-1] # remove new line
@@ -454,12 +464,12 @@ class MCSSController:
             contents = ''
             for l1, l2 in pairs:
                 mcss = self.MCSSs["{}-{}".format(l1, l2)]
-                poses1 = (self.crystal_template.format(l1.replace('_crystal', ''))
+                poses1 = (self.lm.path('PREPARED', {'ligand': l1.replace('_crystal', '')})
                           if 'crystal' in l1 else
-                          self.pv_template.format(l1))
-                poses2 = (self.crystal_template.format(l2.replace('_crystal', ''))
+                         self.lm.path('DOCK_PV', {'ligand': l1}))
+                poses2 = (self.lm.path('PREPARED', {'ligand': l2.replace('_crystal', '')})
                           if 'crystal' in l2 else
-                          self.pv_template.format(l2))
+                          self.lm.path('DOCK_PV', {'ligand': l2}))
                 contents += self.rmsd_command.format(l1, l2, poses1, poses2, str(mcss))
             with open(script, 'w') as f:
                 f.write(self.TEMPLATE.format(contents))

@@ -7,9 +7,9 @@ fi
 '''
 
 import sys
-# import dock.prepare_all
-# import ifp.fp
-# import mcss.mcss
+import dock.prepare_all
+import ifp.fp
+import mcss.mcss
 import score.controller
 import score.scores
 import score.statistics

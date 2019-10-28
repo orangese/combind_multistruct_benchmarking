@@ -17,6 +17,10 @@ class Statistics:
         if 'native_poses' not in settings:
             settings['native_poses'] = settings['max_poses']
 
+
+        if 'crystal-native' not in settings:
+            settings['crystal-native'] = False
+
         assert settings['max_poses'] >= settings['reference_poses']
         assert settings['max_poses'] >= settings['native_poses']
 
@@ -126,8 +130,13 @@ class Statistics:
         from containers import Protein
         prot = Protein(protein, self.settings, self.paths)
         ligands = prot.lm.get_xdocked_ligands(self.settings['n_ligs'])
+        if self.settings['crystal-native']:
+            ligands = [ligand.replace('_lig', '_crystal_lig')
+                       for ligand in ligands]
         print(ligands)
-        prot.load_docking(ligands, load_fp=True, load_mcss='mcss' in self.interactions)
+        prot.load_docking(ligands, load_fp=True,
+                          load_mcss='mcss' in self.interactions,
+                          load_crystal = self.settings['crystal-native'])
 
         stats = {d: {i: [] for i in self.interactions}
                  for d in self.distributions}

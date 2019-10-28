@@ -3,13 +3,21 @@ import sys
 import os
 
 sys.path.append(os.getenv('COMBINDHOME'))
-from shared_paths import shared_paths
-from score.density_estimate import DensityEstimate
+from settings import stats, proteins, paths
+from containers import Protein
 
 
 total, mcss = 0, 0
-for fname in glob('{}/*/stats/{}/*mcss-reference.de'.format(shared_paths['data'], shared_paths['stats']['version'])):
-	de = DensityEstimate.read(fname)
-	total += 1
-	mcss += de.n_samples > 0
+for protein in proteins:
+	print(protein)
+	prot = Protein(protein, stats['stats41'], paths)
+	ligands = prot.lm.get_xdocked_ligands(20)
+	prot.lm.mcss.load_mcss()
+
+	for i, ligand1 in enumerate(ligands):
+		for ligand2 in ligands[i+1:]:
+			total += 1
+			m = prot.lm.mcss.MCSSs['{}-{}'.format(ligand1, ligand2)]
+			mcss += prot.lm.mcss.is_valid(m)
+
 print(total, mcss)

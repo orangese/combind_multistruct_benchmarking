@@ -37,6 +37,8 @@ class LigPair:
         elif 'tanimoto-maxoverlap' in self.mode:
             minimum, maximum = self.feat_map[feature]
             return self.pose_pairs[(rank1, rank2)].tanimoto(feature, maxoverlap=maximum)
+        elif 'tanimoto-half' in self.mode:
+            return self.pose_pairs[(rank1, rank2)].tanimoto_half(feature)
         else:
             return self.pose_pairs[(rank1, rank2)].tanimoto(feature)
 
@@ -97,6 +99,13 @@ class PosePair:
                 overlap += self._residue_level_overlap(self.pose1.fp[(i,r)],
                                                        self.pose2.fp[(i,r)])
         return overlap
+
+    def tanimoto_half(self, feature, pseudo_hits=1, pseudo_misses=1):
+        overlap = self.overlap(feature)
+        total = (self._total(feature) + 2*overlap) / 2.0
+        overlap += pseudo_hits
+        total += (2*pseudo_hits+pseudo_misses)
+        return overlap / (total - overlap)
 
     def tanimoto(self, feature, pseudo_hits=1, pseudo_misses=1, maxoverlap=float('inf')):
         overlap = pseudo_hits + self.overlap(feature)

@@ -33,7 +33,7 @@ class Ligand:
         self.ligand = ligand
         self.params = {k:v for k, v in params.items()}
         self.params['ligand'] = ligand
-        self.params['pdb'] = ligand.replace('_lig', '')
+        self.params['pdb'] = ligand.split('_')[0]
         self.paths = paths
 
         self.poses = None
@@ -105,6 +105,7 @@ class LigandManager:
                                       if l[:6] != 'CHEMBL']))
 
         # Set default structure.
+        self.st = None
         if not os.path.exists(self.path('GRID_ROOT')): return
         self.grids = sorted([l for l in os.listdir(self.path('GRID_ROOT'))
                              if l[0] != '.'])
@@ -116,12 +117,8 @@ class LigandManager:
             self.st = self.grids[-1]
         else:
             assert False
-
-        exceptions = {'AR': '2AXA', 'NR3C1': '3BQD', 'NR3C2': '3WFF'}
-        if self.protein in exceptions:
-            self.st = exceptions[self.protein]
         self.params['struct'] = self.st
-
+        
         self.mcss = MCSSController(self)
         self.helpers = {}
 
@@ -243,9 +240,9 @@ class LigandManager:
         if randomize:
             # This is probably overkill, but I don't want random noise as
             # I'm optimizing parameters.
-            numpy.random.seed(hash(self.protein)//(2**32 - 1))
+            np.random.seed(hash(self.protein) % (2**32 - 1))
             idx = np.random.permutation(len(self.helpers[fname][query]))
-            helpers = self.helpers[fname][query][idx]
+            helpers = [self.helpers[fname][query][i] for i in idx]
         else:
             helpers = self.helpers[fname][query]
         return helpers[:num]
@@ -268,7 +265,11 @@ class Protein:
         self.paths = paths
         
         self.lm = LigandManager(protein, self.params, self.paths)
-        self.docking = {self.lm.st: {}}
+        
+        if self.lm.st:
+            self.docking = {self.lm.st: {}}
+        else:
+            self.docking = {}
 
     def load_docking(self, ligands, load_fp=False, load_crystal=False,
                      load_mcss=False, st=None):

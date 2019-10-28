@@ -3,7 +3,7 @@ import sys
 from utils import grouper
 from settings import paths
 
-queue = 'owners'
+queue = 'rondror'
 group_size = 10
 
 pv_cmd = '$SCHRODINGER/run {}/main.py ifp -version {} -mode pv -input_file {} -output_file {} -poses {}\n'
@@ -31,13 +31,13 @@ def compute_fp(lm, pdb=False):
 
 def _structure_fp(lm):
     for ligand in sorted(os.listdir('../../structures/ligands')):
-        pdb = lig.split('_')[0]
+        pdb = ligand.split('_')[0]
         output_file = '{}_struct.fp'.format(pdb)
         if os.path.exists(output_file): continue
         print ('structure fp', pdb)
         with open('{}.sh'.format(pdb), 'w') as f:
             f.write('#!/bin/bash\n')
-            f.write(st_cmd.format(paths['CODE'], output_file))
+            f.write(st_cmd.format(paths['CODE'],lm.params['ifp_version'],  output_file))
         os.system('sbatch --time=00:10:00 -n 1 -p {} {}.sh'.format(queue, pdb))
 
 def _compute_fp(lm, fp_list):
