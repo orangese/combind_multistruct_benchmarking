@@ -39,7 +39,7 @@ class MCSSController:
     INIT_GROUP_SIZE = 50
     RMSD_GROUP_SIZE = 5
 
-    QUEUE = 'rondror'
+    QUEUE = 'owners'
     
     TEMPLATE = ('#!/bin/bash\n'
                 '#SBATCH -p {}\n'
@@ -260,7 +260,7 @@ class MCSSController:
                 self.MCSSs[mcss.name] = mcss
 
     # All of below are relevant for computation only
-    def compute_mcss(self, chembl = True, pick_helpers={}):
+    def compute_mcss(self, chembl=True, pick_helpers={}):
         """
         Compute unfinished MCSS features. See above class description for more detail.
 

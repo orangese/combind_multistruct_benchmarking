@@ -96,7 +96,7 @@ class LigandManager:
         self.params = {k:v for k, v in params.items()}
         self.params['protein'] = protein
         self.paths = paths
-        
+
         # Initialize ligand info.
         self.chembl_info = load_chembl_proc(self.path('ROOT'))
         self.u_ligs, self.dup_ligs = read_duplicates(self.path('ROOT'))
@@ -117,6 +117,10 @@ class LigandManager:
             self.st = self.grids[-1]
         else:
             assert False
+
+        exceptions = {'AR': '2AXA', 'NR3C1': '3BQD', 'NR3C2': '3WFF'}
+        if self.protein in exceptions:
+            self.st = exceptions[self.protein]
         self.params['struct'] = self.st
         
         self.mcss = MCSSController(self)
