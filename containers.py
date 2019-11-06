@@ -8,6 +8,8 @@ and ligands + docking results for a Protein.
 import os
 import sys
 import numpy as np
+from glob import glob
+import re
 
 from ifp.fp_controller import parse_fp_file
 from dock.parse_chembl import load_chembl_proc
@@ -179,39 +181,43 @@ class LigandManager:
                 print('uh oh, ligand not found in unique or duplicates...', l)
         return unique_ligs
 
-    def pick_helpers(self, maxnum=20, num_chembl=20):
-        ki_sort = lambda c: self.chembl_info[c].ki
+    def pick_helpers(self, maxnum=20, num_chembl=20):  
+        ki = lambda c: self.chembl_info[c].ki
+        os.system('mkdir -p {}'.format(self.path('HELPERS_ROOT')))
 
-        # filters
-        all_options = [
-            'best_affinity.txt',
-            'best_mcss.txt',
-            'best_affinity_diverse.txt'
-        ]
+        options = [
+            'best_affinity',
+            'best_mcss',
+            'best_affinity_diverse']
 
-        root = self.path('HELPERS')
-        os.system('mkdir -p {}'.format(root))
-        for f in all_options:
-            path = '{}/{}'.format(root, f)
+        for option in options:
+            path = self.path('HELPERS', {'helpers': option})
             if os.path.exists(path): continue
-            print('picking chembl ligands', f)
+            print('picking chembl ligands', option)
+            
             chembl_ligs = sorted(self.chembl())
-            with open(path, 'w') as fi:
-                for q in self.get_xdocked_ligands(maxnum):
-                    sorted_helpers = sorted(chembl_ligs, key=ki_sort)
-                    print(q)
-                    if f == 'best_mcss.txt':
-                        self.mcss.load_mcss()
-                        sorted_helpers = self.mcss.sort_by_mcss(q, sorted_helpers)
+            self.mcss.load_mcss()
+            with open(path, 'w') as fp:
+                for query in self.get_xdocked_ligands(maxnum):
+                    print(query)
 
-                    unique = self.unique([q]+sorted_helpers)
-                    if f == 'best_affinity_diverse.txt':
-                        self.mcss.load_mcss()
+                    if option == 'best_affinity':
+                        helpers = sorted(chembl_ligs, key=ki)
+                        unique = self.unique([query]+helpers)
+
+                    elif option == 'best_mcss':
+                        helpers = sorted(chembl_ligs, key=ki)
+                        helpers = self.mcss.sort_by_mcss(query, helpers)
+                        unique = self.unique([query]+helpers)
+
+                    elif option == 'best_affinity_diverse':
+                        helpers = sorted(chembl_ligs, key=ki)
+                        unique = self.unique([query]+helpers)
                         _unique = []
                         for helper in unique:
                             for _helper in _unique:
-                                not_query = _helper != q
-                                sim = self.mcss.get_mcss_size(helper, _helper,compute=True) > 0.8
+                                not_query = _helper != query
+                                sim = self.mcss.get_mcss_size(helper, _helper, compute=True) > 0.8
                                 if sim and not_query:
                                     break
                             else:
@@ -221,15 +227,18 @@ class LigandManager:
                             if len(_unique) == num_chembl+1:
                                 break
                         unique = _unique
-                    fi.write('{}:{}\n'.format(q, ','.join(unique[1:num_chembl+1])))
+                    
+                    fp.write('{}:{}\n'.format(query,
+                                              ','.join(unique[1:num_chembl+1])))
 
     def load_helpers(self):
-        root = self.path('HELPERS')
         helpers = {}
-        for fname in os.listdir(root):
-            if fname[0] == '.' or fname.split('.')[-1] != 'txt': continue
+        glob_pattern = self.path('HELPERS', {'helpers': '*'})
+        re_pattern = self.path('HELPERS', {'helpers': '(.+)'})
+        for fname in glob(glob_pattern):
+            fname = re.match(re_pattern, fname).group(1)
             helpers[fname] = {}
-            with open('{}/{}'.format(root, fname)) as fp:
+            with open(self.path('HELPERS', {'helpers': fname})) as fp:
                 for line in fp:
                     q, chembl = line.strip().split(':')
                     helpers[fname][q] = chembl.split(',')
@@ -237,18 +246,14 @@ class LigandManager:
 
     def get_helpers(self, query, fname, num=10, struct=None, randomize=False):
         if struct is None: struct = self.st
-        if fname not in self.helpers:
-            self.helpers[fname] = self.load_helpers()[fname]
-            for q in self.helpers[fname]:
-                self.helpers[fname][q] = self.docked(self.helpers[fname][q], struct)
+        helpers = self.load_helpers()[fname][query]
+        helpers = self.docked(helpers, struct)
         if randomize:
             # This is probably overkill, but I don't want random noise as
             # I'm optimizing parameters.
             np.random.seed(hash(self.protein) % (2**32 - 1))
-            idx = np.random.permutation(len(self.helpers[fname][query]))
-            helpers = [self.helpers[fname][query][i] for i in idx]
-        else:
-            helpers = self.helpers[fname][query]
+            idx = np.random.permutation(len(helpers))
+            helpers = [helpers[i] for i in idx]
         return helpers[:num]
 
     def path(self, name, extras = {}):
