@@ -1,5 +1,6 @@
 import os
 import sys
+import pandas as pd
 
 from dock.chembl_props import *
 
@@ -77,41 +78,61 @@ def load_chembl_raw(dir_path=None):
     ligs = {}
     for c_file in os.listdir(chembl_path):
         if c_file[0] == '.' or c_file.split('.')[-1] not in ['xls', 'csv']: 
-            continue
-        marker = '\t' if c_file.split('.')[-1] == 'xls' else ','
-
-        with open('{}/{}'.format(chembl_path, c_file)) as f:
-            for i, line in enumerate(f):
-                l_list = line.strip().split(marker)
-                if not i:
-                    id_ind = l_list.index('CMPD_CHEMBLID')
-                    smi_ind = l_list.index('CANONICAL_SMILES')
-                    type_ind = l_list.index('STANDARD_TYPE')
-                    r_ind = l_list.index('RELATION')
-                    val_ind = l_list.index('STANDARD_VALUE')
-                    unit_ind = l_list.index('STANDARD_UNITS')
-                    t_id_ind = l_list.index('PROTEIN_ACCESSION')
-                    c_ind = l_list.index('CONFIDENCE_SCORE')
-                    mw_ind = l_list.index('MOLWEIGHT')
-                    continue
-
-                # Ligand criteria.
-                if l_list[type_ind] not in ['Ki','IC50', 'EC50']: continue
-                if l_list[r_ind] not in ['=']: continue
-                if l_list[c_ind] not in ['9']: continue
-                if l_list[unit_ind] == '': continue
-                if l_list[smi_ind] == '': continue
-                if l_list[unit_ind] != 'nM': continue
-
-                mw = float(l_list[mw_ind])
-                if mw > 1000: continue
-
-                cid = l_list[id_ind]
-                smi = l_list[smi_ind]
-                ki = float(l_list[val_ind])
-                if ki <= 0: continue
-                if ki > 1000: continue
-                if cid not in ligs or (cid in ligs and ki < ligs[cid].ki):
-                    ligs[cid] = CHEMBL(cid, smi, ki, l_list[unit_ind], 
-                                       l_list[t_id_ind], l_list[type_ind])
+             continue
+        for _, row in pd.read_csv('{}/{}'.format(chembl_path, c_file)).iterrows():
+            ligs[row['ligand_chembl_id']] = CHEMBL(row['ligand_chembl_id'],
+                                                   row['canonical_smiles'],
+                                                   row['standard_value'],
+                                                   row['standard_units'], 
+                                                   row['ligand_chembl_id'],
+                                                   row['standard_type'])
     return ligs
+
+
+# def load_chembl_raw(dir_path=None):
+#     chembl_path = 'chembl'
+#     if dir_path is not None:
+#         chembl_path = '{}/chembl'.format(dir_path)
+#     if not os.path.exists(chembl_path): return {}
+
+#     ligs = {}
+#     for c_file in os.listdir(chembl_path):
+#         if c_file[0] == '.' or c_file.split('.')[-1] not in ['xls', 'csv']: 
+#             continue
+#         marker = '\t' if c_file.split('.')[-1] == 'xls' else ','
+
+#         with open('{}/{}'.format(chembl_path, c_file)) as f:
+#             for i, line in enumerate(f):
+#                 l_list = line.strip().split(marker)
+#                 if not i:
+#                     id_ind = l_list.index('CMPD_CHEMBLID')
+#                     smi_ind = l_list.index('CANONICAL_SMILES')
+#                     type_ind = l_list.index('STANDARD_TYPE')
+#                     r_ind = l_list.index('RELATION')
+#                     val_ind = l_list.index('STANDARD_VALUE')
+#                     unit_ind = l_list.index('STANDARD_UNITS')
+#                     t_id_ind = l_list.index('PROTEIN_ACCESSION')
+#                     c_ind = l_list.index('CONFIDENCE_SCORE')
+#                     mw_ind = l_list.index('MOLWEIGHT')
+#                     continue
+
+#                 # Ligand criteria.
+#                 if l_list[type_ind] not in ['Ki','IC50', 'EC50']: continue
+#                 if l_list[r_ind] not in ['=']: continue
+#                 if l_list[c_ind] not in ['9']: continue
+#                 if l_list[unit_ind] == '': continue
+#                 if l_list[smi_ind] == '': continue
+#                 if l_list[unit_ind] != 'nM': continue
+
+#                 mw = float(l_list[mw_ind])
+#                 if mw > 1000: continue
+
+#                 cid = l_list[id_ind]
+#                 smi = l_list[smi_ind]
+#                 ki = float(l_list[val_ind])
+#                 if ki <= 0: continue
+#                 if ki > 1000: continue
+#                 if cid not in ligs or (cid in ligs and ki < ligs[cid].ki):
+#                     ligs[cid] = CHEMBL(cid, smi, ki, l_list[unit_ind], 
+#                                        l_list[t_id_ind], l_list[type_ind])
+#     return ligs

@@ -947,7 +947,7 @@ feature_defs = {
 }
 
 paths = {'CODE': '~/combind',
-         'DATA': '/oak/stanford/groups/rondror/users/jpaggi/bpp_data',
+         'DATA': '/oak/stanford/groups/rondror/users/jpaggi/gpcrs',
          'STATS': '/oak/stanford/groups/rondror/users/jpaggi/statistics',
          'ROOT': '{DATA}/{protein}',
          'HELPERS_ROOT': '{ROOT}/chembl/helpers',
