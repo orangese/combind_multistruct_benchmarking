@@ -39,7 +39,7 @@ class MCSSController:
     INIT_GROUP_SIZE = 50
     RMSD_GROUP_SIZE = 5
 
-    QUEUE = 'owners'
+    QUEUE = 'rondror'
     
     TEMPLATE = ('#!/bin/bash\n'
                 '#SBATCH -p {}\n'
@@ -336,14 +336,14 @@ class MCSSController:
         compute_rmsds = True
         for i, l1 in enumerate(self.pdb):
             for l2 in self.pdb[i+1:]:
-                self._add(l1, l2, compute_rmsds, compute_small = True)
+                self._add(l1, l2, compute_rmsds, compute_small=True)
 
     def _add_crystal(self):
         compute_rmsds = True
         crystal_lig = self.lm.st + '_crystal_lig'
         for ligand in self.pdb:
             if ligand == self.lm.st + '_lig': continue 
-            self._add(crystal_lig, ligand, compute_rmsds)
+            self._add(crystal_lig, ligand, compute_rmsds, compute_small=True)
 
     def _add_crystal_to_crystal(self):
         compute_rmsds = True
@@ -352,7 +352,7 @@ class MCSSController:
                 if ligand1 == ligand2: continue
                 self._add(ligand1.replace('_lig', '_crystal_lig'),
                           ligand2.replace('_lig', '_crystal_lig'),
-                          compute_rmsds)
+                          compute_rmsds, compute_small=True)
 
     def _add_pdb_to_allchembl(self):
         """
@@ -386,7 +386,7 @@ class MCSSController:
                         assert l2 != '', pick_helpers # switch to continue if this happens
                         self._add(l1, l2, compute_rmsds)
 
-    def _add(self, l1, l2, compute_rmsd, compute_small = False):
+    def _add(self, l1, l2, compute_rmsd, compute_small=False):
         """
         Check if pair has been computed, if not add it.
 

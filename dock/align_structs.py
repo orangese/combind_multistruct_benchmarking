@@ -4,16 +4,8 @@ from schrodinger.structure import StructureReader, StructureWriter
 from dock.renumber import renumber
 
 out_dir = 'structures/aligned_files'
-queue = 'owners'
 
 def align_successful(out_dir, struct, verbose=False):
-    if struct in ['5IRX','5IS0','3J5Q']: 
-        in_f = 'structures/processed_files/{}/{}_out.mae'.format(struct, struct)
-        out_f = '{}/{}/{}_out.mae'.format(out_dir, struct, struct)
-        if not os.path.exists(out_f):
-            os.system('mkdir -p {}/{}'.format(out_dir, struct))
-            os.system('cp {} {}'.format(in_f, out_f))
-        return True # TRPV1 was manually aligned because 3J5Q has no ligand
 
     if not os.path.exists('{}/{}/rot-{}_query.mae'.format(out_dir, struct, struct)):
         return False
@@ -25,7 +17,7 @@ def align_successful(out_dir, struct, verbose=False):
         for line in f:
             tmp = line.strip().split()
             if len(tmp) > 0 and tmp[0] == 'Alignment':
-                if float(tmp[2]) > 0.15:
+                if float(tmp[2]) > 0.4:
                     print('-- Alignment warning!', struct, float(tmp[2]))
                     return False
                 return True
@@ -87,5 +79,5 @@ def align_structs(verbose=False):
                     '  -asl_mobile "(not chain. L and not atom.element H) '
                                 'and (fillres within 15.0 chain. L)" \\\n'
                     '  {}_template.mae {}_query.mae\n'.format(template, struct))
-        os.system('sbatch -p {} -t 00:10:00 -o align.out align_in.sh'.format(queue))
+        os.system('sh  align_in.sh > align.out')
         os.chdir('../../..')

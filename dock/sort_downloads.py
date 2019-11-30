@@ -1,5 +1,7 @@
 import os
 import sys
+import pandas as pd
+from glob import glob
 
 from datetime import date
 
@@ -31,65 +33,6 @@ ignore_methods = ['solution nmr']
 # ignore_pdb = ['1h00','1h01','1h07','1h08', # cdk2 2 small molecules on top of each other?
 #               '5tlx','5kcf','5kct','5kra','5tlp', # era multiple small molecules per structure
 #               '4h71'] # plk1 allosteric site
-
-def read_information(log):
-    pdb_csv = [f for f in os.listdir('structures/downloads') 
-                   if f.split('.')[-1] == 'csv' and f[0] != '.']
-
-    # load in csv file
-    structs = {}
-    for csv in pdb_csv:
-        log.write("Begin processing CSV file {}.\n".format(csv))
-        uniprot = csv.split('.')[0].lower()
-
-        with open('structures/downloads/{}'.format(csv)) as f:
-            for line in f:
-                line = line.lower()
-                if len(line) <= 1: continue
-                    
-                # Read header
-                if line[:6] == 'pdb id':
-                    line = [s.strip() for s in line.split(',')]
-                    pdb_i = 0
-                    chain_i = line.index('chain id')
-                    title_i = line.index('structure title')
-                    date_i = line.index('rel. date')
-                    lig_i = line.index('ligand id')
-                    ligmw_i = line.index('ligand mw')
-                    prot_i = line.index('uniprot acc')
-                    method_i = line.index('exp. method')
-                    continue
-                line = [s.strip('"') for s in line.split('","')]
-                u_list = [p.strip('"\n') for p in [x.strip() for x in line[prot_i].strip().split(',')]]                 
-                y,m,d = line[date_i].split('-')
-                st_date = date(int(y),int(m),int(d))
-                skipping = "Skipping PDB {}, chain {}".format(line[pdb_i], line[chain_i])
-
-                if line[pdb_i] not in structs: structs[line[pdb_i]] = []
-                
-                if line[pdb_i] in ignore_pdb:
-                    log.write("{}: PDB ID {} in ignore_pdb.\n".format(skpping, line[pdb_i]))
-                    continue
-                if line[lig_i] in ignore_ligands:
-                    log.write("{}: Ligand {} in ignore_ligands.\n".format(skipping, line[lig_i]))
-                    continue
-                if line[method_i] in ignore_methods:
-                    log.write("{}: Method {} in ignore_methods.\n".format(skipping, line[method_i]))
-                    continue
-                if uniprot not in u_list:
-                    log.write("{}: Uniprots {} not target uniprot.\n".format(skipping, ','.join(u_list)))
-                    continue
-                if any(x in line[title_i] for x in ignore_titles):
-                    log.write("{}: Titles {} in ignore_titles.\n".format(skipping, line[title_i]))
-                    continue
-                if float(line[ligmw_i]) < 100 or float(line[ligmw_i]) > 1000:
-                    log.write("{}: Ligand of MW {} not right size.\n".format(skipping, line[ligmw_i]))
-                    continue
-                
-                structs[line[pdb_i]] += [PDB(line[pdb_i], line[chain_i], 
-                                             line[title_i], st_date, line[lig_i], uniprot)]
-        log.write("End processing CSV file {}.\n".format(csv))
-    return structs
     
 def get_ligs(structs, log):
     log.write('Begin dismabiguating ligands.\n')
@@ -219,72 +162,47 @@ class PDB:
         return pdb
 
 def read_initial_pdbs():
-    """
-    Read PDB info file obtained by performing PDB search, specifiying
-    customized table, and choosing the options
-        (1) the entire "Structure Summary" section
-        (2) "Ligand ID" and "Ligand Molecular Weight" under "Ligands"
-        (3) "Uniprot Accessions" under "Sequence Clusters"
-
-    Additionally, provides some light filtering based on pre-specified
-    pdbs to block
-    """
-    pdb_csv = [f for f in os.listdir('structures/downloads')
-               if f.split('.')[-1] == 'csv' and f[0] != '.']
-
     # load in csv file
     pdbs = {}
-    for csv in pdb_csv:
-        uniprot = csv.split('.')[0].lower()
-        with open('structures/downloads/{}'.format(csv)) as f:
-            for line in f:
-                line = line.lower()
-                if len(line) <= 1: continue
-                    
-                # Read header
-                if line[:6] == 'pdb id':
-                    line = [s.strip() for s in line.split(',')]
-                    pdb_i = 0
-                    chain_i = line.index('chain id')
-                    title_i = line.index('structure title')
-                    date_i = line.index('rel. date')
-                    lig_i = line.index('ligand id')
-                    ligmw_i = line.index('ligand mw')
-                    prot_i = line.index('uniprot acc')
-                    method_i = line.index('exp. method')
-                    continue
-                line = [s.strip('"') for s in line.split('","')]
-                u_list = [p.strip('"\n') for p in [x.strip() for x in line[prot_i].strip().split(',')]]                 
-                y,m,d = line[date_i].split('-')
-                st_date = date(int(y),int(m),int(d))
+    for csv in glob('structures/downloads/*.csv'):
+        uniprot = csv.split('/')[-1].split('.')[0].lower()
 
-                if line[pdb_i] not in pdbs:
-                    pdbs[line[pdb_i]] = PDB(line[pdb_i], line[title_i], st_date)
+        df = pd.read_csv(csv)
+        for col in df:
+            for col in df:
+                if type(df[col][0]) == str:
+                    df[col] = df[col].str.lower()
 
-                pdb = pdbs[line[pdb_i]]
+        for i, line in df.iterrows():
+            m,d,y = line['Rel. Date'].split('/')
+            st_date = date(int(y),int(m),int(d))
 
-                # if line[pdb_i] in ignore_pdb:
-                #     pdb.add_comment(line[chain_i], "PDB ID {} in ignore_pdb".format(line[pdb_i]))
-                #     continue
-                if line[lig_i] in [ligand for chain, ligand in pdb.ligands()]:
-                    pdb.add_comment(line[chain_i], "Ligand {} present in earlier chain".format(line[lig_i]))
-                    continue
-                if line[lig_i] in ignore_ligands:
-                    pdb.add_comment(line[chain_i], "Ligand {} in ignore_ligands".format(line[lig_i]))
-                    continue
-                if line[method_i] in ignore_methods:
-                    pdb.add_comment(line[chain_i], "Method {} in ignore_methods".format(line[method_i]))
-                    continue
-                if uniprot not in u_list:
-                    pdb.add_comment(line[chain_i], "Uniprots {} not target uniprot".format(','.join(u_list)))
-                    continue
-                if any(x in line[title_i] for x in ignore_titles):
-                    pdb.add_comment(line[chain_i], "Title contains one of ignore_titles".format(line[title_i]))
-                    continue
-                if float(line[ligmw_i]) < 100 or float(line[ligmw_i]) > 1000:
-                    pdb.add_comment(line[chain_i], "Ligand {} of MW {} not right size".format(line[lig_i], line[ligmw_i]))
-                    continue
-                pdbs[line[pdb_i]].add_chain(line[chain_i], line[lig_i])
+            if line['PDB ID'] not in pdbs:
+                pdbs[line['PDB ID']] = PDB(line['PDB ID'], line['Structure Title'], st_date)
+
+            if line['Exp. Method'] in ignore_methods:
+                pdbs[line['PDB ID']].add_comment(line['Chain ID'], "Method {} in ignore_methods".format(line['Exp. Method']))
+                continue
+            if uniprot not in line['Uniprot Acc'].split(','):
+                pdbs[line['PDB ID']].add_comment(line['Chain ID'], "Uniprot not target uniprot")
+                continue
+            if any(x in line['Structure Title'] for x in ignore_titles):
+                pdbs[line['PDB ID']].add_comment(line['Chain ID'], "Title contains one of ignore_titles".format(line['Structure Title']))
+                continue
+            if line['Ligand ID'] in ignore_ligands:
+                pdbs[line['PDB ID']].add_comment(line['Chain ID'], "Ligand {} in ignore_ligands".format(line['Ligand ID']))
+                continue
+
+            if line['Ligand ID'] in [ligand for chain, ligand in pdbs[line['PDB ID']].ligands()]:
+                pdbs[line['PDB ID']].add_comment(line[chain_i], "Ligand {} present in earlier chain".format(line['Ligand ID']))
+                continue
+
+            if not (100 < float(line['Ligand MW']) < 1000):
+                pdbs[line['PDB ID']].add_comment(line['Chain ID'], "Ligand {} of MW {} not right size".format(line['Ligand ID'], line['Ligand MW']))
+                continue
+                
+            pdbs[line['PDB ID']].add_chain(line['Chain ID'], line['Ligand ID'])
+                
     return pdbs
 
 def mark_covalently_bound(pdbs):

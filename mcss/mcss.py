@@ -76,9 +76,7 @@ class MCSS:
         mcss.n_mcss_bonds = int(n_mcss_bonds)
         mcss.smarts_l1 = smarts_l1.split(';')
         mcss.smarts_l2 = smarts_l2.split(';')
-
-        tried_small = len(tok)==9 and tok[8] == 'True'
-        mcss.tried_small = tried_small
+        mcss.tried_small = (len(tok)==9) and (tok[8]=='True')
         return mcss
 
     # MCSS Computation Methods.

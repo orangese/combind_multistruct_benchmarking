@@ -5,10 +5,12 @@ ml load schrodinger
 
 unset PYTHONPATH
 unset PYTHONHOME
-PYTHON=~/miniconda3/bin
+PYTHON=$OAK/users/jpaggi/miniconda3/envs/combind/bin
 [ ":$PATH:" == *":$PYTHON:"* ] || PATH="$PYTHON:$PATH"
 export COMBINDHOME=`pwd`
 
 # Set this to your own python site-packages to access your own modules when
 # using $SCHRODINGER/run.
-export SCHRODINGER_PYTHONPATH=/home/users/jpaggi/miniconda3/lib/python3.6/site-packages/
+export SCHRODINGER_PYTHONPATH=$OAK/users/jpaggi/miniconda3/envs/combind/lib/python3.6/site-packages/
+
+conda activate combind

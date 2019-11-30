@@ -10,7 +10,7 @@ def make_grids():
     os.system('mkdir -p docking')
     os.system('mkdir -p docking/grids')
 
-    for prot in os.listdir('structures/proteins'):
+    for prot in sorted(os.listdir('structures/proteins'))[:1]:
         pdb = prot.split('_')[0]
 
         # Normally, protein name will be something like 3YDO_prot.mae. In these cases, both the

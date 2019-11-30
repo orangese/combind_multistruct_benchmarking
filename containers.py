@@ -134,7 +134,7 @@ class LigandManager:
         if self_docked in ligands:
            ligands.remove(self_docked)
         elif ligands:
-            ligands.pop(-1)
+            ligands = ligands[:num]
         return ligands
 
     def docked(self, ligands, st=None):
