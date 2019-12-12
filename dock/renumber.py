@@ -19,9 +19,7 @@ def renumber():
 
 	try:
 	    for st in StructureReader('renumber_out.mae'):
-	        st_wr = StructureWriter('{}_out.mae'.format(st.title))
-	        st_wr.append(st)
-	        st_wr.close()
+	        st.write('{}_out.mae'.format(st.title))
 	except:
 	    print('failed')
 

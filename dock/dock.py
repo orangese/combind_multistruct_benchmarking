@@ -16,7 +16,7 @@ NENHANCED_SAMPLING   2
 '''
 
 GLIDE_ES4_soft = '''GRIDFILE   ../../grids/{}/{}.zip
-LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
+LIGANDFILE   ../../../ligands/{}/{}.mae
 DOCKING_METHOD   confgen
 CANONICALIZE   True
 EXPANDED_SAMPLING   False
@@ -29,12 +29,12 @@ LIG_VSCALE 0.4
 '''
 
 GLIDE_ES4 = '''GRIDFILE   ../../grids/{}/{}.zip
-LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
+LIGANDFILE   ../../../ligands/{}/{}.mae
 DOCKING_METHOD   confgen
 CANONICALIZE   True
 EXPANDED_SAMPLING   False
-POSES_PER_LIG   300
-POSTDOCK_NPOSE   300
+POSES_PER_LIG   100
+POSTDOCK_NPOSE   100
 WRITEREPT   True
 PRECISION   SP
 NENHANCED_SAMPLING   4
@@ -143,7 +143,7 @@ def get_state(ligand, grid):
     rmsd = '{}-to-{}/rmsd.csv'.format(ligand, grid)
     log = '{}-to-{}/{}-to-{}.log'.format(ligand, grid, ligand, grid)
     ref_lig = '../../structures/ligands/{}.mae'.format(ligand)
-    inp_lig = '../../ligands/prepared_ligands/{}/{}.mae'.format(ligand, ligand)
+    inp_lig = '../../ligands/{}/{}.mae'.format(ligand, ligand)
     inp_grid = '../grids/{}/{}.zip'.format(grid, grid)
 
     # 0: do nothing
@@ -192,14 +192,14 @@ def proc_all(all_pairs, dock=False, rmsd=False):
 
         os.system('sbatch -p {} -t 1:00:00 -o dock.out dock{}.sh'.format(queue, i))
 
-def dock(lm, chembl=None, mutants=False, maxnum=30, mode = 'confgen'):
+def dock(lm, chembl=None, mutants=False, maxnum=30, mode='confgen'):
     if lm.st is None: return
     docking = modes[mode]['name']
     os.system('mkdir -p docking/{}'.format(docking))
     os.chdir('docking/{}'.format(docking))
 
     if chembl is None:
-        ligs = lm.pdb[:maxnum]
+        ligs = lm.get_pdb(maxnum)
         grids = [lm.st]
     else:
         ligs = set([])
@@ -208,10 +208,6 @@ def dock(lm, chembl=None, mutants=False, maxnum=30, mode = 'confgen'):
             for q, c_list in f_data.items():
                 ligs.add(q)
                 ligs.update(c_list)
-
-    # if mutants flag is True, then we will try docking all ligands to all mutant receptors
-    if mutants:
-        grids = lm.get_grids()
 
     to_dock = []
     to_rmsd = []

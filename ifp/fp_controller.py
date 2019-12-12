@@ -19,7 +19,7 @@ def compute_fp(lm, pdb=False):
 
     _structure_fp(lm)
     
-    ligands = lm.pdb + lm.chembl()
+    ligands = lm.get_pdb() + lm.get_chembl()
     unfinished = []
     for ligand in lm.docked(ligands):
         if pdb and 'CHEMBL' in lig: continue

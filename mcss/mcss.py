@@ -334,10 +334,10 @@ class MCSS:
             
 def main(args):
 
-    mode = args[1]
+    mode = args[0]
     if mode == 'INIT':
-        l1, l2, l1_path, l2_path, init_file, mcss_types_file = args[2:8]
-        small = len(args) == 9
+        l1, l2, l1_path, l2_path, init_file, mcss_types_file = args[1:7]
+        small = len(args) == 8
 
         mcss = MCSS(l1, l2)
         with StructureReader(l1_path) as ligand1, StructureReader(l2_path) as ligand2:
@@ -347,7 +347,7 @@ def main(args):
         from schrodinger.structutils.analyze import evaluate_smarts_canvas
         from schrodinger.structutils.rmsd import ConformerRmsd
         (l1, l2, pv1_path, pv2_path, init_file, mcss_types_file,
-         rmsd_file, max_poses, mcss_string_rep) = args[2:]
+         rmsd_file, max_poses, mcss_string_rep) = args[1:]
         max_poses = int(max_poses)
         poseviewer_paths = {l1:pv1_path, l2:pv2_path}
         mcss = MCSS.from_string(mcss_string_rep)

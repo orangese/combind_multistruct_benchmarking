@@ -9,11 +9,10 @@ import os
 import sys
 import numpy as np
 from glob import glob
+import pandas as pd
+from schrodinger.structure import SmilesStructure
 import re
-
 from ifp.fp_controller import parse_fp_file
-from dock.parse_chembl import load_chembl_proc
-from dock.chembl_props import read_duplicates
 from mcss.mcss_controller import MCSSController
 
 class Pose:
@@ -100,11 +99,9 @@ class LigandManager:
         self.paths = paths
 
         # Initialize ligand info.
-        self.chembl_info = load_chembl_proc(self.path('ROOT'))
-        self.u_ligs, self.dup_ligs = read_duplicates(self.path('ROOT'))
-        self.all_ligs = self.prepped()
-        self.pdb = self.unique(sorted([l for l in self.all_ligs
-                                      if l[:6] != 'CHEMBL']))
+        self.pdb = self.read_pdb()
+        self.chembl = self.read_chembl()
+        self.prepped = self.prepped()
 
         # Set default structure.
         self.st = None
@@ -128,8 +125,55 @@ class LigandManager:
         self.mcss = MCSSController(self)
         self.helpers = {}
 
+    def read_pdb(self):
+        pdb = {}
+        if os.path.exists(self.path('PDB')):
+            for _, row in pd.read_csv(self.path('PDB')).iterrows():
+                name = '{}_lig'.format(row['PDB ID'])
+                smiles = row['Ligand SMILES']
+                affinity = 1
+                pdb[name] = (smiles, affinity)
+        return pdb
+
+    def read_chembl(self):
+        chembl = {}
+        _chembl = []
+        for csv in glob(self.path('CHEMBL')):
+            _chembl += [pd.read_csv(csv)]
+        if _chembl:
+            for _, row in pd.concat(_chembl).iterrows():
+                name = '{}_lig'.format(row['ligand_chembl_id'])
+                smiles = row['canonical_smiles']
+                affinity = row['standard_value']
+                chembl[name] = (smiles, affinity)
+        return chembl
+
+    def prepped(self):
+        if not os.path.exists(self.path('LIGANDS_ROOT')): return set([])
+        return set([ligand for ligand in os.listdir(self.path('LIGANDS_ROOT'))
+                    if os.path.exists(self.path('LIGANDS', {'ligand': ligand}))])
+
+    def get_pdb(self, num=None):
+        pdb = sorted(self.pdb.keys())
+        if num is None:
+            return pdb
+        return pdb[:num]
+
+    def get_chembl(self):
+        return sorted(self.chembl.keys())
+
+    def lookup(self, ligand):
+        if ligand in self.pdb:
+            return self.pdb[ligand]
+        if ligand in self.chembl:
+            return self.chembl[ligand]
+        return None
+
+    def get_structure(self, ligand):
+        return SmilesStructure(self.lookup(ligand)[0]).get2dStructure()
+
     def get_xdocked_ligands(self, num):
-        ligands = self.docked(self.pdb)[:num+1]
+        ligands = self.docked(self.get_pdb())[:num+1]
         self_docked = self.st+'_lig'
         if self_docked in ligands:
            ligands.remove(self_docked)
@@ -138,98 +182,81 @@ class LigandManager:
         return ligands
 
     def docked(self, ligands, st=None):
-        if st == None: st = self.st
         return [ligand for ligand in ligands
                 if os.path.exists(self.path('DOCK_PV', {'ligand': ligand}))]
 
-    def prepped(self):
-        if not os.path.exists(self.path('PREPARED_ROOT')): return set([])
-        return set([ligand for ligand in os.listdir(self.path('PREPARED_ROOT'))
-                   if os.path.exists(self.path('PREPARED', {'ligand': ligand}))])
+    def unique(self, ligands_st, query_st):
+        for ligand_st in ligands_st:
+            if ligand_st.isEquivalent(query_st):
+                return False
+        return True
 
-    def chembl(self):
-        def valid(l):
-            filters = [
-                lambda x,ci: ci[x].ki is not None and ci[x].ki <= 1000,
-                lambda x,ci: ci[x].mw is not None and ci[x].mw <= 800,
-                lambda x,ci: ci[x].macrocycle is not None and not ci[x].macrocycle,
-                lambda x,ci: ci[x].valid_stereo is not None and ci[x].valid_stereo
-            ]
-            return all(f(l, self.chembl_info) for f in filters)
-        return [l for l in self.all_ligs if l in self.chembl_info and valid(l)]
+    def diverse(self, ligands, query):
+        for ligand in ligands:
+            if self.mcss.get_mcss_size(ligand, query, compute=True) > 0.8:
+                return False
+        return True
 
-    def unique(self, l_list):
-        """
-        Removes duplicates from l_list.
-        
-        If identical ligands are found, the one that appears first in l_list will be kept.
-        """
-        if not self.u_ligs:
-            print('duplicates not loaded')
-            return l_list
-        unique_ligs = []
-        exclude = set([])
-        for l in l_list:
-            if l in exclude: continue
-            unique_ligs.append(l)
-            if l in self.u_ligs: continue
-            for l2, dups in self.dup_ligs.items():
-                if l in dups:
-                    exclude.update(dups)
-                    break
-            else:
-                print('uh oh, ligand not found in unique or duplicates...', l)
-        return unique_ligs
+    def _pick_helpers_best_affinity(self, query, num_chembl):
+        sorted_helpers = sorted(self.get_chembl(), key=lambda x: self.chembl[x][-1])
+        query_st = self.get_structure(query)
+        helpers, helpers_st = [], []
+        for ligand in sorted_helpers:
+            ligand_st = self.get_structure(ligand)
+            if self.unique(helpers_st+[query_st], ligand_st):
+                helpers += [ligand]
+                helpers_st += [ligand_st]
+            if len(helpers) == num_chembl:
+                break
+        return helpers
 
-    def pick_helpers(self, maxnum=20, num_chembl=20):  
-        ki = lambda c: self.chembl_info[c].ki
+    def _pick_helpers_best_affinity_diverse(self, query, num_chembl):
+        sorted_helpers = sorted(self.get_chembl(), key=lambda x: self.chembl[x][-1])
+        query_st = self.get_structure(query)
+        helpers, helpers_st = [], []
+        for ligand in sorted_helpers:
+            ligand_st = self.get_structure(ligand)
+            if self.unique(helpers_st+[query_st], ligand_st) and self.diverse(helpers, ligand):
+                helpers += [ligand]
+                helpers_st += [ligand_st]
+            if len(helpers) == num_chembl:
+                break
+            print(len(helpers))
+        return helpers
+
+    def _pick_helpers_best_mcss(self, query, num_chembl):
+        sorted_helpers = sorted(self.get_chembl(), key=lambda x: self.chembl[x][-1])
+        sorted_helpers = self.mcss.sort_by_mcss(query, sorted_helpers)
+        query_st = self.get_structure(query)
+        helpers, helpers_st = [], []
+        for ligand in sorted_helpers:
+            ligand_st = self.get_structure(ligand)
+            if self.unique(helpers_st+[query_st], ligand_st):
+                helpers += [ligand]
+                helpers_st += [ligand_st]
+            if len(helpers) == num_chembl:
+                break
+        return helpers
+
+    def pick_helpers(self, maxnum=20, num_chembl=20):
         os.system('mkdir -p {}'.format(self.path('HELPERS_ROOT')))
+        options = {
+            'best_affinity': self._pick_helpers_best_affinity,
+            'best_mcss': self._pick_helpers_best_mcss,
+            'best_affinity_diverse': self._pick_helpers_best_affinity_diverse
+            }
 
-        options = [
-            'best_affinity',
-            'best_mcss',
-            'best_affinity_diverse']
-
-        for option in options:
+        for option, function in options.items():
             path = self.path('HELPERS', {'helpers': option})
             if os.path.exists(path): continue
             print('picking chembl ligands', option)
-            
-            chembl_ligs = sorted(self.chembl())
             self.mcss.load_mcss()
             with open(path, 'w') as fp:
                 for query in self.get_xdocked_ligands(maxnum):
                     print(query)
-
-                    if option == 'best_affinity':
-                        helpers = sorted(chembl_ligs, key=ki)
-                        unique = self.unique([query]+helpers)
-
-                    elif option == 'best_mcss':
-                        helpers = sorted(chembl_ligs, key=ki)
-                        helpers = self.mcss.sort_by_mcss(query, helpers)
-                        unique = self.unique([query]+helpers)
-
-                    elif option == 'best_affinity_diverse':
-                        helpers = sorted(chembl_ligs, key=ki)
-                        unique = self.unique([query]+helpers)
-                        _unique = []
-                        for helper in unique:
-                            for _helper in _unique:
-                                not_query = _helper != query
-                                sim = self.mcss.get_mcss_size(helper, _helper, compute=True) > 0.8
-                                if sim and not_query:
-                                    break
-                            else:
-                                _unique += [helper]
-
-                            print(len(_unique))
-                            if len(_unique) == num_chembl+1:
-                                break
-                        unique = _unique
-                    
-                    fp.write('{}:{}\n'.format(query,
-                                              ','.join(unique[1:num_chembl+1])))
+                    helpers = function(query, num_chembl)
+                    helpers = ','.join(helpers)
+                    fp.write('{}:{}\n'.format(query, helpers))
 
     def load_helpers(self):
         helpers = {}

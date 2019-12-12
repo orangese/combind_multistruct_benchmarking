@@ -36,7 +36,7 @@ def make_grids():
             c2 = get_centroid(st_2)
             x,y,z = c2[:3]
                       
-        out_f = prot_prefix  
+        out_f = prot_prefix
         os.system('mkdir -p docking/grids/{}'.format(out_f))
         with open('docking/grids/{}/{}.in'.format(out_f,out_f), 'w') as f:
             f.write('GRID_CENTER {},{},{}\n'.format(x,y,z))
@@ -51,5 +51,5 @@ def make_grids():
                         
         print('making grid', out_f)
         os.chdir('docking/grids/{}'.format(out_f))
-        os.system('sbatch -p owners -t 00:30:00 -o grid.out grid_in.sh')
+        os.system('sbatch -p rondror -t 00:30:00 -o grid.out grid_in.sh')
         os.chdir('../../..')

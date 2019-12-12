@@ -132,8 +132,8 @@ class ScoreContainer:
 
 
 def main(args):
-    stats_root, struct, protein = args[1:4]
-    queries = args[4:]
+    stats_root, struct, protein = args[:3]
+    queries = args[3:]
     sc = ScoreContainer(os.getcwd(), stats_root, protein, struct)
 
     if sc.settings['chembl']:

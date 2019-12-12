@@ -36,7 +36,7 @@ class MCSSController:
         versus docking performance.
     """
 
-    INIT_GROUP_SIZE = 50
+    INIT_GROUP_SIZE = 500
     RMSD_GROUP_SIZE = 5
 
     QUEUE = 'rondror'
@@ -53,7 +53,7 @@ class MCSSController:
     def __init__(self, lm):
         self.lm = lm
         self.pdb = lm.get_xdocked_ligands(lm.params['n_ligs'])
-        self.chembl = lm.chembl()
+        self.chembl = lm.get_chembl()
         self.docked  = set(lm.docked(self.pdb+self.chembl))
 
         self.MCSSs = {}
@@ -442,8 +442,8 @@ class MCSSController:
             script = 'init{}.sh'.format(i)
             contents = 'export SCHRODINGER_CANVAS_MAX_MEM=1e+12\n'
             for l1, l2 in pairs:
-                poses1 = self.lm.path('PREPARED', {'ligand': l1.replace('_crystal', '')})
-                poses2 = self.lm.path('PREPARED', {'ligand': l2.replace('_crystal', '')})
+                poses1 = self.lm.path('LIGANDS', {'ligand': l1.replace('_crystal', '')})
+                poses2 = self.lm.path('LIGANDS', {'ligand': l2.replace('_crystal', '')})
                 contents += self.init_command.format(l1, l2, poses1, poses2)
                 if small:
                     contents = contents[:-1] # remove new line
@@ -464,10 +464,10 @@ class MCSSController:
             contents = ''
             for l1, l2 in pairs:
                 mcss = self.MCSSs["{}-{}".format(l1, l2)]
-                poses1 = (self.lm.path('PREPARED', {'ligand': l1.replace('_crystal', '')})
+                poses1 = (self.lm.path('LIGANDS', {'ligand': l1.replace('_crystal', '')})
                           if 'crystal' in l1 else
                          self.lm.path('DOCK_PV', {'ligand': l1}))
-                poses2 = (self.lm.path('PREPARED', {'ligand': l2.replace('_crystal', '')})
+                poses2 = (self.lm.path('LIGANDS', {'ligand': l2.replace('_crystal', '')})
                           if 'crystal' in l2 else
                           self.lm.path('DOCK_PV', {'ligand': l2}))
                 contents += self.rmsd_command.format(l1, l2, poses1, poses2, str(mcss))
