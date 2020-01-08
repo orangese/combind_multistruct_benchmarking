@@ -4,32 +4,28 @@ import matplotlib.pyplot as plt
 import pickle
 import os
 import sys
-sys.path.append('/Users/jpaggi/Documents/combind/combind')
-from shared_paths import proteins, shared_paths
+from glob import glob
 
 pd.set_option("display.max_rows", 75)
 
-mcss = '../../../mcss_sizes.pkl'
-
 families = {
     'GPCR': ['5HT2B', 'A2AR', 'B1AR', 'B2AR', 'SMO', 'MGLUR5'],
-    'Kinase': ['BRAF', 'CDK2', 'CHK1', 'JAK2', 'PLK1', 'MAPK14', 'MEK1'],
-    #'Ion Channel': ['TRPV1'],
+    'Ion Channel': ['P19491', 'P22756', 'Q05586-Q12879'],
     'Transporter': ['SLC6A4', 'GLUT1', 'DAT'],
     'Nuclear Receptor': ['NR3C2', 'NR3C1', 'AR', 'VDR', 'ERA'],
     'Peptidase': ['F2', 'F10', 'F11', 'PLAU', 'P00760', 'BACE1'],
-    'Other': ['PYGM', 'PTPN1', 'BRD4', 'HSP90AA1', 'PDE10A', 'SIGMAR1', 'ELANE', 'TRPV1', 'DHFR']
+    'Other': ['CDK2', 'PYGM', 'PTPN1', 'BRD4', 'HSP90AA1', 'PDE10A', 'SIGMAR1', 'ELANE', 'DHFR']
 }
 
 drugs = {'GPCR': 0.33,
-         'Kinase': 0.03,
-         #'Ion Channel': 0.18,
+         'Ion Channel': 0.18,
          'Nuclear Receptor': 0.16,
-         'Other': 0.20+0.18,
+         'Other': 0.20+0.03,
          'Peptidase': 0.03,
          'Transporter': 0.07}
 
-family = pd.api.types.CategoricalDtype(['GPCR', 'Nuclear Receptor', 'Transporter', 'Peptidase', 'Kinase', 'Other'],
+family = pd.api.types.CategoricalDtype(['GPCR', 'Ion Channel', 'Nuclear Receptor', 'Transporter',
+                                        'Peptidase', 'Other'],
                                         ordered = True)
 
 def dumbell_plot(data, metric, level = -2):
@@ -73,7 +69,7 @@ def add_correct(data, thresh = 2.0):
     data = data.copy()
     for col in data:
         if 'rmsd' in col:
-            data[col.replace('rmsd', 'correct')] = data[col] < thresh
+            data[col.replace('rmsd', 'correct')] = round(data[col], 1) <= thresh
     return data
 
 def filter_to_ubiquitous_ligands(data):
@@ -82,10 +78,10 @@ def filter_to_ubiquitous_ligands(data):
                                  for name, group in data.groupby(level=level)])
     return data[data.index.get_level_values(-1).isin(ligands)]
 
-def get_data(helpers, versions, best=True):
-    data = pd.concat(load(version, helpers, mcss) for version in versions)
+def get_data(helpers, version, best=True):
+    roots = ['bpp_data', 'ionchannels']
+    data = pd.concat(load(version, helpers, root, '{}_mcss.pkl'.format(root)) for root in roots)
     data = add_correct(data, thresh = 2.0)
-    data = data[(data.index.get_level_values('protein') != 'A2AR')]
     data = data[data.mcss < 0.5]
     if best: data = data[data.best_correct]
     return data
@@ -103,21 +99,26 @@ def results(data, helpers, alpha=1.0, method='standard',
     perf = drug_average(family)
     return perf['glide_correct'][0], perf['combind_correct'][0]
 
-def load(version, helpers, mcss=mcss):
-    fnames = ('{}/{}/scores/{}/summary/{}.tsv'.format(shared_paths['data'], protein, version, helpers)
-             for protein in proteins)
+def load(version, helpers, root, mcss):
+    data_root = '/Users/jpaggi/sherlock/oak/users/jpaggi'
+    if root == 'bpp_data':
+        version = 'stats41'
+    if root == 'ionchannels':
+        version = 'stats104'
+    fnames = glob('{}/{}/*/scores/{}/summary/{}.tsv'.format(data_root, root, version, helpers))
+    version = 'stats104'
     data = pd.concat(pd.read_csv(fname, sep='\t')
-                     for fname in fnames
-                     if os.path.exists(fname))
+                     for fname in fnames)
+    data = data[~data['protein'].isin(['O35433', 'P13569', 'O14649', 'TRPV1'])]
 
     data['version'] = version
     data['helpers'] = helpers
 
     # Add mcss overlap with crystal ligand.
-    with open(mcss, 'rb') as fp:
+    with open('{}/{}'.format(data_root, mcss), 'rb') as fp:
         mcss = pd.DataFrame(pickle.load(fp).items(), columns=['ligand', 'mcss']).set_index('ligand')
         data = data.join(mcss, on='ligand')
-        
+ 
     # Add family
     reverse = {v:k for k, vs in families.items() for v in vs}
     data['family'] = data['protein'].apply(lambda x: reverse[x]).astype(family)
