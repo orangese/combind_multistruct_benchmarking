@@ -224,6 +224,28 @@ class LigandManager:
             print(len(helpers))
         return helpers
 
+    def _pick_helpers_best_affinity_maybe_diverse(self, query, num_chembl):
+        sorted_helpers = sorted(self.get_chembl(), key=lambda x: self.chembl[x][-1])
+        query_st = self.get_structure(query)
+        helpers, helpers_st = [], []
+        for ligand in sorted_helpers:
+            ligand_st = self.get_structure(ligand)
+            if self.unique(helpers_st+[query_st], ligand_st) and self.diverse(helpers, ligand):
+                helpers += [ligand]
+                helpers_st += [ligand_st]
+            if len(helpers) == num_chembl:
+                break
+
+        if len(helpers) < num_chembl:
+            for ligand in sorted_helpers:
+                if ligand in helpers: continue
+                if self.unique(helpers_st+[query_st], ligand_st):
+                    helpers += [ligand]
+                    helpers_st += [ligand_st]
+                if len(helpers) == num_chembl:
+                    break
+        return helpers
+
     def _pick_helpers_best_mcss(self, query, num_chembl):
         sorted_helpers = sorted(self.get_chembl(), key=lambda x: self.chembl[x][-1])
         sorted_helpers = self.mcss.sort_by_mcss(query, sorted_helpers)
@@ -243,7 +265,8 @@ class LigandManager:
         options = {
             'best_affinity': self._pick_helpers_best_affinity,
             'best_mcss': self._pick_helpers_best_mcss,
-            'best_affinity_diverse': self._pick_helpers_best_affinity_diverse
+            'best_affinity_diverse': self._pick_helpers_best_affinity_diverse,
+            'best_affinity_maybe_diverse': self._pick_helpers_best_affinity_maybe_diverse
             }
 
         for option, function in options.items():
