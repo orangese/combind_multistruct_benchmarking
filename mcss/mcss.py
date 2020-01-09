@@ -200,7 +200,6 @@ class MCSS:
             return True
         if not os.path.exists(rmsd_file): return False
         
-        from schrodinger.structure import StructureReader
         n_poses_l1 = len(list(StructureReader(poseviewer_paths[self.l1]))) - 1
         n_poses_l2 = len(list(StructureReader(poseviewer_paths[self.l2]))) - 1
         

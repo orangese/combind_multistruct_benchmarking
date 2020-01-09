@@ -126,7 +126,7 @@ class ScoreContainer:
         self.predict_data.load_docking(list(cluster.keys()), load_fp = True,
                                        load_mcss = 'mcss' in self.settings['k_list'],
                                        st = self.struct)
-        self.ps.ligands = {lig: self.predict_data.docking[self.struct].ligands[lig]
+        self.ps.ligands = {lig: self.predict_data.docking[self.struct][lig]
                            for lig in list(cluster.keys())}
         return cluster
 

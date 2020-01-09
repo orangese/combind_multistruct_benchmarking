@@ -5,6 +5,12 @@ Core optimization code.
 import numpy as np
 from score.pairs import LigPair
 
+from matplotlib import colors
+from matplotlib.gridspec import GridSpec
+from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.pyplot as plt
+from settings import feature_defs
+
 class PredictStructs:
     """
     ligands ({name: containers.Ligand, })
@@ -281,17 +287,6 @@ class PredictStructs:
 
 ################################################################################
 
-from matplotlib import colors
-from matplotlib.gridspec import GridSpec
-from matplotlib.colors import LinearSegmentedColormap
-import matplotlib.pyplot as plt
-from settings import feature_defs
-
-class PredictStructsFigures(PredictStructs):
-    """
-    Methods of this class are used for figure making. They are seperated
-    from the PredictStructs to prevent obscuring the core optimization logic.
-    """
     def likelihood_and_feature_matrix(self, pose_cluster, k, lig_order):
         """
         Returns the feature values and likelihood ratios, P(X|l)/P(X)
