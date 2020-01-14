@@ -2,7 +2,7 @@ reinit
 # Load data
 cd ~/Downloads/combind_data/bpp_data
 run ../../combind_code/pymol/view_complexes.py
-load_complexes AR
+load_complexes AR, 20
 load AR/docking/confgen_es4/2HVC_lig-to-1E3G/2HVC_lig-to-1E3G_pv.maegz
 
 bg_color white
@@ -71,7 +71,7 @@ hide cartoon, resid 707-712
 hide cartoon, resid 740-750
 
 show sticks, het and not element H
-show sticks, resid 705+752+877 and not name o+c+n and not element H
+hide sticks, element F
 
 #######################################################################
 # Glide poses
@@ -82,16 +82,7 @@ color green, 2HVC_lig-to-1E3G_pv.2HVC_lig and element c
 set stick_transparency, 0.35, crystal_2HVC
 
 disable; enable 2HVC_lig-to-1E3G_pv or 2HVC_lig-to-1E3G_pv.2HVC_lig or prot_1E3G or crystal_2HVC
-delete *dist*
-dist 2HVC_lig-to-1E3G_pv.2HVC_lig and name N1,  prot_1E3G and 705/od1
-dist 2HVC_lig-to-1E3G_pv.2HVC_lig and name O21, prot_1E3G and 877/og1
-hide labels
-ray
-png ~/Downloads/combind_code/pymol/figures/fig1_panels/2HVC_glide_top.png
+ray; png ~/sherlock/combind_code/pymol/figures/fig1_panels/2HVC_glide_top.png
 
 disable; enable 2HVC_lig-to-1E3G_pv or 2HVC_lig-to-1E3G_pv.2HVC_lig_41 or prot_1E3G or crystal_2HVC
-delete *dist*
-dist 2HVC_lig-to-1E3G_pv.2HVC_lig_41 and name O21, *1E3G* and 752/nh2
-hide labels
-ray
-png ~/Downloads/combind_code/pymol/figures/fig1_panels/2HVC_combind_top.png
+ray; png ~/sherlock/combind_code/pymol/figures/fig1_panels/2HVC_combind_top.png

@@ -65,7 +65,7 @@ NENHANCED_SAMPLING   1
 '''
 
 GLIDEXP = '''GRIDFILE   ../../grids/{}/{}.zip
-LIGANDFILE   ../../../ligands/prepared_ligands/{}/{}.mae
+LIGANDFILE   ../../../ligands/{}/{}.mae
 DOCKING_METHOD   confgen
 CANONICALIZE   True
 POSES_PER_LIG   300
@@ -132,8 +132,8 @@ modes = {'confgen':{
                        'template': GLIDEXP},
         }
 
-queue = 'owners'
-group_size = 5
+queue = 'rondror'
+group_size = 3
 
 dock_cmd = '$SCHRODINGER/glide -WAIT {}-to-{}.in\n' 
 rmsd_cmd = '$SCHRODINGER/run rmsd.py -use_neutral_scaffold -pv second -c rmsd.csv ../../../structures/ligands/{}.mae {}-to-{}_pv.maegz\n'

@@ -871,6 +871,23 @@ stats = {'stats5': {'version'         : 'stats5',
                     'max_poses'       : 100,
                     'stats_sd'        : 0.03,
                     'stats_points'    : 100},
+          'stats106': {'version'      : 'stats106',
+                    'metric'          : 'tanimoto',
+                    'ifp_version'     : 'ifp5',
+                    'mcss_version'    : 'mcss16',
+                    'mcss_func'       : StringFunction('min'),
+                    'mcss_rel_min'    : 0.5,
+                    'mcss_abs_min'    : 10,
+                    'mcss_domain'     : (0, 6),
+                    'docking_version' : 'XP',
+                    'pdb_order'       : 'First',
+                    'poses_equal'     : False,
+                    'ligands_equal'   : False,
+                    'native_thresh'   : 2.0,
+                    'n_ligs'          : 20,
+                    'max_poses'       : 100,
+                    'stats_sd'        : 0.03,
+                    'stats_points'    : 100},
          }
 
 # for stats in stats32 stats33 stats34 stats35 stats36 stats37 stats38 stats39 stats40; do ./main.py score_controller run_pdb $stats; done;
@@ -947,7 +964,7 @@ feature_defs = {
 }
 
 paths = {'CODE': '~/combind',
-         'DATA': '/oak/stanford/groups/rondror/users/jpaggi/ionchannels',
+         'DATA': '/oak/stanford/groups/rondror/users/jpaggi/combind',
          'STATS': '/oak/stanford/groups/rondror/users/jpaggi/statistics',
          'ROOT': '{DATA}/{protein}',
          
@@ -971,6 +988,5 @@ paths = {'CODE': '~/combind',
          }
 paths = resolve(paths)
 
-exclude = ['D2', 'CHRM3', 'A2AR', 'F11',
-           'CHK1', 'MEK1', 'MAPK14', 'PLK1', 'JAK2', 'BRAF']
+exclude = ['D2']
 proteins = get_proteins(paths, exclude)

@@ -8,4 +8,4 @@ unset PYTHONHOME
 
 export COMBINDHOME=`pwd`
 
-source schrodinger.ve/bin/activate
+source schrodinger_sherlock.ve/bin/activate

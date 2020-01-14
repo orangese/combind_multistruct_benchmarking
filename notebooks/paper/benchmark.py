@@ -82,7 +82,6 @@ def get_data(helpers, version, best=True):
     roots = ['bpp_data', 'ionchannels']
     data = pd.concat(load(version, helpers, root, '{}_mcss.pkl'.format(root)) for root in roots)
     data = add_correct(data, thresh = 2.0)
-    data = data[data.mcss < 0.5]
     if best: data = data[data.best_correct]
     return data
 
@@ -101,12 +100,17 @@ def results(data, helpers, alpha=1.0, method='standard',
 
 def load(version, helpers, root, mcss):
     data_root = '/Users/jpaggi/sherlock/oak/users/jpaggi'
-    if root == 'bpp_data':
-        version = 'stats41'
-    if root == 'ionchannels':
-        version = 'stats104'
-    fnames = glob('{}/{}/*/scores/{}/summary/{}.tsv'.format(data_root, root, version, helpers))
-    version = 'stats104'
+    if version == 'sp':
+        if root == 'bpp_data':
+            _version = 'stats41'
+        if root == 'ionchannels':
+            _version = 'stats104'
+    elif version == 'xp':
+        if root == 'bpp_data':
+            _version = 'stats20'
+        if root == 'ionchannels':
+            _version = 'stats106'
+    fnames = glob('{}/{}/*/scores/{}/summary/{}.tsv'.format(data_root, root, _version, helpers))
     data = pd.concat(pd.read_csv(fname, sep='\t')
                      for fname in fnames)
     data = data[~data['protein'].isin(['O35433', 'P13569', 'O14649', 'TRPV1'])]

@@ -48,7 +48,7 @@ def load_top_glide(protein, n = 1):
     n = int(n)
     for prot in sorted(glob('{}/structures/proteins/*_prot.mae'.format(protein)))[:n]:
         pdb = prot.split('/')[-1].split('_')[0]
-        print pdb
+        print(pdb)
         load_pose(protein, pdb, 0, 'glide')
     cmd.show('sticks', "glide_*")
     cmd.hide('lines', 'element h')
@@ -117,7 +117,7 @@ def parse_fp_file(fp_file):
 
 def show_interactions(protein, ligand, struct, ifp, pose):
     ifp_file = '{}/ifp/{}/{}_lig-to-{}-confgen_es4.fp'.format(protein, ifp, ligand, struct)
-    print ifp_file
+    print(ifp_file)
     ifp = parse_fp_file(ifp_file)[int(pose)]
     cmd.hide('labels')
     cmd.set('label_size', 50)

@@ -33,21 +33,23 @@ def main(args):
             sort_files()
             make_grids()
 
-        if task == 'prep-ligands':
+        elif task == 'prep-ligands':
             prep_ligands(protein.lm)
 
-        if task == 'mcss':
+        elif task == 'mcss':
             protein.lm.mcss.compute_mcss()
 
-        if task == 'pick-helpers':
+        elif task == 'pick-helpers':
             protein.lm.pick_helpers()
 
-        if task == 'dock-pdb':
+        elif task == 'dock-pdb':
             dock(protein.lm, mode=params['docking_version'])
             protein.lm.mcss.compute_mcss(False)
             compute_fp(protein.lm)
 
-        if task == 'dock-helpers':
+        elif task == 'dock-helpers':
             dock(protein.lm, protein.lm.load_helpers(), mode=params['docking_version'])
             protein.lm.mcss.compute_mcss(True, protein.lm.load_helpers())
             compute_fp(protein.lm)
+        else:
+            assert False
