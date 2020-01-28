@@ -5,7 +5,7 @@ ml load schrodinger
 
 unset PYTHONPATH
 unset PYTHONHOME
+source schrodinger_sherlock.ve/bin/activate
 
 export COMBINDHOME=`pwd`
-
-source schrodinger_sherlock.ve/bin/activate
+ml load schrodinger

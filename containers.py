@@ -260,7 +260,7 @@ class LigandManager:
                 break
         return helpers
 
-    def pick_helpers(self, maxnum=20, num_chembl=20):
+    def pick_helpers(self, maxnum=20, num_chembl=25):
         os.system('mkdir -p {}'.format(self.path('HELPERS_ROOT')))
         options = {
             'best_affinity': self._pick_helpers_best_affinity,

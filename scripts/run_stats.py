@@ -4,7 +4,7 @@ sys.path.append(os.environ['COMBINDHOME'])
 from settings import proteins
 
 version = sys.argv[1]
-stats_root = '/oak/stanford/groups/rondror/users/jpaggi/statistics'
+stats_root = '/oak/stanford/groups/rondror/users/jpaggi/combind_stats'
 root = '{}/{}'.format(stats_root, version)
 os.system('mkdir -p ' + root)
 

@@ -13,12 +13,13 @@ set cartoon_color, white
 set ray_trace_mode, 1
 set ray_shadow, 0
 set dash_width, 10
+set dash_color, lightmagenta
 hide lines
 util.cbaw
 as cartoon
 
 color grey, crystal* and element c
-color manganese, prot* and element c
+#color manganese, prot* and element c
 
 #################################################################
 # Ligand and protein

@@ -1,7 +1,7 @@
 reinit
 # Load data
-cd ~/Downloads/combind_data/bpp_data
-run ../../combind_code/pymol/view_complexes.py
+cd ~/sherlock/oak/users/jpaggi/bpp_data
+run ~/sherlock/combind_code/pymol/view_complexes.py
 load_complexes AR, 20
 load AR/docking/confgen_es4/2HVC_lig-to-1E3G/2HVC_lig-to-1E3G_pv.maegz
 
@@ -22,21 +22,6 @@ color grey, crystal* and element c
 color manganese, prot* and element c
 
 #################################################################
-# Protein Zoom Out
-
-set_view (\
-     0.716844857,    0.440551609,   -0.540400803,\
-    -0.695714951,    0.502800286,   -0.512978137,\
-     0.045718949,    0.743700802,    0.666936457,\
-     0.000969930,   -0.000386957, -161.198501587,\
-    42.171535492,   67.736015320,  -41.928524017,\
-    89.083877563,  164.198501587,  -20.000000000 )
-
-hide everything
-disable *; enable prot_1E3G
-show surface, crystal* expand 3.9
-ray; png ../../combind_code/pymol/figures/fig1_panels/pocket_surface.png
-
 set_view (\
      0.716844857,    0.440551609,   -0.540400803,\
     -0.695714951,    0.502800286,   -0.512978137,\
@@ -45,14 +30,13 @@ set_view (\
      4.038010597,   31.537578583,    5.133893013,\
     75.683784485,  106.098449707,  -20.000000000 )
 
+disable *; enable 1E3G_prot
 hide everything
 show cartoon
-show sticks, resid 705+752+877 and not name o+c+n and not element H
 hide cartoon, resid 707-720
 hide cartoon, resid 670-695
 hide cartoon, resid 828-856
-ray; png ../../combind_code/pymol/figures/fig1_panels/pocket_cartoon.png
-
+ray; png ~/sherlock/combind_code/pymol/figures/fig1_panels/pocket_cartoon.png
 
 #################################################################
 # Ligand and protein

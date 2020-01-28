@@ -132,7 +132,7 @@ modes = {'confgen':{
                        'template': GLIDEXP},
         }
 
-queue = 'rondror'
+queue = 'owners'
 group_size = 3
 
 dock_cmd = '$SCHRODINGER/glide -WAIT {}-to-{}.in\n' 

@@ -274,7 +274,7 @@ class PredictStructs:
     def _get_physics_score(self, ligname, pose):
         if self.physics_score == 'gscore':
             if pose == -1:
-                return -8.27
+                return -8.30
             return self.ligands[ligname].poses[pose].gscore
         else:
             if pose == -1:
