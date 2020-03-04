@@ -25,7 +25,7 @@ from utils import grouper
 
 group_size = 1
 num_ligs = [20] #[1, 3, 5, 10, 15, 20]
-alpha_factors = [1.0]
+alpha_factors = [0.0]
 features = [['mcss', 'contact', 'hbond', 'sb'],
             # ['mcss'],
             # ['mcss', 'contact', 'hbond_donor', 'hbond_acceptor', 'sb'],
@@ -80,7 +80,7 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
     # Run specific settings.
     if chembl is not None:
         settings['num_pred_chembl'] = chembl[1]
-        settings['chembl_file'] = chembl[0] + '.txt'
+        settings['chembl_file'] = chembl[0]
     
     settings['chembl'] = chembl is not None
     settings['alpha'] = alpha_factor
@@ -101,7 +101,7 @@ def score(stats_root, struct, protein, ligands, use_crystal_pose,
                 f.write('#!/bin/bash\n')
                 for ligand in group:
                     f.write(cmd.format(stats_root, struct, protein, ligand)+'\n')
-            os.system('sbatch -t 09:00:00 -p owners run{}.sh'.format(i))
+            os.system('sbatch -t 09:00:00 -p rondror run{}.sh'.format(i))
     else:
         with open('run.sh','w') as f:
             f.write('#!/bin/bash\n')
@@ -188,7 +188,7 @@ def run_chembl(stats, helpers):
 
         protein = Protein(d, stats, paths)
         ligands = protein.lm.get_xdocked_ligands(20)
-        compute_stats(protein, stats_root, stats, paths)
+        #compute_stats(protein, stats_root, stats, paths)
         # Standard.
         os.chdir(scores_root)
         os.chdir('standard')
@@ -200,13 +200,13 @@ def run_chembl(stats, helpers):
         os.chdir('..')
 
         # Crystal.
-        os.chdir('crystal')
-        for num_lig in num_ligs:
-            for alpha_factor in alpha_factors:
-                for feature in features:
-                    score(stats_root, protein.lm.st, protein.lm.protein, ligands,
-                          True, alpha_factor, feature, stats, chembl = (helpers, num_lig))
-        os.chdir('..')
+        #os.chdir('crystal')
+        #for num_lig in num_ligs:
+        #    for alpha_factor in alpha_factors:
+        #        for feature in features:
+        #            score(stats_root, protein.lm.st, protein.lm.protein, ligands,
+        #                  True, alpha_factor, feature, stats, chembl = (helpers, num_lig))
+        #os.chdir('..')
 
 def check(stats_version, mode):
 
