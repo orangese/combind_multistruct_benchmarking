@@ -1,11 +1,10 @@
 # Run this before anything else
 
-ml load chemistry
-ml load schrodinger
+ml chemistry schrodinger
 
 unset PYTHONPATH
 unset PYTHONHOME
-source schrodinger_sherlock.ve/bin/activate
+source ~/schrodinger.ve/bin/activate
 
 export COMBINDHOME=`pwd`
-ml load schrodinger
+ml schrodinger

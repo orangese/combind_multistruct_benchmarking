@@ -11,10 +11,11 @@ class ScoreContainer:
     """
     Manages execution of ComBind for a given protein and settings.
     """
-    def __init__(self, root, stats_root, prot, struct):
+    def __init__(self, root, stats_root, prot, struct, crystal=False):
         self.prot = prot
         self.struct = struct
         self.root = root
+        self.crystal = crystal
 
       
         self.settings = self.read_settings()
@@ -123,7 +124,7 @@ class ScoreContainer:
                 lig, combind_pose, *rest = line.split(',')
                 cluster[lig] = int(combind_pose)
 
-        self.predict_data.load_docking(list(cluster.keys()), load_fp = True,
+        self.predict_data.load_docking(list(cluster.keys()), load_fp = True, load_crystal=self.crystal,
                                        load_mcss = 'mcss' in self.settings['k_list'],
                                        st = self.struct)
         self.ps.ligands = {lig: self.predict_data.docking[self.struct][lig]

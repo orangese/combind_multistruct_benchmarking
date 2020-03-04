@@ -13,13 +13,13 @@ both in scripts and in jupyter notebooks.
 
 Set the SCHRODINGER environment variable using, for local installation,
 `export SCHRODINGER=/opt/schrodinger/suites2019-4` or, for sherlock,
-`ml load chemistry; ml load schrodinger`.
+`ml chemistry schrodinger`.
 
 
 Then create the environment and upgrade the relevant packages.
 ```
-$SCHRODINGER/run schrodinger_virtualenv.py schrodinger_sherlock.ve
-source schrodinger_sherlock.ve/bin/activate
+$SCHRODINGER/run schrodinger_virtualenv.py schrodinger.ve
+source schrodinger.ve/bin/activate
 pip install --upgrade jupyter matplotlib numpy sklearn scipy pandas
 ```
 

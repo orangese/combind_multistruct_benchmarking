@@ -1,0 +1,41 @@
+reinit
+
+fetch 1JSV, async=0
+fetch 1DI8, async=0
+align 1DI8, 1JSV
+
+bg_color white
+set cartoon_transparency, 0.5
+set cartoon_oval_length, 1.0
+set opaque_background, 0
+set cartoon_color, white
+set ray_trace_mode, 1
+set ray_shadow, 0
+set dash_width, 18
+set dash_color, lightmagenta
+set line_as_cylinder, 1
+set line_radius, 0.05
+util.cbaw
+
+hide everything
+show sticks, het and not element H
+show cartoon
+color manganese, prot* and element c
+color gray, het and element c
+hide cartoon, resid 84-300 or resid 36-45
+
+as lines, name C7+C8+C9+C10+O31+C32+C27+O21 and 1DI8
+as lines, name N17+N10+S07+O09 and 1JSV
+
+
+set_view (\
+    -0.810670972,   -0.117909089,   -0.573506951,\
+     0.460226536,    0.477195203,   -0.748652160,\
+     0.361944556,   -0.870850801,   -0.332582742,\
+    -0.000062920,    0.000097191,  -44.962200165,\
+    12.661550522,    9.366411209,   24.690124512,\
+  -288.133666992,  378.054382324,  -20.000000000 )
+
+
+disable *; enable 1JSV; ray; png 1JSV.png
+disable *; enable 1DI8; ray; png 1DI8.png
