@@ -296,7 +296,9 @@ class LigandManager:
 
     def get_helpers(self, query, fname, num=10, struct=None, randomize=False):
         if struct is None: struct = self.st
-        helpers = self.load_helpers()[fname][query]
+        helpers = self.load_helpers()
+        print(list(helpers.keys()))
+        helpers = helpers[fname][query]
         helpers = self.docked(helpers, struct)
         if randomize:
             # This is probably overkill, but I don't want random noise as
