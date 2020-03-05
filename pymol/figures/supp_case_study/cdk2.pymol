@@ -6,8 +6,8 @@ fetch 1DI8, async=0
 load /Users/jpaggi/sherlock/oak/users/jpaggi/bpp_data/CDK2/docking/confgen_es4/1DI8_lig-to-1AQ1/1DI8_lig-to-1AQ1_pv.maegz
 load /Users/jpaggi/sherlock/oak/users/jpaggi/bpp_data/CDK2/docking/confgen_es4/1JSV_lig-to-1AQ1/1JSV_lig-to-1AQ1_pv.maegz
 
-align 1DI8, 1DI8_lig-to-1AQ1_pv.1AQI_prot
-align 1JSV, 1DI8_lig-to-1AQ1_pv.1AQI_prot
+align 1DI8, 1DI8_lig-to-1AQ1_pv.1AQ1_prot
+align 1JSV, 1DI8_lig-to-1AQ1_pv.1AQ1_prot
 
 
 bg_color white
@@ -45,7 +45,7 @@ set_view (\
      0.279056549,   27.564117432,    7.702813148,\
   -5476.643066406, 5558.566406250,  -20.000000000 )
 
-disable *; enable 1JSV; ray; png 1JSV.png
-disable *; enable 1DI8; ray; png 1DI8.png
-disable *; enable 1JSV_lig-to-1AQ1_pv.1JSV_lig or 1JSV_lig-to-1AQ1_pv.1AQ1_prot or 1JSV_lig-to-1AQ1_pv; ray; png 1JSV_dock.png
-disable *; enable 1DI8_lig-to-1AQ1_pv.1DI8_lig or 1DI8_lig-to-1AQ1_pv.1AQ1_prot or 1DI8_lig-to-1AQ1_pv; ray; png 1DI8_dock.png
+disable *; enable 1JSV; ray; png ~/1JSV.png
+disable *; enable 1DI8; ray; png ~/1DI8.png
+disable *; enable 1JSV_lig-to-1AQ1_pv.1JSV_lig or 1JSV_lig-to-1AQ1_pv.1AQ1_prot or 1JSV_lig-to-1AQ1_pv; ray; png ~/1JSV_dock.png
+disable *; enable 1DI8_lig-to-1AQ1_pv.1DI8_lig or 1DI8_lig-to-1AQ1_pv.1AQ1_prot or 1DI8_lig-to-1AQ1_pv; ray; png ~/1DI8_dock.png
