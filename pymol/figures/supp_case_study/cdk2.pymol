@@ -9,6 +9,75 @@ load /Users/jpaggi/sherlock/oak/users/jpaggi/bpp_data/CDK2/docking/confgen_es4/1
 align 1DI8, 1DI8_lig-to-1AQ1_pv.1AQ1_prot
 align 1JSV, 1DI8_lig-to-1AQ1_pv.1AQ1_prot
 
+unbond /1JSV/B/A/U55`400/C11, /1JSV/B/A/U55`400/N12
+bond /1JSV/B/A/U55`400/C11, /1JSV/B/A/U55`400/N12, 1
+unbond /1JSV/B/A/U55`400/N12, /1JSV/B/A/U55`400/C13
+bond /1JSV/B/A/U55`400/N12, /1JSV/B/A/U55`400/C13, 2
+unbond /1JSV/B/A/U55`400/C13, /1JSV/B/A/U55`400/N14
+bond /1JSV/B/A/U55`400/C13, /1JSV/B/A/U55`400/N14, 1
+unbond /1JSV/B/A/U55`400/N14, /1JSV/B/A/U55`400/C15
+bond /1JSV/B/A/U55`400/N14, /1JSV/B/A/U55`400/C15, 2
+unbond /1JSV/B/A/U55`400/C15, /1JSV/B/A/U55`400/C16
+bond /1JSV/B/A/U55`400/C15, /1JSV/B/A/U55`400/C16, 1
+unbond /1JSV/B/A/U55`400/C16, /1JSV/B/A/U55`400/C11
+bond /1JSV/B/A/U55`400/C16, /1JSV/B/A/U55`400/C11, 2
+
+unbond /1JSV/B/A/U55`400/C01, /1JSV/B/A/U55`400/C02
+unbond /1JSV/B/A/U55`400/C02, /1JSV/B/A/U55`400/C03
+unbond /1JSV/B/A/U55`400/C03, /1JSV/B/A/U55`400/C04
+unbond /1JSV/B/A/U55`400/C04, /1JSV/B/A/U55`400/C05
+unbond /1JSV/B/A/U55`400/C05, /1JSV/B/A/U55`400/C06
+unbond /1JSV/B/A/U55`400/C06, /1JSV/B/A/U55`400/C01
+
+bond /1JSV/B/A/U55`400/C01, /1JSV/B/A/U55`400/C02, 2
+bond /1JSV/B/A/U55`400/C02, /1JSV/B/A/U55`400/C03, 1
+bond /1JSV/B/A/U55`400/C03, /1JSV/B/A/U55`400/C04, 2
+bond /1JSV/B/A/U55`400/C04, /1JSV/B/A/U55`400/C05, 1
+bond /1JSV/B/A/U55`400/C05, /1JSV/B/A/U55`400/C06, 2
+bond /1JSV/B/A/U55`400/C06, /1JSV/B/A/U55`400/C01, 1
+
+unbond /1DI8/B/A/DTQ`500/C14, /1DI8/B/A/DTQ`500/C15
+unbond /1DI8/B/A/DTQ`500/C15, /1DI8/B/A/DTQ`500/C16
+unbond /1DI8/B/A/DTQ`500/C16, /1DI8/B/A/DTQ`500/C17
+unbond /1DI8/B/A/DTQ`500/C17, /1DI8/B/A/DTQ`500/C18
+unbond /1DI8/B/A/DTQ`500/C18, /1DI8/B/A/DTQ`500/C19
+unbond /1DI8/B/A/DTQ`500/C19, /1DI8/B/A/DTQ`500/C14
+
+bond /1DI8/B/A/DTQ`500/C14, /1DI8/B/A/DTQ`500/C15, 1
+bond /1DI8/B/A/DTQ`500/C15, /1DI8/B/A/DTQ`500/C16, 2
+bond /1DI8/B/A/DTQ`500/C16, /1DI8/B/A/DTQ`500/C17, 1
+bond /1DI8/B/A/DTQ`500/C17, /1DI8/B/A/DTQ`500/C18, 2
+bond /1DI8/B/A/DTQ`500/C18, /1DI8/B/A/DTQ`500/C19, 1
+bond /1DI8/B/A/DTQ`500/C19, /1DI8/B/A/DTQ`500/C14, 2
+
+unbond /1DI8/B/A/DTQ`500/C5, /1DI8/B/A/DTQ`500/C10
+unbond /1DI8/B/A/DTQ`500/C10, /1DI8/B/A/DTQ`500/C9
+unbond /1DI8/B/A/DTQ`500/C9, /1DI8/B/A/DTQ`500/C8
+unbond /1DI8/B/A/DTQ`500/C8, /1DI8/B/A/DTQ`500/C7
+unbond /1DI8/B/A/DTQ`500/C7, /1DI8/B/A/DTQ`500/C4
+unbond /1DI8/B/A/DTQ`500/C4, /1DI8/B/A/DTQ`500/C5
+
+bond /1DI8/B/A/DTQ`500/C5, /1DI8/B/A/DTQ`500/C10, 1
+bond /1DI8/B/A/DTQ`500/C10, /1DI8/B/A/DTQ`500/C9, 2
+bond /1DI8/B/A/DTQ`500/C9, /1DI8/B/A/DTQ`500/C8, 1
+bond /1DI8/B/A/DTQ`500/C8, /1DI8/B/A/DTQ`500/C7, 2
+bond /1DI8/B/A/DTQ`500/C7, /1DI8/B/A/DTQ`500/C4, 1
+bond /1DI8/B/A/DTQ`500/C4, /1DI8/B/A/DTQ`500/C5, 2
+
+unbond /1DI8/B/A/DTQ`500/N1, /1DI8/B/A/DTQ`500/C2
+unbond /1DI8/B/A/DTQ`500/C2, /1DI8/B/A/DTQ`500/N3
+unbond /1DI8/B/A/DTQ`500/N3, /1DI8/B/A/DTQ`500/C4
+unbond /1DI8/B/A/DTQ`500/C4, /1DI8/B/A/DTQ`500/C5
+unbond /1DI8/B/A/DTQ`500/C5, /1DI8/B/A/DTQ`500/C6
+unbond /1DI8/B/A/DTQ`500/C6, /1DI8/B/A/DTQ`500/N1
+
+bond /1DI8/B/A/DTQ`500/N1, /1DI8/B/A/DTQ`500/C2, 1
+bond /1DI8/B/A/DTQ`500/C2, /1DI8/B/A/DTQ`500/N3, 2
+bond /1DI8/B/A/DTQ`500/N3, /1DI8/B/A/DTQ`500/C4, 1
+bond /1DI8/B/A/DTQ`500/C4, /1DI8/B/A/DTQ`500/C5, 2
+bond /1DI8/B/A/DTQ`500/C5, /1DI8/B/A/DTQ`500/C6, 1
+bond /1DI8/B/A/DTQ`500/C6, /1DI8/B/A/DTQ`500/N1, 2
+
 
 bg_color white
 set cartoon_transparency, 0.5
@@ -27,11 +96,12 @@ hide everything
 show sticks, het and not element H
 show cartoon
 color manganese, prot* and element c
-color gray, het and element c
 hide cartoon, resid 84-300 or resid 36-45
 
 color green, *1JSV_lig and element C
 color cyan, *1DI8_lig and element C
+color green, 1JSV and element C and het
+color cyan, 1DI8 and element C and het
 
 as lines, name C7+C8+C9+C10+O31+C32+C27+O21 and *1DI8*
 as lines, name N17+N10+S07+O09 and *1JSV*
@@ -45,7 +115,7 @@ set_view (\
      0.279056549,   27.564117432,    7.702813148,\
   -5476.643066406, 5558.566406250,  -20.000000000 )
 
-disable *; enable 1JSV; ray; png ~/1JSV.png
-disable *; enable 1DI8; ray; png ~/1DI8.png
-disable *; enable 1JSV_lig-to-1AQ1_pv.1JSV_lig or 1JSV_lig-to-1AQ1_pv.1AQ1_prot or 1JSV_lig-to-1AQ1_pv; ray; png ~/1JSV_dock.png
-disable *; enable 1DI8_lig-to-1AQ1_pv.1DI8_lig or 1DI8_lig-to-1AQ1_pv.1AQ1_prot or 1DI8_lig-to-1AQ1_pv; ray; png ~/1DI8_dock.png
+disable *; enable 1JSV; ray; png 1JSV.png
+disable *; enable 1DI8; ray; png 1DI8.png
+disable *; enable 1JSV_lig-to-1AQ1_pv.1JSV_lig or 1JSV_lig-to-1AQ1_pv.1AQ1_prot or 1JSV_lig-to-1AQ1_pv; ray; png 1JSV_dock.png
+disable *; enable 1DI8_lig-to-1AQ1_pv.1DI8_lig or 1DI8_lig-to-1AQ1_pv.1AQ1_prot or 1DI8_lig-to-1AQ1_pv; ray; png 1DI8_dock.png

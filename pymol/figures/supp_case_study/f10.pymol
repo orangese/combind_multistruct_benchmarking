@@ -4,7 +4,8 @@ reinit
 run ~/sherlock/combind_code/pymol/view_complexes.py
 
 load_complexes F10, 21
-load F10/docking/confgen_es4/2BOH_lig-to-1EZQ/2BOH_lig-to-1EZQ_pv.maegz
+load F10/docking/confgen_es4/1MQ6_lig-to-1EZQ/1MQ6_lig-to-1EZQ_pv.maegz
+load F10/docking/confgen_es4/1KSN_lig-to-1EZQ/1KSN_lig-to-1EZQ_pv.maegz
 
 bg_color white
 set cartoon_transparency, 0.5
@@ -20,10 +21,10 @@ util.cbaw
 hide everything
 show sticks, het and not element H
 show cartoon
-color manganese, prot* and element c
-color gray, het and element c
+color manganese, *prot* and element c
+color green, het and element c and *1KSN*
+color cyan, het and element c and *1MQ6*
 show sticks, resid 189 and not (element H or name O+C+N)
-show sticks, resid 219 and not element H
 
 set_view (\
     -0.039445370,   -0.771931708,   -0.634473860,\
@@ -33,20 +34,38 @@ set_view (\
      8.480530739,    4.956575871,   22.492389679,\
     23.427953720,   50.700454712,  -20.000000000 )
 
-# 1KSN, "a"
+set_view (\
+    -0.062348392,   -0.642352223,   -0.763861239,\
+    -0.235616595,   -0.734246671,    0.636671424,\
+    -0.969827592,    0.219669387,   -0.105564490,\
+     0.000793980,   -0.000239845,  -46.195293427,\
+     7.577025414,    4.220980644,   25.236257553,\
+    26.152194977,   66.471595764,  -20.000000000 )
+
+# 1KSN
 disable *; enable *1KSN
 delete dist*
 dist /prot_1KSN//A/ASP`189/OD2, /crystal_1KSN//L/FXV`52/N31
-dist /prot_1KSN//A/GLY`219/N, /crystal_1KSN//L/FXV`52/O33
 hide labels; ray; png ~/sherlock/combind_code/pymol/figures/supp_case_study/1KSN.png
 
-# 2BOH, "m"
-disable *; enable crystal_2BOH; enable prot_2BOH
+# 1KSN dock
+disable *; enable 1KSN_lig-to-1EZQ_pv.1KSN_lig or 1KSN_lig-to-1EZQ_pv.1EZQ_prot or 1KSN_lig-to-1EZQ_pv
 delete dist*
-hide labels; ray; png ~/sherlock/combind_code/pymol/figures/supp_case_study/2BOH.png
+dist /1KSN_lig-to-1EZQ_pv.1EZQ_prot//A/ASP`189/OD2, /1KSN_lig-to-1EZQ_pv.1KSN_lig//L/FXV`52/N31
+hide labels; ray; png ~/sherlock/combind_code/pymol/figures/supp_case_study/1KSN_dock.png
 
-# 2BOH, "m"
-disable *; enable 2BOH_lig-to-1EZQ_pv.2BOH_lig_39; enable 2BOH_lig-to-1EZQ_pv.1EZQ_prot
+# 1MQ6
+disable *; enable crystal_1MQ6; enable prot_1MQ6
 delete dist*
-hide labels; ray; png ~/sherlock/combind_code/pymol/figures/supp_case_study/2BOH_alternate.png
+hide labels; ray; png ~/sherlock/combind_code/pymol/figures/supp_case_study/1MQ6.png
 
+# 1MQ6 dock
+disable *; enable 1MQ6_lig-to-1EZQ_pv.1MQ6_lig or 1MQ6_lig-to-1EZQ_pv.1EZQ_prot or 1MQ6_lig-to-1EZQ_pv
+delete dist*
+hide labels; ray; png ~/sherlock/combind_code/pymol/figures/supp_case_study/1MQ6_dock.png
+
+# 1MQ6 dock
+disable *; enable 1MQ6_lig-to-1EZQ_pv.1MQ6_lig_24 or 1MQ6_lig-to-1EZQ_pv.1EZQ_prot or 1MQ6_lig-to-1EZQ_pv
+delete dist*
+dist /1MQ6_lig-to-1EZQ_pv.1EZQ_prot//A/ASP`189/OD2, /1MQ6_lig-to-1EZQ_pv.1MQ6_lig_24//L/XLD`51/N33
+hide labels; ray; png ~/sherlock/combind_code/pymol/figures/supp_case_study/1MQ6_dock_alt.png

@@ -981,8 +981,8 @@ feature_defs = {
 }
 
 paths = {'CODE': '~/combind',
-         'DATA': '/oak/stanford/groups/rondror/users/jpaggi/ionchannels',
-         'STATS': '/oak/stanford/groups/rondror/users/jpaggi/combind_stats',
+         'DATA': '/Users/jpaggi/sherlock/oak/users/jpaggi/combind',
+         'STATS': '/oak/stanford/groups/rondror/users/jpaggi/stats',
          'ROOT': '{DATA}/{protein}',
          
          'HELPERS_ROOT': '{ROOT}/chembl/helpers',
