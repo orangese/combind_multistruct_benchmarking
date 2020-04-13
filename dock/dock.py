@@ -192,14 +192,14 @@ def proc_all(all_pairs, dock=False, rmsd=False):
 
         os.system('sbatch -p {} -t 1:00:00 -o dock.out dock{}.sh'.format(queue, i))
 
-def dock(lm, chembl=None, mutants=False, maxnum=30, mode='confgen'):
+def dock(lm, chembl=None, mutants=False, mode='confgen_es4'):
     if lm.st is None: return
     docking = modes[mode]['name']
     os.system('mkdir -p docking/{}'.format(docking))
     os.chdir('docking/{}'.format(docking))
 
     if chembl is None:
-        ligs = lm.get_pdb(maxnum)
+        ligs = lm.get_pdb()
         grids = [lm.st]
     else:
         ligs = set([])
