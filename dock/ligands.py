@@ -1,7 +1,5 @@
 import os
-import pandas as pd
 from utils import grouper
-from glob import glob
 
 queue = 'rondror'
 group_size = 50
@@ -13,7 +11,7 @@ def _prep_ligands(ligands, root):
 
     for i, ligs in enumerate(grouper(group_size, ligands)):
         batch_file = '{}/batch-{}.sbatch'.format(root, i)
-        with open(batch_file,'w') as batch:
+        with open(batch_file, 'w') as batch:
             batch.write('#!/bin/bash\n')
             batch.write('#SBATCH --chdir={}\n'.format(root))
             batch.write('#SBATCH -t 1:00:00\n')

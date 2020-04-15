@@ -1,55 +1,50 @@
 import os
-import sys
-import re
-
+from glob import glob
 from schrodinger.structure import StructureReader
 from schrodinger.structutils.transform import get_centroid
 
-def make_grids():
+GRID_IN = """
+GRID_CENTER {x},{y},{z}
+GRIDFILE {pdb}.zip
+INNERBOX 15,15,15
+OUTERBOX 30,30,30
+RECEP_FILE ../../../structures/proteins/{pdb}_prot.mae
+"""
 
-    os.system('mkdir -p docking')
-    os.system('mkdir -p docking/grids')
+CMD = ('sbatch -p rondror -t 00:30:00 -o grid.out'
+       ' --wrap="glide -WAIT {infile}"'
+       ' --chdir={wd}')
 
-    for prot in sorted(os.listdir('structures/proteins'))[:1]:
-        pdb = prot.split('_')[0]
+WD = 'docking/grids/{pdb}/'
+INFILE = '{pdb}.in'
+ZIPFILE = '{pdb}.zip'
 
-        # Normally, protein name will be something like 3YDO_prot.mae. In these cases, both the
-        # "pdb" and "prot_prefix" variable are "3YDO"
-        # However, sometimes the protein will be modified (e.g. mutant residues), so the name
-        # may be something like 3YDO_151S_prot.mae. In these cases, we refer to 3YDO with
-        # the "pdb" variable, and "3YDO_151S" as the "prot_prefix" variable.
-        prot_prefix = pdb
-        prot_matches = re.match(r'(.*)_prot.mae$', prot)
-        if prot_matches is not None:
-            prot_prefix = prot_matches.group(1)
+PROTFILE = 'structures/proteins/{pdb}_prot.mae'
+LIGFILE = 'structures/ligands/{pdb}_lig.mae'
+
+def make_grids(pdb=None):
+    if pdb is None:
+        pdb = sorted(glob(PROTFILE.format(pdb='*')))[0]
+        pdb = pdb.split('/')[-1].split('_')[0]
+
+    if os.path.exists((WD+ZIPFILE).format(pdb=pdb)):
+        return # Done.
+    if not (os.path.exists(LIGFILE.format(pdb=pdb))
+            and os.path.exists(PROTFILE.format(pdb=pdb))):
+        return # Not ready.
+
+    print('making grid', pdb)
+
+    for path in glob(WD.format(pdb=pdb) + '*'):
+        os.remove(path)
+    os.makedirs(WD.format(pdb=pdb), exist_ok=True)
+
+    st = next(StructureReader(LIGFILE.format(pdb=pdb)))
+    c = get_centroid(st)
+    x,y,z = c[:3]
         
-        if os.path.exists('docking/grids/{}/{}.zip'.format(prot_prefix, prot_prefix)): 
-            continue
-        if not (os.path.exists('structures/proteins/{}_prot.mae'.format(prot_prefix)) and os.path.exists('structures/ligands/{}_lig.mae'.format(pdb))):
-            continue
-        os.system('rm -rf docking/grids/{}'.format(prot_prefix))
+    with open((WD+INFILE).format(pdb=pdb), 'w') as fp:
+        fp.write(GRID_IN.format(x=x, y=y, z=z, pdb=pdb))
 
-        if pdb == '3J5Q':
-            x,y,z = 13,-30,-33
-        else:
-            st_2 = next(StructureReader('structures/ligands/{}_lig.mae'.format(pdb)))
-            c2 = get_centroid(st_2)
-            x,y,z = c2[:3]
-                      
-        out_f = prot_prefix
-        os.system('mkdir -p docking/grids/{}'.format(out_f))
-        with open('docking/grids/{}/{}.in'.format(out_f,out_f), 'w') as f:
-            f.write('GRID_CENTER {},{},{}\n'.format(x,y,z))
-            f.write('GRIDFILE {}.zip\n'.format(out_f))
-            f.write('INNERBOX 15,15,15\n')
-            f.write('OUTERBOX 30,30,30\n')
-            f.write('RECEP_FILE ../../../structures/proteins/{}_prot.mae\n'.format(prot_prefix))
-
-        with open('docking/grids/{}/grid_in.sh'.format(out_f), 'w') as f:
-            f.write('#!/bin/bash\n')
-            f.write('$SCHRODINGER/glide -WAIT {}.in'.format(out_f))
-                        
-        print('making grid', out_f)
-        os.chdir('docking/grids/{}'.format(out_f))
-        os.system('sbatch -p rondror -t 00:30:00 -o grid.out grid_in.sh')
-        os.chdir('../../..')
+    os.system(CMD.format(infile=INFILE.format(pdb=pdb),
+                         wd=WD.format(pdb=pdb)))

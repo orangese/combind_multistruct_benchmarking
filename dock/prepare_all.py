@@ -1,36 +1,28 @@
 import os
 import sys
 
-from dock.align_structs import align_structs
-from dock.process_structs import process_structs
-from dock.sort_files import sort_files
+from dock.struct_align import struct_align
+from dock.struct_process import struct_process
+from dock.struct_sort import struct_sort
 
 from dock.ligands import prep_ligands
 
 from dock.grids import make_grids
 from dock.dock import dock
 
-from settings import paths, stats, proteins
 from ifp.fp_controller import compute_fp
 from containers import Protein
 
-def main(args):
-    stats_version = args[0]
-    task = args[1]
-    datasets = args[2:]
-    if datasets == []:
-        datasets = proteins
-    params = stats[stats_version]
-    
-    for i, d in enumerate(datasets):
-        print(d, i)
-        os.chdir('{}/{}'.format(paths['DATA'], d))
-        protein = Protein(d, params, paths)
+def main(params, paths, task, proteins):
+    for i, protein_name in enumerate(proteins):
+        print(protein_name, i)
+        os.chdir('{}/{}'.format(paths['DATA'], protein_name))
+        protein = Protein(protein_name, params, paths)
      
         if task == 'prep-structs':
-            process_structs()
-            align_structs()
-            sort_files()
+            struct_process()
+            struct_align()
+            struct_sort()
             make_grids()
 
         elif task == 'prep-ligands':

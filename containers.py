@@ -16,17 +16,15 @@ from ifp.fp_controller import parse_fp_file
 from mcss.mcss_controller import MCSSController
 
 class Pose:
-    def __init__(self, rmsd, gscore, emodel, fp):
+    def __init__(self, rmsd, gscore, fp):
         """
         rmsd (float): RMSD to crystallographic pose
         gscore (float): glide score
-        emodel (float): emodel (from glide)
         fp ({(int, string): float}): dict mapping (interactiontype, resname)
             to interaction score
         """
         self.rmsd = rmsd
         self.gscore = gscore
-        self.emodel = emodel
         self.fp = fp
 
 class Ligand:
@@ -46,18 +44,14 @@ class Ligand:
         if load_fp:  
             fps = parse_fp_file(self.path('IFP'))
 
-        self.poses = [Pose(rmsds[i], gscores[i], emodels[i], fps.get(i, {}))
+        self.poses = [Pose(rmsds[i], gscores[i], fps.get(i, {}))
                       for i in range(len(gscores))]
-
-    def load_crystal_pose(self):
-        fps = parse_fp_file(self.path('XTAL_IFP'))
-        self.poses = [Pose(0, -1000, -1000, fps[0])]
 
     def parse_glide_output(self):
         if not os.path.exists(self.path('DOCK')):
             return [], [], []
 
-        gscores, emodels, rmsds = [], [], []
+        gscores, rmsds = [], []
         with open(self.path('DOCK_REPT')) as fp:
             for line in fp:
                 line = line.strip().split()
@@ -65,16 +59,13 @@ class Ligand:
                 lig, _lig = self.params['ligand'], line[1]
                 if not (_lig == lig or _lig == lig+'_out' or _lig == '1'):
                     continue
-                
+
                 if _lig == '1':
                     score = line[2]
-                    emodel = line[12]
                 else:
                     score = line[3]
-                    emodel = line[13]
                     
                 gscores.append(float(score))
-                emodels.append(float(emodel))
             
         if os.path.exists(self.path('DOCK_RMSD')):
             rmsds = []
@@ -110,16 +101,8 @@ class LigandManager:
                              if l[0] != '.'])
         if not self.grids: return
         
-        if self.params['pdb_order'] is 'First':
-            self.st = self.grids[0] 
-        elif self.params['pdb_order'] is 'Last':
-            self.st = self.grids[-1]
-        else:
-            assert False
+        self.st = self.grids[0]
 
-        exceptions = {'AR': '2AXA', 'NR3C1': '3BQD', 'NR3C2': '3WFF'}
-        if self.protein in exceptions:
-            self.st = exceptions[self.protein]
         self.params['struct'] = self.st
         
         self.mcss = MCSSController(self)
@@ -326,7 +309,7 @@ class Protein:
         self.paths = paths
         
         self.lm = LigandManager(protein, self.params, self.paths)
-        
+
         if self.lm.st:
             self.docking = {self.lm.st: {}}
         else:
@@ -344,12 +327,7 @@ class Protein:
             params = {'struct': st}
             params.update(self.params)
             self.docking[st][ligand] = Ligand(ligand, params, self.paths)
-            if load_crystal:
-                assert 'crystal' in ligand
-                self.docking[st][ligand].load_crystal_pose()
-            else:
-                assert 'crystal' not in ligand
-                self.docking[st][ligand].load_poses(load_fp)
+            self.docking[st][ligand].load_poses(load_fp)
 
         if load_mcss:
             ligands = ligands+list(self.docking[st].keys())
