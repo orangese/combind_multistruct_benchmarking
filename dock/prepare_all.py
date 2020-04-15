@@ -10,7 +10,7 @@ from dock.ligands import prep_ligands
 from dock.grids import make_grids
 from dock.dock import dock
 
-from ifp.fp_controller import compute_fp
+from ifp.ifp_controller import compute_ifp
 from containers import Protein
 
 def main(params, paths, task, proteins):
@@ -37,11 +37,11 @@ def main(params, paths, task, proteins):
         elif task == 'dock-pdb':
             dock(protein.lm, mode=params['docking_version'])
             protein.lm.mcss.compute_mcss(False)
-            compute_fp(protein.lm)
+            compute_ifp(protein.lm)
 
         elif task == 'dock-helpers':
             dock(protein.lm, protein.lm.load_helpers(), mode=params['docking_version'])
             protein.lm.mcss.compute_mcss(True, protein.lm.load_helpers())
-            compute_fp(protein.lm)
+            compute_ifp(protein.lm)
         else:
             assert False
