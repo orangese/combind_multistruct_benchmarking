@@ -59,7 +59,6 @@ class MCSSController:
         self.MCSSs = {}
         self.no_mcss = set([])
         self.no_rmsd = set([])
-        self.no_mcss_small = set([])
 
         # File paths. Remaining '{}' is ligand pair name.
         self.root = lm.path('MCSS')
@@ -84,13 +83,13 @@ class MCSSController:
             '{0:},{1:}' ligand1,ligand2, '{2:},{3:}' poses1,poses2 '{4:}' str(MCSS).
         """
         
-        init_command =  '$SCHRODINGER/run {0:}/main.py mcss INIT '.format(self.lm.path('CODE'))
+        init_command =  'run {0:}/main.py mcss INIT '.format(self.lm.path('CODE'))
         init_command += '{0:} {1:} {2:} {3:} ' # ligand names
         init_command += self.init_file.format('{0:}-{1:}') + ' '
         init_command += self.atom_types + ' '
         init_command += '\n'
         
-        rmsd_command = '$SCHRODINGER/run {0:}/main.py mcss RMSD '.format(self.lm.path('CODE'))
+        rmsd_command = 'run {0:}/main.py mcss RMSD '.format(self.lm.path('CODE'))
         rmsd_command += '{0:} {1:} {2:} {3:} '
         rmsd_command += self.init_file.format('{0:}-{1:}') + ' '
         rmsd_command += self.atom_types + ' '
@@ -336,14 +335,14 @@ class MCSSController:
         compute_rmsds = True
         for i, l1 in enumerate(self.pdb):
             for l2 in self.pdb[i+1:]:
-                self._add(l1, l2, compute_rmsds, compute_small=True)
+                self._add(l1, l2, compute_rmsds)
 
     def _add_crystal(self):
         compute_rmsds = True
         crystal_lig = self.lm.st + '_crystal_lig'
         for ligand in self.pdb:
             if ligand == self.lm.st + '_lig': continue 
-            self._add(crystal_lig, ligand, compute_rmsds, compute_small=True)
+            self._add(crystal_lig, ligand, compute_rmsds)
 
     def _add_crystal_to_crystal(self):
         compute_rmsds = True
@@ -352,7 +351,7 @@ class MCSSController:
                 if ligand1 == ligand2: continue
                 self._add(ligand1.replace('_lig', '_crystal_lig'),
                           ligand2.replace('_lig', '_crystal_lig'),
-                          compute_rmsds, compute_small=True)
+                          compute_rmsds)
 
     def _add_pdb_to_allchembl(self):
         """
@@ -386,7 +385,7 @@ class MCSSController:
                         assert l2 != '', pick_helpers # switch to continue if this happens
                         self._add(l1, l2, compute_rmsds)
 
-    def _add(self, l1, l2, compute_rmsd, compute_small=False):
+    def _add(self, l1, l2, compute_rmsd):
         """
         Check if pair has been computed, if not add it.
 
@@ -404,11 +403,6 @@ class MCSSController:
               and self.is_valid(self.MCSSs[name])
               and not os.path.exists(self.rmsd_file.format(name))):
             self.no_rmsd.add((l1, l2))
-        elif (compute_small
-              and not self.MCSSs[name].n_mcss_atoms
-              and min(self.MCSSs[name].n_l1_atoms, self.MCSSs[name].n_l2_atoms) < 25
-              and not self.MCSSs[name].tried_small):
-            self.no_mcss_small.add((l1, l2))
 
     # Methods to execute computation
     def _execute_init_on_the_fly(self, l1, l2):
@@ -432,22 +426,15 @@ class MCSSController:
         if self.no_rmsd:
             print(len(self.no_rmsd), 'mcss rmsd pairs left')
             self._execute_rmsd()
-        if self.no_mcss_small:
-            print(len(self.no_mcss_small), 'small mcss init pairs left')
-            self._execute_init(small = True)
 
-    def _execute_init(self, small = False, inline=False):
-        for i, pairs in enumerate(grouper(self.INIT_GROUP_SIZE,
-                                          self.no_mcss_small if small else self.no_mcss)):
+    def _execute_init(self, inline=False):
+        for i, pairs in enumerate(grouper(self.INIT_GROUP_SIZE, self.no_mcss)):
             script = 'init{}.sh'.format(i)
             contents = 'export SCHRODINGER_CANVAS_MAX_MEM=1e+12\n'
             for l1, l2 in pairs:
                 poses1 = self.lm.path('LIGANDS', {'ligand': l1.replace('_crystal', '')})
                 poses2 = self.lm.path('LIGANDS', {'ligand': l2.replace('_crystal', '')})
                 contents += self.init_command.format(l1, l2, poses1, poses2)
-                if small:
-                    contents = contents[:-1] # remove new line
-                    contents += ' small\n'
             with open(script, 'w') as f:
                 f.write(self.TEMPLATE.format(contents))
             
@@ -456,7 +443,6 @@ class MCSSController:
             else:
                 os.system('sbatch {}'.format(script))
         self.no_mcss = set([])
-        self.no_mcss_small = set([])
 
     def _execute_rmsd(self):
         for i, pairs in enumerate(grouper(self.RMSD_GROUP_SIZE, self.no_rmsd)):

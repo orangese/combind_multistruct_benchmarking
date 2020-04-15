@@ -38,6 +38,14 @@ def score(paths, stats_root, struct, protein, queries):
 	score.scores.main(paths, config.FEATURE_DEFS,
 	                  stats_root, struct, protein, queries)
 
+def score_controller():
+	import score.controller
+	score.controller.main(args)
+
+def statistics():
+	import score.statistics
+	score.statistics.main(args)
+
 @main.command()
 @click.argument('ifp_version')
 @click.argument('input_file')
@@ -47,22 +55,23 @@ def ifp(ifp_version, input_file, output_file, poses):
 	import ifp.ifp
 	ifp.ifp.IFP(config.IFP[ifp_version], input_file, output_file, poses)
 
-#def mc
-
-# import mcss.mcss
-# import score.controller
-# 
-# import score.statistics
-# elif mode == 'ifp':
-#     
-# elif mode == 'mcss':
-#     mcss.mcss.main(args)
-# elif mode == 'score_controller':
-#     score.controller.main(args)
-# elif mode == 'statistics':
-#     score.statistics.main(args)
-# else:
-#     print('Invalid arguments. Doing nothing.')
-
+@main.command()
+@click.argument('mode')
+@click.argument('ligand1')
+@click.argument('ligand2')
+@click.argument('ligand1_path')
+@click.argument('ligand2_path')
+@click.argument('init_file')
+@click.argument('mcss_types_file')
+@click.argument('rmsd_file', default='')
+@click.argument('max_poses', type=int, default=0)
+@click.argument('mcss_string_rep', default='')
+def mcss(mode, ligand1, ligand2, ligand1_path, ligand2_path,
+         init_file, mcss_types_file, rmsd_file, max_poses,
+         mcss_string_rep):
+	import mcss.mcss
+	mcss.mcss.main(mode, ligand1, ligand2, ligand1_path, ligand2_path,
+                   init_file, mcss_types_file, rmsd_file, max_poses,
+                   mcss_string_rep)
 
 main()
