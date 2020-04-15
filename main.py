@@ -28,19 +28,37 @@ def prepare(paths, task, stats_version, proteins):
 		proteins = utils.get_proteins(paths, [])
 	dock.prepare_all.main(params, paths, task, list(proteins))
 
-# import ifp.fp
+@main.command()
+@click.argument('stats_root')
+@click.argument('stats_version', default='default')
+@click.argument('proteins', nargs=-1)
+@click.pass_obj
+def score(paths, stats_root, struct, protein, queries):
+	import score.scores
+	score.scores.main(paths, config.FEATURE_DEFS,
+	                  stats_root, struct, protein, queries)
+
+@main.command()
+@click.argument('ifp_version')
+@click.argument('input_file')
+@click.argument('output_file')
+@click.argument('poses', type=int)
+def ifp(ifp_version, input_file, output_file, poses):
+	import ifp.ifp
+	ifp.ifp.IFP(config.IFP[ifp_version], input_file, output_file, poses)
+
+#def mc
+
 # import mcss.mcss
 # import score.controller
-# import score.scores
+# 
 # import score.statistics
 # elif mode == 'ifp':
-#     ifp.fp.FP(args)
+#     
 # elif mode == 'mcss':
 #     mcss.mcss.main(args)
 # elif mode == 'score_controller':
 #     score.controller.main(args)
-# elif mode == 'score':
-#     score.scores.main(args)
 # elif mode == 'statistics':
 #     score.statistics.main(args)
 # else:

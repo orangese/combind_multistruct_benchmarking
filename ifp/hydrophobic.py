@@ -11,8 +11,8 @@ class Hydrophobic_Container:
         self.all_scores = {}
 
     def add_residue(self, resnum, res):
-        for res_atom in res.nonpolar1 | res.nonpolar2:
-            for lig_atom in self.lig.nonpolar1 | self.lig.nonpolar2:
+        for res_atom in res.nonpolar:
+            for lig_atom in self.lig.nonpolar:
 
                 vdw_radius = self.radii[res_atom.element] + self.radii[lig_atom.element]
                 r = measure_distance(res_atom, lig_atom)
@@ -25,13 +25,9 @@ class Hydrophobic_Container:
                     score = ((self.settings['contact_scale_cut']*vdw_radius - r)
                              / ((self.settings['contact_scale_cut'] - self.settings['contact_scale_opt'])
                                 * vdw_radius))
-            
-                if lig_atom in self.lig.nonpolar1 and res_atom in res.nonpolar1:
-                    key1 = (self.ind[0], resnum, '')
-                    self.all_scores[key1] = self.all_scores.get(key1, 0) + score
-                if lig_atom in self.lig.nonpolar2 and res_atom in res.nonpolar2:
-                    key2 = (self.ind[1], resnum, '')
-                    self.all_scores[key2] = self.all_scores.get(key2, 0) + score
+                if lig_atom in self.lig.nonpolar and res_atom in res.nonpolar:
+                    key = (self.ind[0], resnum, '')
+                    self.all_scores[key] = self.all_scores.get(key, 0) + score
     
     def filter_int(self):
         pass

@@ -12,7 +12,7 @@ from glob import glob
 import pandas as pd
 from schrodinger.structure import SmilesStructure
 import re
-from ifp.fp_controller import parse_fp_file
+#from ifp.fp_controller import parse_fp_file
 from mcss.mcss_controller import MCSSController
 
 class Pose:
@@ -42,7 +42,7 @@ class Ligand:
 
         fps = {}
         if load_fp:  
-            fps = parse_fp_file(self.path('IFP'))
+            fps = self.parse_fp_file()
 
         self.poses = [Pose(rmsds[i], gscores[i], fps.get(i, {}))
                       for i in range(len(gscores))]
@@ -77,6 +77,32 @@ class Ligand:
         else:
             rmsds = [None]*len(gscores)
         return gscores, emodels, rmsds
+
+    def parse_ifp_file(self):
+        ifps = {}
+        try:
+            with open(self.path('IFP')) as f:
+                pose_num = 0
+                for line in f:
+                    if line.strip() == '': continue
+                    if line[:4] == 'Pose':
+                        pose_num = int(line.strip().split(' ')[1])
+                        ifps[pose_num] = {}
+                        continue
+                    sc_key, sc = line.strip().split('=')
+                    i,r,ss = sc_key.split('-')
+                    i = int(i)
+                    sc = float(sc)
+                    prev_sc = ifps[(i, r)] if (i,r) in ifps[pose_num] else 0
+                    ifps[pose_num][(i,r)] = max(prev_sc, sc)
+
+        except Exception as e:
+            print(e)
+            print(fp_file, 'fp not found')
+        if len(ifps) == 0:
+            print('check', fp_file)
+            return {}
+        return ifps
 
     def path(self, name, extras = {}):
         extras.update(self.params)

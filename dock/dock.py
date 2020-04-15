@@ -20,7 +20,7 @@ modes = {'confgen_es4': {
                        'template': GLIDE_ES4},
         }
 
-queue = 'owners'
+queue = 'rondror'
 group_size = 3
 
 dock_cmd = 'glide -WAIT {}-to-{}.in\n' 

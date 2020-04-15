@@ -2,7 +2,7 @@ from utils import StringFunction, resolve
 
 STATS = {'default': {'version'         : 'default',
                      'metric'          : 'tanimoto',
-                     'ifp_version'     : 'ifp5',
+                     'ifp_version'     : 'default',
                      'mcss_version'    : 'mcss16',
                      'mcss_func'       : StringFunction('min'),
                      'mcss_rel_min'    : 0.5,
@@ -38,8 +38,6 @@ FEATURE_DEFS = {
     'hbond_acceptor' : [3],
     'contact'        : [11]
 }
-
-
 
 PATHS = {'ROOT': '{DATA}/{protein}',
 
