@@ -30,11 +30,13 @@ def prepare(paths, task, stats_version, proteins):
 
 @main.command()
 @click.argument('stats_root')
-@click.argument('stats_version', default='default')
-@click.argument('proteins', nargs=-1)
+@click.argument('struct')
+@click.argument('protein')
+@click.argument('queries', nargs=-1)
 @click.pass_obj
 def score(paths, stats_root, struct, protein, queries):
 	import score.scores
+	queries = list(queries)
 	score.scores.main(paths, config.FEATURE_DEFS,
 	                  stats_root, struct, protein, queries)
 

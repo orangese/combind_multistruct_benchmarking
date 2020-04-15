@@ -9,7 +9,6 @@ from matplotlib import colors
 from matplotlib.gridspec import GridSpec
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.pyplot as plt
-from settings import feature_defs
 
 class PredictStructs:
     """
@@ -25,19 +24,13 @@ class PredictStructs:
     all_wrong (bool): Whether to allow possibility that all poses are wrong
         and exclude the ligand from the optimization.
     """
-    def __init__(self, ligands, mcss, stats,
-                 features, max_poses, alpha, overlap='maxoverlap',
-                 xtal_boost=1.0, physics_score='gscore', all_wrong=False):
+    def __init__(self, ligands, mcss, stats, features, max_poses, alpha):
         self.ligands = ligands
         self.mcss = mcss
         self.stats = stats
         self.features = features
-        self.overlap = overlap
         self.max_poses = max_poses
         self.alpha = float(alpha)
-        self.xtal_boost = xtal_boost
-        self.physics_score = physics_score
-        self.all_wrong = -1 if all_wrong else 0
 
         self.log_likelihood_ratio_cache = {}
         self.lig_pairs = {}
@@ -136,30 +129,22 @@ class PredictStructs:
         for _ in range(max_iterations):
             update = False
             for query in np.random.permutation(list(pose_cluster.keys())):
-                best_pose = self._best_pose(pose_cluster, query, self.all_wrong)
+                best_pose = self._best_pose(pose_cluster, query)
                 if best_pose != pose_cluster[query]:
                     update = True
                     pose_cluster[query] = best_pose
             if not update:
                 break
-
-        # Assign all poses in optimal cluster to best real pose.
-        output = {}
-        for query, pose in pose_cluster.items():
-            if pose != -1:
-                output[query] = pose
-            else:
-                output[query] =self._best_pose(pose_cluster, query, 0)
-        return self.log_posterior(output), output
+        return self.log_posterior(pose_cluster), pose_cluster
 
 
-    def _best_pose(self, pose_cluster, query, all_wrong):
+    def _best_pose(self, pose_cluster, query):
         # Copy the pose cluster so that we don't have to worry
         # about mutating it.
         pose_cluster = {k:v for k, v in pose_cluster.items()}
         best_score = -float('inf')
         best_pose  = -1
-        for pose in range(all_wrong, self._num_poses(query)):
+        for pose in range(self._num_poses(query)):
             pose_cluster[query] = pose
             score = self._partial_log_posterior(pose_cluster, query)
             if score > best_score:
@@ -193,10 +178,7 @@ class PredictStructs:
         log_odds = 0
         for ligname in pose_cluster:
             if ligname == query: continue
-            lr = self._log_likelihood_ratio_pair(pose_cluster, query, ligname)
-            
-            lr *= self.xtal_boost if 'crystal' in ligname else 1.0
-            log_odds += lr
+            log_odds += self._log_likelihood_ratio_pair(pose_cluster, query, ligname)
         
         log_prior = -self._get_physics_score(query, pose_cluster[query])
         log_prior *= self.alpha * self._effective_number(pose_cluster, query)
@@ -210,8 +192,6 @@ class PredictStructs:
         
         as the the sum of the log likelihoods of each of the k_list.
         """
-        if pose_cluster[ligname1] == -1 or pose_cluster[ligname2] == -1:
-            return 0
 
         pair_key = ((ligname1, ligname2, pose_cluster[ligname1], pose_cluster[ligname2])
                     if ligname1 < ligname2 else
@@ -252,7 +232,7 @@ class PredictStructs:
     # Helpers
     def _effective_number(self, pose_cluster, query):
         return sum(1 for ligand, pose in pose_cluster.items()
-                   if pose != -1 and ligand != query)
+                   if ligand != query)
 
     def _get_feature(self, feature, ligname1, ligname2, pose1, pose2):
         # Maintain the convention that ligname1 < ligname2, so that
@@ -266,183 +246,12 @@ class PredictStructs:
             self.lig_pairs[(ligname1, ligname2)] = LigPair(self.ligands[ligname1],
                                                            self.ligands[ligname2],
                                                            self.features, self.mcss,
-                                                           self.max_poses,
-                                                           self.overlap)
+                                                           self.max_poses)
 
         return self.lig_pairs[(ligname1, ligname2)].get_feature(feature, pose1, pose2)
 
     def _get_physics_score(self, ligname, pose):
-        if self.physics_score == 'gscore':
-            if pose == -1:
-                return -8.30
-            return self.ligands[ligname].poses[pose].gscore
-        else:
-            if pose == -1:
-                assert False
-                return -80.0 # Not sure if this is right?
-            return self.ligands[ligname].poses[pose].emodel
+        return self.ligands[ligname].poses[pose].gscore
 
     def _num_poses(self, ligname):
         return min(self.max_poses, len(self.ligands[ligname].poses))
-
-################################################################################
-
-    def likelihood_and_feature_matrix(self, pose_cluster, k, lig_order):
-        """
-        Returns the feature values and likelihood ratios, P(X|l)/P(X)
-        for feature 'fname' for poses in 'pose_cluster'
-        as len(pose_cluster) x len(pose_cluster) numpy arrays.
-        """
-        x                    = np.zeros((len(lig_order), len(lig_order)))
-        log_likelihood_ratio = np.zeros((len(lig_order), len(lig_order)))
-
-        for i, ligname1 in enumerate(lig_order):
-            for j, ligname2 in enumerate(lig_order):
-                if j <= i: continue
-                x_k, p_x_native, p_x = self._likelihoods_for_pair_and_single_feature(k, pose_cluster,
-                                                                                   ligname1, ligname2)
-                x[i, j] = x_k
-                log_likelihood_ratio[i, j] = np.log(p_x_native) - np.log(p_x)
-        return x, log_likelihood_ratio
-
-    def interactions(self, pose_clusters, k):
-        interactions = set()
-        for pose_cluster in pose_clusters:
-            _interactions = set([interaction
-                                 for ligand, pose in pose_cluster.items()
-                                 for interaction in self.ligands[ligand].poses[pose].fp
-                                 if (interaction[0] in feature_defs[k])])
-            interactions = interactions.union(_interactions)
-        interactions = sorted(interactions)
-        X = 0
-        for pose_cluster in pose_clusters:
-            X += self.interaction_matrix(pose_cluster, interactions, list(pose_cluster.keys()))
-
-        # Remove interactions that are never seen
-        interactions = [interaction
-                        for interaction, present in zip(interactions, X.sum(axis = 1) > 0)
-                        if present]
-        X = X[X.sum(axis = 1) > 0]
-
-        # Sort by interacton frequency
-        idx = np.argsort(X.sum(axis = 1))[::-1]
-        return [interactions[i] for i in idx]
-
-    def interaction_matrix(self, pose_cluster, interactions, lig_order):
-        X = []
-        for ligand in lig_order:
-            X += [[]]
-            pose = self.ligands[ligand].poses[pose_cluster[ligand]]
-            for interaction in interactions:
-                X[-1] += [pose.fp[interaction] if interaction in pose.fp else 0]
-        return np.array(X).T
-
-    def gel_plot_individual(self, cluster, k, lig_order, interactions=None,
-                            divide=2, resname_size=14, ax=None, pretty=True):
-        if interactions is None:
-            interactions = self.interactions([cluster], k)
-        X = self.interaction_matrix(cluster, interactions, lig_order)
-        labels = [self._format_int(interaction) for interaction in interactions]
-
-        # Y is X + empty cells seperating boxes.
-        Y = np.zeros((X.shape[0]*divide, X.shape[1]*divide))
-        Y[::divide, ::divide] = X
-        if ax is None:
-            figure = plt.figure(figsize =  (9, 5))
-            gs = GridSpec(1, 2, figure = figure, width_ratios = [4, 5])
-            ax = plt.subplot(gs[1])
-        ax.imshow(Y, cmap='binary', aspect = 'auto', vmin=0, vmax=1.0)
-        #ax.set(adjustable='box', aspect='equal')
-
-        if pretty:
-            self._pretty(lig_order, labels, divide, resname_size)
-
-    
-    def gel_plot(self, combind_cluster, glide_cluster, k, lig_order,
-                 divide=2, resname_size=14):
-        interactions = self.interactions([combind_cluster, glide_cluster], k)
-        combind = self.interaction_matrix(combind_cluster,interactions, lig_order)
-        glide = self.interaction_matrix(glide_cluster, interactions, lig_order)
-
-        seen = combind + glide
-        X = combind - glide
-
-        labels = [self._format_int(interaction) for interaction in interactions]
-
-        # Differentiate values that are the same and
-        # positive from those that are zero.
-        X[seen == 0] = float('inf')
-    
-        # Y is X + empty cells seperating boxes.
-        Y = np.zeros((X.shape[0]*divide, X.shape[1]*divide))
-        Y.fill(float('inf')) # dividers should be white.
-        Y[::divide, ::divide] = X
-
-    
-        rkb = [(1, 0, 0.5), (0, 0, 0), (0.5, 1, 0)]
-        cm = LinearSegmentedColormap.from_list('rkb', rkb, N=256, gamma=1.0)
-        figure = plt.figure(figsize =  (9, 5))
-        gs = GridSpec(1, 2, figure = figure, width_ratios = [4, 5])
-        ax = plt.subplot(gs[1])
-        ax.imshow(Y, cm, vmin=-0.5, vmax=0.5)
-        ax.set(adjustable='box', aspect='equal')
-        self._pretty(lig_order, labels, divide, resname_size)
-        print('ComBind - Glide: {}'.format(X.sum()))
-
-    def _pretty(self, lig_order, resnames, divide, resname_size):
-        for spine in plt.gca().spines.values():
-            spine.set_visible(False)
-        for axis in ['x', 'y']:
-            plt.tick_params(axis=axis, which='both',bottom=False,
-                            top=False, left=False, right=False)
-        plt.yticks(range(0, divide*len(resnames), divide), resnames,
-                   size = resname_size, fontname = 'monospace')
-        plt.xticks(range(0, divide*len(lig_order), divide), lig_order,
-                   rotation = 'vertical', size = resname_size, fontname = 'monospace')
-
-    def _format_int(self, interaction):
-        three_to_one = {
-            'TYR': 'Y',
-            'VAL': 'V',
-            'ARG': 'R',
-            'THR': 'T',
-            'GLU': 'E',
-            'SER': 'S',
-            'PHE': 'F',
-            'ALA': 'A',
-            'MET': 'M',
-            'ILE': 'I',
-            'ASP': 'D',
-            'GLN': 'Q',
-            'ASN': 'N',
-            'GLY': 'G',
-            'PRO': 'P',
-            'TRP': 'W',
-            'LEU': 'L',
-            'LYS': 'K',
-            'CYS': 'C',
-            'HIS': 'H'
-        }
-        name = interaction[1].split('(')[1][:-1]
-        num = interaction[1].split('(')[0].split(':')[1]
-        if name in three_to_one:
-            name = three_to_one[name]
-        
-        feature = [feature for feature, codes in feature_defs.items()
-                   if interaction[0] in codes]
-
-        if 'hbond' in feature:
-            feature.remove('hbond')
-        assert len(feature) == 1
-        feature = feature[0]
-
-        if 'hbond_' in feature:
-            feature = feature.replace('hbond_', '')
-        return '{}{}:{}'.format(name, num, feature)
-    
-    def get_poses(self, cluster):
-        return {l:self.ligands[l].poses[p] for l,p in cluster.items()}
-
-    def get_rmsd(self, cluster):
-        tmp = [self.ligands[l].poses[p].rmsd for l,p in cluster.items()]
-        return np.mean([r for r in tmp if r is not None])

@@ -12,7 +12,6 @@ from glob import glob
 import pandas as pd
 from schrodinger.structure import SmilesStructure
 import re
-#from ifp.fp_controller import parse_fp_file
 from mcss.mcss_controller import MCSSController
 
 class Pose:
@@ -38,18 +37,18 @@ class Ligand:
         self.poses = None
 
     def load_poses(self, load_fp):
-        gscores, emodels, rmsds = self.parse_glide_output()
+        gscores, rmsds = self.parse_glide_output()
 
         fps = {}
         if load_fp:  
-            fps = self.parse_fp_file()
+            fps = self.parse_ifp_file()
 
         self.poses = [Pose(rmsds[i], gscores[i], fps.get(i, {}))
                       for i in range(len(gscores))]
 
     def parse_glide_output(self):
         if not os.path.exists(self.path('DOCK')):
-            return [], [], []
+            return [], []
 
         gscores, rmsds = [], []
         with open(self.path('DOCK_REPT')) as fp:
@@ -66,7 +65,7 @@ class Ligand:
                     score = line[3]
                     
                 gscores.append(float(score))
-            
+
         if os.path.exists(self.path('DOCK_RMSD')):
             rmsds = []
             with open(self.path('DOCK_RMSD')) as fp:
@@ -76,7 +75,7 @@ class Ligand:
                     rmsds.append(float(line[3].strip('"')))
         else:
             rmsds = [None]*len(gscores)
-        return gscores, emodels, rmsds
+        return gscores, rmsds
 
     def parse_ifp_file(self):
         ifps = {}
@@ -98,9 +97,9 @@ class Ligand:
 
         except Exception as e:
             print(e)
-            print(fp_file, 'fp not found')
+            print(self.path('IFP'), 'fp not found')
         if len(ifps) == 0:
-            print('check', fp_file)
+            print('check', self.path('IFP'))
             return {}
         return ifps
 
