@@ -5,11 +5,6 @@ Core optimization code.
 import numpy as np
 from score.pairs import LigPair
 
-from matplotlib import colors
-from matplotlib.gridspec import GridSpec
-from matplotlib.colors import LinearSegmentedColormap
-import matplotlib.pyplot as plt
-
 class PredictStructs:
     """
     ligands ({name: containers.Ligand, })
@@ -18,11 +13,6 @@ class PredictStructs:
     features ([str, ]): Features to use when computing similarity scores.
     max_poses (int): Maximum number of poses to consider.
     alpha (float): Factor to which to weight the glide scores.
-    overlap (float): Overlap metric. Must match stats.
-    xtal_boost (float): Multiplier for pair scores involving xtal poses.
-    physics_score ('gscore' or 'emodel'): which physics score to use.
-    all_wrong (bool): Whether to allow possibility that all poses are wrong
-        and exclude the ligand from the optimization.
     """
     def __init__(self, ligands, mcss, stats, features, max_poses, alpha):
         self.ligands = ligands

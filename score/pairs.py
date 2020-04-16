@@ -27,6 +27,13 @@ class LigPair:
             return self.pose_pairs[key].mcss_score
         return self.pose_pairs[key].tanimoto(feature)
 
+    def correct(self, rank1, rank2):
+        key = (rank1, rank2)
+        if key not in self.pose_pairs:
+            self._init_pose_pair(rank1, rank2)
+
+        return self.pose_pairs[key].correct()
+
     def _init_pose_pair(self, rank1, rank2):
         if 'mcss' in self.features:
             mcss_score = self.mcss.get_rmsd(self.l1.ligand, self.l2.ligand,

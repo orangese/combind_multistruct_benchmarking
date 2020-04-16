@@ -1,9 +1,15 @@
 import os
 import sys
+import numpy as np
 
 from containers import Protein
 from score.prob_opt import PredictStructs
 from score.density_estimate import DensityEstimate
+
+from matplotlib import colors
+from matplotlib.gridspec import GridSpec
+from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.pyplot as plt
 
 class ScoreContainer:
     """
@@ -14,6 +20,7 @@ class ScoreContainer:
         self.struct = struct
         self.root = root
 
+        self.feature_defs = feature_defs
         self.settings = self.read_settings()
         self.stats = self.read_stats(stats_root)
  
@@ -106,6 +113,23 @@ class ScoreContainer:
         return cluster
 ################################################################################
 
+    def plot_interactions(self, combind, feature):
+        glide = {k:0 for k in combind}
+        interactions = self.interactions([glide, combind], feature)
+        ligands = sorted(combind)
+
+        if not interactions:
+            return
+
+        f, ax = plt.subplots(1, 2, figsize=(10, 4))
+        self.gel_plot(combind, feature, ligands, interactions=interactions, ax=ax[0])
+        self.gel_plot(glide, feature, ligands, interactions=interactions, ax=ax[1])
+        
+        ax[1].set_yticklabels([])
+        plt.tight_layout()
+        plt.savefig(feature+'.pdf')
+        plt.show()
+
     def likelihood_and_feature_matrix(self, pose_cluster, k, lig_order):
         """
         Returns the feature values and likelihood ratios, P(X|l)/P(X)
@@ -130,7 +154,7 @@ class ScoreContainer:
             _interactions = set([interaction
                                  for ligand, pose in pose_cluster.items()
                                  for interaction in self.ps.ligands[ligand].poses[pose].fp
-                                 if (interaction[0] in feature_defs[k])])
+                                 if (interaction[0] in self.feature_defs[k])])
             interactions = interactions.union(_interactions)
         interactions = sorted(interactions)
         X = 0
@@ -164,27 +188,27 @@ class ScoreContainer:
         labels = [self._format_int(interaction) for interaction in interactions]
 
         # Y is X + empty cells seperating boxes.
-        Y = np.zeros((X.shape[0]*divide, X.shape[1]*divide))
+        Y = np.zeros((X.shape[0]*divide-1, X.shape[1]*divide-1))
         Y[::divide, ::divide] = X
         if ax is None:
-            figure = plt.figure(figsize =  (9, 5))
-            gs = GridSpec(1, 2, figure = figure, width_ratios = [4, 5])
-            ax = plt.subplot(gs[1])
-        ax.imshow(Y, cmap='binary', aspect = 'auto', vmin=0, vmax=1.0)
+            f, ax = plt.subplots(figsize = (9, 5))
+
+        vmax = np.max(Y)
+        ax.imshow(Y, cmap='binary', aspect = 'auto', vmin=0, vmax=vmax)
 
         if pretty:
-            self._pretty(lig_order, labels, divide, resname_size)
+            self._pretty(lig_order, labels, divide, resname_size, ax)
 
-    def _pretty(self, lig_order, resnames, divide, resname_size):
-        for spine in plt.gca().spines.values():
+    def _pretty(self, lig_order, resnames, divide, resname_size, ax):
+        for spine in ax.spines.values():
             spine.set_visible(False)
         for axis in ['x', 'y']:
-            plt.tick_params(axis=axis, which='both',bottom=False,
-                            top=False, left=False, right=False)
-        plt.yticks(range(0, divide*len(resnames), divide), resnames,
-                   size = resname_size, fontname = 'monospace')
-        plt.xticks(range(0, divide*len(lig_order), divide), lig_order,
-                   rotation = 'vertical', size = resname_size, fontname = 'monospace')
+            ax.tick_params(axis=axis, which='both',bottom=False,
+                               top=False, left=False, right=False)
+        ax.set_yticks(range(0, divide*len(resnames), divide))
+        ax.set_yticklabels(resnames)
+        ax.set_xticks(range(0, divide*len(lig_order), divide))
+        ax.set_xticklabels(lig_order, rotation='vertical')
 
     def _format_int(self, interaction):
         three_to_one = {
@@ -214,7 +238,7 @@ class ScoreContainer:
         if name in three_to_one:
             name = three_to_one[name]
         
-        feature = [feature for feature, codes in feature_defs.items()
+        feature = [feature for feature, codes in self.feature_defs.items()
                    if interaction[0] in codes]
 
         if 'hbond' in feature:
@@ -226,7 +250,7 @@ class ScoreContainer:
             feature = feature.replace('hbond_', '')
         return '{}{}:{}'.format(name, num, feature)
 
-def main(paths, feature_defs, stats_root, struct, protein, queries):
+def main(paths, feature_defs, stats_root, struct, protein, queries, plot=None):
     sc = ScoreContainer(os.getcwd(), paths, feature_defs,
                         stats_root, protein, struct)
 
@@ -240,3 +264,8 @@ def main(paths, feature_defs, stats_root, struct, protein, queries):
         fname = '{}/{}.sc'.format(sc.root, 'pdb' if len(queries) > 1 else queries[0])
         combind_cluster = sc.compute_results(queries)
         sc.write_results(combind_cluster, fname)
+
+        if plot:
+            for feature in feature_defs:
+                if feature != 'mcss':
+                    sc.plot_interactions(combind_cluster, feature)

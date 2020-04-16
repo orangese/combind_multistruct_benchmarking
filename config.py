@@ -1,7 +1,6 @@
-from utils import StringFunction, resolve
+from utils import StringFunction
 
 STATS = {'default': {'version'         : 'default',
-                     'metric'          : 'tanimoto',
                      'ifp_version'     : 'default',
                      'mcss_version'    : 'mcss16',
                      'mcss_func'       : StringFunction('min'),
@@ -10,8 +9,6 @@ STATS = {'default': {'version'         : 'default',
                      'mcss_domain'     : (0, 6),
                      'docking_version' : 'confgen_es4',
                      'pdb_order'       : 'First',
-                     'poses_equal'     : False,
-                     'ligands_equal'   : False,
                      'native_thresh'   : 2.0,
                      'n_ligs'          : 20,
                      'max_poses'       : 100,
@@ -25,8 +22,6 @@ IFP = {'default': {'version'           : 'default',
                    'hbond_angle_cut'   : 90.0,
                    'sb_dist_opt'       : 4.0,
                    'sb_dist_cut'       : 5.0,
-                   'pipi_dist_opt'     : 4.5,
-                   'pipi_dist_cut'     : 6.0,
                    'contact_scale_opt' : 1.25,
                    'contact_scale_cut' : 1.75},}
 

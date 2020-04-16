@@ -6,7 +6,6 @@ import config
 
 @click.group()
 @click.option('--data', default='/oak/stanford/groups/rondror/users/jpaggi/negative')
-@click.option('--stats', default='/oak/stanford/groups/rondror/users/jpaggi/stats')
 @click.pass_context
 def main(ctx, data, stats):
 	paths = {'CODE': os.path.dirname(os.path.realpath(__file__)),
@@ -29,24 +28,31 @@ def prepare(paths, task, stats_version, proteins):
 	dock.prepare_all.main(params, paths, task, list(proteins))
 
 @main.command()
+@click.option('--plot', is_flag=True)
 @click.argument('stats_root')
 @click.argument('struct')
 @click.argument('protein')
 @click.argument('queries', nargs=-1)
 @click.pass_obj
-def score(paths, stats_root, struct, protein, queries):
+def score(paths, stats_root, struct, protein, queries, plot):
 	import score.scores
 	queries = list(queries)
 	score.scores.main(paths, config.FEATURE_DEFS,
-	                  stats_root, struct, protein, queries)
+	                  stats_root, struct, protein, queries, plot)
 
-def score_controller():
-	import score.controller
-	score.controller.main(args)
-
-def statistics():
+@main.command()
+@click.option('--merged_root')
+@click.option('--plot')
+@click.argument('stats_version')
+@click.argument('stats_root')
+@click.argument('proteins', nargs=-1)
+@click.pass_obj
+def statistics(paths, stats_version, stats_root, proteins, merged_root, plot):
 	import score.statistics
-	score.statistics.main(args)
+	params = config.STATS[stats_version]
+	proteins = list(proteins)
+	score.statistics.main(params, paths, config.FEATURE_DEFS, stats_root,
+	                      proteins, merged_root, plot)
 
 @main.command()
 @click.argument('ifp_version')
