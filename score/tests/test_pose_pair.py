@@ -4,8 +4,8 @@ from containers import Pose
 
 features = {'sb': [1], 'hbond': [2], 'contact': [11]}
 
-def pose(rmsd=0.0, gscore=0.0, emodel=0.0, fp={}):
-	return Pose(rmsd, gscore, emodel, fp)
+def pose(rmsd=0.0, gscore=0.0, fp={}):
+	return Pose(rmsd, gscore, fp)
 
 def test_correct_both():
 	pose1 = pose(rmsd=1.0)

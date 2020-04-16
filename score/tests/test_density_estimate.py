@@ -50,26 +50,6 @@ def test_merge():
 	de3.x = np.array([0, 1, 2])
 	de3.fx = np.array([2, 2, 2])
 
-	merged = DensityEstimate.merge([de1, de2, de3], False)
-
-	assert np.all(merged.fx == [0.75, 0.75, 0.75])
-
-def test_merge_weighted():
-	de1 = DensityEstimate(points = 3, domain = (0, 2))
-	de1.n_samples = 5
-	de1.x = np.array([0, 1, 2])
-	de1.fx = np.array([0, 0, 0])
-
-	de2 = DensityEstimate(points = 3, domain = (0, 2))
-	de2.n_samples = 10
-	de2.x = np.array([0, 1, 2])
-	de2.fx = np.array([1, 1, 1])
-
-	de3 = DensityEstimate(points = 3, domain = (0, 2))
-	de3.n_samples = 0
-	de3.x = np.array([0, 1, 2])
-	de3.fx = np.array([2, 2, 2])
-
 	merged = DensityEstimate.merge([de1, de2, de3])
 
-	assert np.all(merged.fx == [0.5, 0.5, 0.5])
+	assert np.all(merged.fx == [0.75, 0.75, 0.75])

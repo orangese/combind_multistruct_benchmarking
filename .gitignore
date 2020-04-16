@@ -1,11 +1,9 @@
 ._*
 *.log
 *.pyc
-*/tests/outputs
 .ipynb_checkpoints
 .fuse*
 __pycache__
 *.DS_Store
 .cache
-
-schrodinger*
+.pytest_cache

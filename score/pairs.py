@@ -19,6 +19,9 @@ class LigPair:
         Returns the overlap score for feature for the pose pair
         consisting of poses rank1 and rank2.
         """
+        if feature not in self.features:
+            return None
+
         key = (rank1, rank2)
         if key not in self.pose_pairs:
             self._init_pose_pair(rank1, rank2)
@@ -47,6 +50,11 @@ class LigPair:
                                                    self.features,
                                                    self.native_thresh)
 
+    def init_pose_pairs(self):
+        for rank1 in range(min(len(self.l1.poses), self.max_poses)):
+            for rank2 in range(min(len(self.l2.poses), self.max_poses)):
+                self._init_pose_pair(rank1, rank2)
+
 class PosePair:
     """
     Computes overlap scores for a pair of poses.
@@ -61,9 +69,9 @@ class PosePair:
     def correct(self):
         return int(max(self.pose1.rmsd,self.pose2.rmsd) <= self.native_thresh)
 
-    def tanimoto(self, feature, pseudo_hits=1, pseudo_misses=1, maxoverlap=float('inf')):
+    def tanimoto(self, feature, pseudo_hits=1, pseudo_misses=1):
         overlap = pseudo_hits + self.overlap(feature)
-        total = (2*pseudo_hits+pseudo_misses) + min(self._total(feature), 2*maxoverlap)
+        total = (2*pseudo_hits+pseudo_misses) + self._total(feature)
         return overlap / (total - overlap)
 
     def overlap(self, feature):
