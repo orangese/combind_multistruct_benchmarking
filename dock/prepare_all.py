@@ -28,16 +28,16 @@ def main(params, paths, task, proteins):
         elif task == 'prep-ligands':
             prep_ligands(protein.lm)
 
+        elif task == 'dock':
+            dock(protein.lm, mode=params['docking_version'])
+            protein.lm.mcss.compute_mcss(False)
+            compute_ifp(protein.lm)
+
         elif task == 'mcss':
             protein.lm.mcss.compute_mcss()
 
         elif task == 'pick-helpers':
             protein.lm.pick_helpers()
-
-        elif task == 'dock-pdb':
-            dock(protein.lm, mode=params['docking_version'])
-            protein.lm.mcss.compute_mcss(False)
-            compute_ifp(protein.lm)
 
         elif task == 'dock-helpers':
             dock(protein.lm, protein.lm.load_helpers(), mode=params['docking_version'])

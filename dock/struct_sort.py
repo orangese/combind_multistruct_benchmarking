@@ -2,6 +2,7 @@ import os
 from schrodinger.structure import StructureReader
 
 def split_complex(st, pdb_id):
+    os.system('mkdir -p structures/proteins structures/ligands')
     lig_path = 'structures/ligands/{}_lig.mae'.format(pdb_id)
     prot_path = 'structures/proteins/{}_prot.mae'.format(pdb_id)
 
@@ -16,7 +17,8 @@ def split_complex(st, pdb_id):
         prot_st.write(prot_path)
 
 def struct_sort():
-    os.system('mkdir -p structures/proteins structures/ligands')
+    if not os.path.exists('structures/aligned'):
+        return
 
     for pdb_id in os.listdir('structures/aligned'):
         opt_complex = 'structures/aligned/{}/rot-{}_query.mae'.format(pdb_id, pdb_id)

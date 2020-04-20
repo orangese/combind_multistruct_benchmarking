@@ -2,6 +2,7 @@ import os
 import sys
 import numpy as np
 
+import config
 from containers import Protein
 from score.prob_opt import PredictStructs
 from score.density_estimate import DensityEstimate
@@ -23,8 +24,9 @@ class ScoreContainer:
         self.feature_defs = feature_defs
         self.settings = self.read_settings()
         self.stats = self.read_stats(stats_root)
+        self.params = config.STATS[self.settings['stats_version']]
  
-        self.predict_data = Protein(prot, self.settings['stats'], paths)
+        self.predict_data = Protein(prot, params, paths)
         features = {feature: feature_defs[feature] for feature in self.settings['k_list']}
         self.ps = PredictStructs({}, self.predict_data.lm.mcss,
                                  self.stats, features,
@@ -32,7 +34,11 @@ class ScoreContainer:
                                  self.settings['alpha'])
 
     def read_settings(self):
-        tr = {'chembl': False}
+        tr = {'num_poses': 100,
+              'alpha': 1.0,
+              'stats_version': 'default',
+              'features': ['hbond', 'sb', 'contact', 'mcss'],
+              'chembl': False}
         with open('{}/settings.py'.format(self.root)) as f:
             for line in f:
                 var, val = line.split('=')
@@ -42,7 +48,7 @@ class ScoreContainer:
     def read_stats(self, stats_root):
         stats = {'native':{}, 'reference':{}}
         for dist in stats:
-            for interaction in self.settings['k_list']:
+            for interaction in self.settings['features']:
                 fname = '{}/{}_{}.txt'.format(stats_root, dist, interaction)
                 assert os.path.exists(fname), fname
                 stats[dist][interaction] = DensityEstimate.read(fname)
@@ -57,7 +63,7 @@ class ScoreContainer:
 
     def compute_results(self, queries):
         self.predict_data.load_docking(queries, load_fp = True,
-                                       load_mcss = 'mcss' in self.settings['k_list'],
+                                       load_mcss = 'mcss' in self.settings['features'],
                                        st=self.struct)
 
         # Set ligands and optimize!
@@ -106,7 +112,7 @@ class ScoreContainer:
                 cluster[lig] = int(combind_pose)
 
         self.predict_data.load_docking(list(cluster.keys()), load_fp = True,
-                                       load_mcss = 'mcss' in self.settings['k_list'],
+                                       load_mcss = 'mcss' in self.settings['features'],
                                        st = self.struct)
         self.ps.ligands = {lig: self.predict_data.docking[self.struct][lig]
                            for lig in list(cluster.keys())}

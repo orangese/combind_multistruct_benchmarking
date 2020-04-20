@@ -14,40 +14,25 @@ class Statistics:
         self.paths = paths
         self.path = path
 
-        if 'reference_poses' not in settings:
-            settings['reference_poses'] = settings['max_poses']
-        if 'native_poses' not in settings:
-            settings['native_poses'] = settings['max_poses']
-
-        assert settings['max_poses'] >= settings['reference_poses']
-        assert settings['max_poses'] >= settings['native_poses']
-
         if self.path:
             os.makedirs(os.path.dirname(path), exist_ok=True)
 
         self.stats = self._load()
 
     @classmethod
-    def read(cls, path, paths, considered_proteins=None):
-        proteins = set()
+    def read_merged(cls, path):
         interactions = set()
-        settings = {}
         stats = {}
-        for fname in glob(path.format('*', '*', '*')):
+        for fname in glob(path.format('*', '*')):
             ID = fname.split('/')[-1].split('.')[0]
-            protein, interaction, distribution = ID.split('-')
-            if considered_proteins and protein not in considered_proteins:
-                continue
-            proteins.add(protein)
+            distribution, interaction  = ID.split('_')
             interactions.add(interaction)
             if distribution not in stats:
                 stats[distribution] = {}
-            if interaction not in stats[distribution]:
-                stats[distribution][interaction] = []
-            stats[distribution][interaction] += [DensityEstimate.read(fname)]
+            stats[distribution][interaction] = DensityEstimate.read(fname)
 
-        self = cls(list(proteins), list(interactions), settings, paths, path=path)
-        self.stats = self._merge(stats, ligands_equal)
+        self = cls([], list(interactions), {}, {})
+        self.stats = stats
         return self
 
     @classmethod
@@ -196,14 +181,17 @@ class Statistics:
         for d, interactions in stats.items():
             merged[d] = {}
             for i, des in interactions.items():
-                merged[d][i] = DensityEstimate.merge(des)
+                if des:
+                    merged[d][i] = DensityEstimate.merge(des)
         return merged
 
-def main(params, paths, feature_defs, path, proteins, merged=None, plot=None):
+def compute(params, paths, feature_defs, path, proteins, merged=None):
     path += '/{}-{}-{}.de'
     stats = Statistics(proteins, feature_defs, params, paths, path=path)
 
     if merged is not None:
         stats.write_merged(merged)
-    if plot is not None:
-        stats.plot_merged(plot)
+
+def plot(merged):
+    stats = Statistics.read_merged(merged + '/{}_{}.txt')
+    stats.plot_merged('{}/stats.pdf'.format(merged))

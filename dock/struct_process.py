@@ -33,7 +33,8 @@ def load_complex(pdb):
     return merged_st
 
 def struct_process():
-    os.system('mkdir -p structures/processed')
+    if not os.path.exists('structures/raw'):
+        return
 
     all_f = sorted(os.listdir('structures/raw'))
     all_prot = [f.split('_')[0] for f in all_f if f.split('_')[1] == 'prot.mae']
@@ -43,7 +44,8 @@ def struct_process():
 
         if os.path.exists('structures/processed/{}/{}_out.mae'.format(pdb, pdb)):
             continue
-      
+     
+        os.system('mkdir -p structures/processed')
         os.system('rm -rf structures/processed/{}'.format(pdb))
         os.system('mkdir structures/processed/{}'.format(pdb))
 

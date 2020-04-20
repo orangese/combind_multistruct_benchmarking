@@ -23,6 +23,9 @@ PROTFILE = 'structures/proteins/{pdb}_prot.mae'
 LIGFILE = 'structures/ligands/{pdb}_lig.mae'
 
 def make_grids(pdb=None):
+    if not glob(PROTFILE.format(pdb='*')):
+        return
+
     if pdb is None:
         pdb = sorted(glob(PROTFILE.format(pdb='*')))[0]
         pdb = pdb.split('/')[-1].split('_')[0]

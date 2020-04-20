@@ -23,9 +23,12 @@ def align_successful(out_dir, struct):
             return False
 
 def struct_align():
-    os.system('mkdir -p {}'.format(out_dir))
+    if not os.path.exists('structures/processed'):
+        return
 
     all_prot = sorted([p for p in os.listdir('structures/processed') if p[0] != '.'])
+    if not len(all_prot):
+        return
     template = all_prot[0]
  
     if os.path.exists(out_dir) and len(os.listdir(out_dir)) > 0:
@@ -45,6 +48,7 @@ def struct_align():
         if not os.path.exists(query_path) or align_successful(out_dir, struct):
             continue
 
+        os.system('mkdir -p {}'.format(out_dir))
         os.system('rm -rf {}/{}'.format(out_dir, struct))
         os.system('mkdir -p {}/{}'.format(out_dir, struct))
 

@@ -3,49 +3,109 @@
 ComBind scores small molecule ligand binding poses by combining data-driven
 modeling and physics-based docking.
 
-## Installation
-
-Running ComBind requires access to Glide and the Schrodinger Python API.
-
-### Creating a Schrodinger virtual environment
-
-ComBind makes use of the schrodinger python api, which is only accessible by
-using their interpretter. Creating a virtual environment that makes their
-interpretter the default python interpretter is the simplest way to do this.
-By following the below directions you'll be able to use their python api
-both in scripts and in jupyter notebooks.
-
-Set the SCHRODINGER environment variable using, for local installation,
-`export SCHRODINGER=/opt/schrodinger/suites2019-4` or, for sherlock,
-`ml chemistry schrodinger`.
-
-Then create the environment and upgrade the relevant packages.
-```
-$SCHRODINGER/run schrodinger_virtualenv.py schrodinger.ve
-source schrodinger.ve/bin/activate
-pip install --upgrade jupyter matplotlib numpy sklearn scipy pandas
-```
-
-Run `source schrodinger.ve/bin/activate` to activate the
-environment in the future.
+Specifically, given the chemical structures of several ligands that can bind
+a given target protein, ComBind solves for a set of poses, one per ligand, that
+are both highly scored by physics-based docking and display similar interactions
+with the target protein. ComBind quantifies this vague notion of "similar" by
+considering a diverse training set of protein complexes and computing the
+overlap between protein–ligand interactions formed by distinct ligands
+they are in their correct poses, as compared to when they are in randomly
+selected poses.
 
 ## Overview
 
 Running ComBind can be broken into several components: data curation,
 data preparation (including docking), featurization of docked poses,
-the ComBind scoring itself, and inspection of results.
+the ComBind scoring itself, inspection of results, and, optionally, fitting
+the statistical model.
+
+But first, a brief note: these components are each comprised of several steps,
+many of which require significant computation time. Currently, most of these
+steps need to be run more or less individually. The intermediate results are
+stored in a following a structure defined in config.py.
 
 ### Curation of raw data
 
 To produce poses for a particular protein, you'll need to provide at least one
 3D structure of the target protein and chemical structures of ligands to dock.
 
+These raw inputs need to be properly stored so that the rest of the pipeline
+can recognize them.
+
+The structure(s) should be stored in a directory `structures/raw`.
+Each structure should be split into two files `NAME_prot.mae`
+and `NAME_lig.mae` containing only the protein and only the reference ligand,
+respectively.
+
+Alternatively, if you'd prefer to prepare your structures yourself, save your
+prepared files to `structures/proteins` and `structures/ligands`. Moreover,
+you could even just begin with a Glide docking grid which you prepared yourself
+by placing it in `docking/grids`.
+
+Ligands should be specified in a file `structures/pdb.csv`. There must be a
+header line containing at least the entries "PDB ID" and "Ligand SMILES",
+specifying the ligand name and the ligand chemical structure.
+
+Additionally, "helper" ligands can be specified in files named
+`chembl/CHEMBL*.csv` these files must contain entries for each ligand's
+'ligand_chembl_id', 'canonical_smiles', and 'standard_value'. Note that these
+ligands are not docked by default.
+
+
 ### Data preparation and docking
+
+```
+./main.py prepare prep-structs
+./main.py prepare prep-ligands
+./main.py prepare dock
+```
 
 ### Featurization: interaction fingerprints, maximum common substructures
 
+```
+./main.py prepare dock
+```
+
 ### ComBind Scoring
+
+
+
+```
+$COMBINDHOME/main.py score $COMBINDHOME/statistics/default STRUCT PROTEIN QUERIES
+```
 
 ### Visualization of the results
 
 ### Model Training (Optional)
+
+## Installation
+
+Start by cloning this git repository (likely into your home directory).
+
+ComBind requires access to Glide along with several other Schrodinger tools
+and the Schrodinger Python API.
+
+The Schrodinger suite of tools can be accessed on Sherlock by running
+`ml chemistry schrodinger`. This will add many of the Schrodinger tools to
+your path and sets the SCHRODINGER environmental variable. (Some tools are
+not added to your path and you'll need to write out $SCHRODINGER/tool.)
+After running this you should be able to run Glide by typing `glide` in the
+command line.
+
+You can only access the Schrodinger Python API using their interpretter.
+Creating a virtual environment that makes their interpretter the default
+python interpretter is the simplest way to do this. To create the environment
+and upgrade the relevant packages run the following:
+
+```
+cd
+$SCHRODINGER/run schrodinger_virtualenv.py schrodinger.ve
+source schrodinger.ve/bin/activate
+pip install --upgrade numpy sklearn scipy pandas
+```
+
+Run `source schrodinger.ve/bin/activate` to activate the environment in
+the future, you'll need to do this everytime before running ComBind.
+This is included in the setup_sherlock script; you can source the
+script by running `source setup_sherlock`.
+

@@ -7,9 +7,9 @@ import config
 @click.group()
 @click.option('--data', default='/oak/stanford/groups/rondror/users/jpaggi/negative')
 @click.pass_context
-def main(ctx, data, stats):
+def main(ctx, data):
 	paths = {'CODE': os.path.dirname(os.path.realpath(__file__)),
-			 'DATA': data, 'STATS': stats}
+			 'DATA': data}
 	paths.update(config.PATHS)
 	paths = utils.resolve(paths)
 	ctx.obj = paths
@@ -42,17 +42,22 @@ def score(paths, stats_root, struct, protein, queries, plot):
 
 @main.command()
 @click.option('--merged_root')
-@click.option('--plot')
 @click.argument('stats_version')
 @click.argument('stats_root')
 @click.argument('proteins', nargs=-1)
 @click.pass_obj
-def statistics(paths, stats_version, stats_root, proteins, merged_root, plot):
+def statistics(paths, stats_version, stats_root, proteins, merged_root):
 	import score.statistics
 	params = config.STATS[stats_version]
 	proteins = list(proteins)
-	score.statistics.main(params, paths, config.FEATURE_DEFS, stats_root,
-	                      proteins, merged_root, plot)
+	score.statistics.compute(params, paths, config.FEATURE_DEFS, stats_root,
+	                         proteins, merged_root, plot)
+
+@main.command()
+@click.argument('merged')
+def plot_statistics(merged):
+	import score.statistics
+	score.statistics.plot(merged)
 
 @main.command()
 @click.argument('ifp_version')
