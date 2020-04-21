@@ -7,7 +7,8 @@ GLIDE_ES4 = '''GRIDFILE   ../../grids/{}/{}.zip
 LIGANDFILE   ../../../ligands/{}/{}.mae
 DOCKING_METHOD   confgen
 CANONICALIZE   True
-EXPANDED_SAMPLING   False
+LIGAND_START 1
+LIGAND_END 1
 POSES_PER_LIG   100
 POSTDOCK_NPOSE   100
 WRITEREPT   True
@@ -21,7 +22,7 @@ modes = {'confgen_es4': {
         }
 
 queue = 'rondror'
-group_size = 3
+group_size = 5
 
 dock_cmd = 'glide -WAIT {}-to-{}.in\n' 
 rmsd_cmd = 'run rmsd.py -use_neutral_scaffold -pv second -c rmsd.csv ../../../structures/ligands/{}.mae {}-to-{}_pv.maegz\n'
@@ -80,22 +81,16 @@ def proc_all(all_pairs, dock=False, rmsd=False):
 
         os.system('sbatch -p {} -t 1:00:00 -o dock.out dock{}.sh'.format(queue, i))
 
-def dock(lm, chembl=None, mode='confgen_es4'):
-    if lm.st is None: return
+def dock(lm, mode):
+    if lm.st is None:
+        return
+
     docking = modes[mode]['name']
+    grid = lm.st
+    ligs = lm.get_pdb()
+
     os.system('mkdir -p docking/{}'.format(docking))
     os.chdir('docking/{}'.format(docking))
-
-    grid = lm.st
-
-    if chembl is None:
-        ligs = lm.get_pdb()
-    else:
-        ligs = set([])
-        for f, f_data in chembl.items():
-            for q, c_list in f_data.items():
-                ligs.add(q)
-                ligs.update(c_list)
 
     to_dock = []
     to_rmsd = []

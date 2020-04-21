@@ -26,12 +26,10 @@ def _prep_ligands(ligands, root):
         os.system('sbatch {}'.format(batch_file))
 
 def prep_ligands(lm):
-    ligands = lm.pdb.copy()
-    ligands.update(lm.chembl)
     unfinished = []
-    for name, (smiles, affinity) in ligands.items():
-        if not name in lm.prepped:
-            unfinished += [(name, smiles)]
+    for name, info in lm.pdb.items():
+        if name not in lm.prepped:
+            unfinished += [(name, info['SMILES'])]
 
     if unfinished:
         print('Processing {} ligands'.format(len(unfinished)))

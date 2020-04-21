@@ -42,41 +42,45 @@ prepared files to `structures/proteins` and `structures/ligands`. Moreover,
 you could even just begin with a Glide docking grid which you prepared yourself
 by placing it in `docking/grids`.
 
-Ligands should be specified in a file `structures/pdb.csv`. There must be a
-header line containing at least the entries "PDB ID" and "Ligand SMILES",
-specifying the ligand name and the ligand chemical structure.
-
-Additionally, "helper" ligands can be specified in files named
-`chembl/CHEMBL*.csv` these files must contain entries for each ligand's
-'ligand_chembl_id', 'canonical_smiles', and 'standard_value'. Note that these
-ligands are not docked by default.
-
+Ligands should be specified in a csv file with a header line containing at
+least the entries "ID" and "SMILES", specifying the ligand name and the ligand
+chemical structure.
 
 ### Data preparation and docking
 
 ```
-./main.py prepare prep-structs
-./main.py prepare prep-ligands
-./main.py prepare dock
+$COMBINDHOME/main.py prepare prep-structs
+$COMBINDHOME/main.py prepare prep-ligands
+$COMBINDHOME/main.py prepare dock
 ```
+
+Note that you will need to run this first command twice. The first time, it
+will run Schrodinger's prepwizard on all of the structures. The second time,
+it will align the structures and generate docking grids.
 
 ### Featurization: interaction fingerprints, maximum common substructures
 
 ```
-./main.py prepare dock
+$COMBINDHOME/main.py prepare ifp
+$COMBINDHOME/main.py prepare mcss
 ```
 
+Note that you will need to run the mcss command twice because it is
+split into two phases.
+
 ### ComBind Scoring
-
-
 
 ```
 $COMBINDHOME/main.py score $COMBINDHOME/statistics/default STRUCT PROTEIN QUERIES
 ```
 
-### Visualization of the results
+### Visualizing the results
 
-### Model Training (Optional)
+TODO
+
+### Fitting the statistical model (Optional)
+
+TODO
 
 ## Installation
 

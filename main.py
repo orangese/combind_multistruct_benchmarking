@@ -6,26 +6,32 @@ import config
 
 @click.group()
 @click.option('--data', default='/oak/stanford/groups/rondror/users/jpaggi/negative')
+@click.option('--ligands')
 @click.pass_context
-def main(ctx, data):
-	paths = {'CODE': os.path.dirname(os.path.realpath(__file__)),
-			 'DATA': data}
-	paths.update(config.PATHS)
-	paths = utils.resolve(paths)
-	ctx.obj = paths
+def main(ctx, data, ligands):
+    paths = {'CODE': os.path.dirname(os.path.realpath(__file__)),
+             'DATA': data}
+    paths.update(config.PATHS)
+    if ligands is not None:
+        paths['PDB'] = ligands
+    paths = utils.resolve(paths)
+    ctx.obj = paths
 
 @main.command()
+@click.option('--stats_version', default='default')
 @click.argument('task')
-@click.argument('stats_version', default='default')
 @click.argument('proteins', nargs=-1)
 @click.pass_obj
 def prepare(paths, task, stats_version, proteins):
-	import dock.prepare_all
-	params = config.STATS[stats_version]
-	proteins = list(proteins)
-	if not proteins:
-		proteins = utils.get_proteins(paths, [])
-	dock.prepare_all.main(params, paths, task, list(proteins))
+    """
+    Prep structures and ligands; docking; and featurization.
+    """
+    import dock.prepare_all
+    params = config.STATS[stats_version]
+    proteins = list(proteins)
+    if not proteins:
+        proteins = utils.get_proteins(paths, [])
+    dock.prepare_all.main(params, paths, task, list(proteins))
 
 @main.command()
 @click.option('--plot', is_flag=True)
@@ -35,29 +41,35 @@ def prepare(paths, task, stats_version, proteins):
 @click.argument('queries', nargs=-1)
 @click.pass_obj
 def score(paths, stats_root, struct, protein, queries, plot):
-	import score.scores
-	queries = list(queries)
-	score.scores.main(paths, config.FEATURE_DEFS,
-	                  stats_root, struct, protein, queries, plot)
+    """
+    Run ComBind!
+    """
+    import score.scores
+    queries = list(queries)
+    score.scores.main(paths, config.FEATURE_DEFS,
+                      stats_root, struct, protein, queries, plot)
 
 @main.command()
 @click.option('--merged_root')
-@click.argument('stats_version')
+@click.option('--stats_version', default='default')
 @click.argument('stats_root')
 @click.argument('proteins', nargs=-1)
 @click.pass_obj
 def statistics(paths, stats_version, stats_root, proteins, merged_root):
-	import score.statistics
-	params = config.STATS[stats_version]
-	proteins = list(proteins)
-	score.statistics.compute(params, paths, config.FEATURE_DEFS, stats_root,
-	                         proteins, merged_root, plot)
+    """
+    Fit statistics to a set of protein–ligand complexes.
+    """
+    import score.statistics
+    params = config.STATS[stats_version]
+    proteins = list(proteins)
+    score.statistics.compute(params, paths, config.FEATURE_DEFS, stats_root,
+                             proteins, merged_root, plot)
 
 @main.command()
 @click.argument('merged')
 def plot_statistics(merged):
-	import score.statistics
-	score.statistics.plot(merged)
+    import score.statistics
+    score.statistics.plot(merged)
 
 @main.command()
 @click.argument('ifp_version')
@@ -65,8 +77,11 @@ def plot_statistics(merged):
 @click.argument('output_file')
 @click.argument('poses', type=int)
 def ifp(ifp_version, input_file, output_file, poses):
-	import ifp.ifp
-	ifp.ifp.IFP(config.IFP[ifp_version], input_file, output_file, poses)
+    """
+    Compute interaction fingerprints. (For internal use.)
+    """
+    import ifp.ifp
+    ifp.ifp.IFP(config.IFP[ifp_version], input_file, output_file, poses)
 
 @main.command()
 @click.argument('mode')
@@ -82,8 +97,11 @@ def ifp(ifp_version, input_file, output_file, poses):
 def mcss(mode, ligand1, ligand2, ligand1_path, ligand2_path,
          init_file, mcss_types_file, rmsd_file, max_poses,
          mcss_string_rep):
-	import mcss.mcss
-	mcss.mcss.main(mode, ligand1, ligand2, ligand1_path, ligand2_path,
+    """
+    Compute substructure similiarity. (For internal use.)
+    """
+    import mcss.mcss
+    mcss.mcss.main(mode, ligand1, ligand2, ligand1_path, ligand2_path,
                    init_file, mcss_types_file, rmsd_file, max_poses,
                    mcss_string_rep)
 

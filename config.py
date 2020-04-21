@@ -51,6 +51,5 @@ PATHS = {'ROOT': '{DATA}/{protein}',
          'DOCK_RMSD': '{DOCK}/rmsd.csv',
          'IFP_ROOT':  '{ROOT}/ifp/{ifp_version}',
          'IFP':  '{IFP_ROOT}/{ligand}-to-{struct}-{docking_version}.fp',
-         'XTAL_IFP':'{IFP_ROOT}/{pdb}_struct.fp',
          'MCSS': '{ROOT}/mcss/{mcss_version}',
          }

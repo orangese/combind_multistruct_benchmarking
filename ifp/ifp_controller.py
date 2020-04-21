@@ -2,7 +2,7 @@ import os
 from utils import grouper
 
 queue = 'rondror'
-group_size = 10
+group_size = 50
 
 CMD = '{}/main.py ifp {} {} {} {}\n'
 
@@ -10,10 +10,9 @@ def compute_ifp(lm):
     cwd = os.getcwd()
     os.makedirs(lm.path('IFP_ROOT'), exist_ok=True)
     os.chdir(lm.path('IFP_ROOT'))
-    
-    ligands = lm.get_pdb() + lm.get_chembl()
+
     unfinished = []
-    for ligand in lm.docked(ligands):
+    for ligand in lm.docked(lm.get_pdb()):
         if not os.path.exists(lm.path('IFP', {'ligand': ligand})):
             unfinished.append(ligand)
     _compute_ifp(lm, unfinished)
