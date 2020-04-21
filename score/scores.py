@@ -44,10 +44,11 @@ class ScoreContainer:
               'alpha': 1.0,
               'stats_version': 'default',
               'features': ['hbond', 'sb', 'contact', 'mcss']}
-        with open('{}/settings.py'.format(self.root)) as f:
-            for line in f:
-                var, val = line.split('=')
-                tr[var] = eval(val)
+        if os.path.exists(settings_file):
+            with open('{}/settings.py'.format(self.root)) as f:
+                for line in f:
+                    var, val = line.split('=')
+                    tr[var] = eval(val)
         return tr
 
     def read_stats(self, stats_root):
@@ -253,6 +254,58 @@ class ScoreContainer:
         if 'hbond_' in feature:
             feature = feature.replace('hbond_', '')
         return '{}{}:{}'.format(name, num, feature)
+
+def screen(paths, feature_defs, stats_root, struct, protein, queries):
+    sc = ScoreContainer(os.getcwd(), paths, feature_defs,
+                        stats_root, protein, struct)
+
+    if 'all' in queries:
+        queries = sc.predict_data.lm.docked(list(sc.predict_data.lm.pdb.keys()))
+
+    #pose_cluster = sc.read_results(cluster)
+    pose_cluster = {'CHEMBL135076_lig': 0,
+                    'CHEMBL85194_lig': 0}
+
+    all_ligands = queries + list(pose_cluster.keys())
+
+
+    sc.predict_data.load_docking(all_ligands, load_fp = True,
+                                 #load_mcss = 'mcss' in sc.settings['features'],
+                                 st=sc.struct)
+
+    sc.ps.ligands = sc.predict_data.docking[sc.struct]
+
+    affinities, gscores, cscores = [], [], []
+    for query in queries:
+        ligand = sc.predict_data.docking[sc.struct][query]
+        affinities += [sc.predict_data.lm.pdb[query]['AFFINITY']]
+        gscores += [ligand.poses[0].gscore]
+        cscores += [-sc.ps.score_new_ligand(pose_cluster, ligand)]
+
+    affinities = np.log(affinities)-9
+
+    from scipy import stats
+
+    def enrich(affinities, scores, p=0.1, cut=-7):
+        N = int(p*len(affinities))
+        print(N)
+        sorted_affinities = affinities[np.argsort(scores)]
+        top = np.mean(sorted_affinities[:N] < cut)
+        overall = np.mean(sorted_affinities < cut)
+        return  top / overall 
+
+    rho, _ = stats.spearmanr(affinities, gscores)
+    r, _ = stats.pearsonr(affinities, gscores)
+    print(rho, r, enrich(affinities, gscores))
+    plt.scatter(affinities, gscores, s=2, c='k')
+    plt.savefig('gscore.pdf')
+    plt.close()
+
+    rho, _ = stats.spearmanr(affinities, cscores)
+    r, _ = stats.pearsonr(affinities, cscores)
+    print(rho, r, enrich(affinities, cscores))
+    plt.scatter(affinities, cscores, s=2, c='k')
+    plt.savefig('cscore.pdf')
 
 def main(paths, feature_defs, stats_root, protein, queries,
          fname='pdb.sc', plot=None, struct=None):

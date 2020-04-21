@@ -46,6 +46,20 @@ class PredictStructs:
         assert self.alpha >= 0
         assert self.max_poses > 0
 
+    def score_new_ligand(self, pose_cluster, ligand):
+        # Clear caches of test ligand
+        for k in [k for k in self.lig_pairs if 'test' in k]:
+            del self.lig_pairs[k]
+
+        for k in [k for k in self.log_likelihood_ratio_cache if 'test' in k]:
+            del self.log_likelihood_ratio_cache[k]
+
+        self.ligands['test'] = ligand
+        pose_cluster['test'] = 0
+        pose_cluster['test'] = self._best_pose(pose_cluster, 'test')
+
+        return self._partial_log_posterior(pose_cluster, 'test')
+
     def max_posterior(self, max_iterations=1000000, restart=500):
         """
         Computes the pose cluster maximizing the posterior likelihood.
@@ -178,7 +192,7 @@ class PredictStructs:
         """
         Computes the pairwise log likelihood ratio for the poses
 
-                poses_cluster[ligname1] and pose_clusters[ligname2]
+            poses_cluster[ligname1] and pose_clusters[ligname2]
         
         as the the sum of the log likelihoods of each of the k_list.
         """

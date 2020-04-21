@@ -50,6 +50,21 @@ def score(paths, stats_root, struct, protein, queries, plot):
                       stats_root, struct, protein, queries, plot)
 
 @main.command()
+@click.argument('stats_root')
+@click.argument('struct')
+@click.argument('protein')
+@click.argument('queries', nargs=-1)
+@click.pass_obj
+def screen(paths, stats_root, struct, protein, queries):
+    """
+    Run ComBind virtual screening!
+    """
+    import score.scores
+    queries = list(queries)
+    score.scores.screen(paths, config.FEATURE_DEFS,
+                      stats_root, struct, protein, queries)
+
+@main.command()
 @click.option('--merged_root')
 @click.option('--stats_version', default='default')
 @click.argument('stats_root')
