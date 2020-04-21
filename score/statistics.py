@@ -1,7 +1,9 @@
 import numpy as np
+from containers import Protein
 from score.density_estimate import DensityEstimate
 from score.pairs import LigPair
 from glob import glob
+import os
 
 class Statistics:
     def __init__(self, proteins, interactions, settings, paths, path=None):
@@ -12,41 +14,25 @@ class Statistics:
         self.paths = paths
         self.path = path
 
-        if 'reference_poses' not in settings:
-            settings['reference_poses'] = settings['max_poses']
-        if 'native_poses' not in settings:
-            settings['native_poses'] = settings['max_poses']
-
-
-        if 'crystal-native' not in settings:
-            settings['crystal-native'] = False
-
-        assert settings['max_poses'] >= settings['reference_poses']
-        assert settings['max_poses'] >= settings['native_poses']
+        if self.path:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
 
         self.stats = self._load()
 
     @classmethod
-    def read(cls, path, paths, ligands_equal, considered_proteins=None):
-        proteins = set()
+    def read_merged(cls, path):
         interactions = set()
-        settings = {'ligands_equal': ligands_equal, 'max_poses': 100}
         stats = {}
-        for fname in glob(path.format('*', '*', '*')):
+        for fname in glob(path.format('*', '*')):
             ID = fname.split('/')[-1].split('.')[0]
-            protein, interaction, distribution = ID.split('-')
-            if considered_proteins and protein not in considered_proteins:
-                continue
-            proteins.add(protein)
+            distribution, interaction  = ID.split('_')
             interactions.add(interaction)
             if distribution not in stats:
                 stats[distribution] = {}
-            if interaction not in stats[distribution]:
-                stats[distribution][interaction] = []
-            stats[distribution][interaction] += [DensityEstimate.read(fname)]
+            stats[distribution][interaction] = DensityEstimate.read(fname)
 
-        self = cls(list(proteins), list(interactions), settings, paths, path=path)
-        self.stats = self._merge(stats, ligands_equal)
+        self = cls([], list(interactions), {}, {})
+        self.stats = stats
         return self
 
     @classmethod
@@ -62,51 +48,32 @@ class Statistics:
             stats[distribution][interaction] += [DensityEstimate.read(fname)]
         return stats
 
-    def likelihood(self, interaction, distribution, x):
-        return self.stats[distribution][interaction](x)
+    def write_merged(self, merged):
+        os.makedirs(merged, exist_ok=True)
+        for dist, interactions in self.stats.items():
+            for interaction, de in interactions.items():
+                fname = '{}/{}_{}.txt'.format(merged, dist, interaction)
+                with open(fname, 'w') as fp:
+                    fp.write(str(de)+'\n')
 
-    def likelihood_ratio(self, interaction, x):
-        n = self.likelihood(interaction, 'native', x)
-        r = self.likelihood(interaction, 'reference', x)
-        return n / r
+    def plot_merged(self, plot):
+        import matplotlib.pyplot as plt
+        f, ax = plt.subplots(2, len(self.interactions),
+                             figsize=(3*len(self.interactions), 3.5))
 
-    def domain(self, interaction):
-        n = self.stats['native'][interaction].x[[0, -1]]
-        r = self.stats['reference'][interaction].x[[0, -1]]
-        assert np.all(n == r)
-        return n
-
-    def trace(self, interaction, points=100):
-        low, high = self.domain(interaction)
-        x = np.linspace(low, high, points)
-        n = self.likelihood(interaction, 'native', x)
-        r = self.likelihood(interaction, 'reference', x)
-        return x, n, r
-
-    def data_loglikelihood(self, protein):
-        loglikelihood = {d: {i:0 for i in self.interactions}
-                         for d in self.distributions}
-        prot = Protein(protein)
-        ligands = prot.lm.get_xdocked_ligands(self.settings['n_ligs'])
-        prot.load_docking(ligands, load_fp=True, load_mcss=True)
-        for j, ligand1 in enumerate(ligands):
-            for ligand2 in ligands[j+1:]:
-                lig_pair = LigPair(prot.docking[prot.lm.st].ligands[ligand1],
-                                   prot.docking[prot.lm.st].ligands[ligand2],
-                                   self.interactions, prot.lm.mcss,
-                                   self.settings['max_poses'], self.settings['metric'])
-                for i in self.interactions:
-                    X_native, X_ref = self._get_interaction_scores(lig_pair, i)
-                    loglikelihood['native'][i] += self.stats['native'][i].data_loglikelihood(X_native)
-                    loglikelihood['reference'][i] += self.stats['reference'][i].data_loglikelihood(X_native)
-        
-        if self.settings['ligands_equal']:
-            # Note that poses_equal is not implemented.
-            n = len(ligands) * (len(ligands) - 1) / 2
-            for distribution, interactions in loglikelihood.items():
-                for interaction, _loglikelihood in interaction.items():
-                    loglikelihood[distribution][interaction] = _loglikelihood / n
-        return loglikelihood
+        for i, interaction in enumerate(self.interactions):
+            nat = self.stats['native'][interaction]
+            ref = self.stats['reference'][interaction]
+            ax[0, i].set_title(interaction)
+            ax[0, i].plot(nat.x, nat.fx, c='g')
+            ax[0, i].plot(ref.x, ref.fx, c='k')
+            ax[1, i].plot(nat.x, -np.log(nat.fx) + np.log(ref.fx), c='b')
+            ax[0, i].set_ylim(0)
+            ax[0, i].set_xlim(nat.x[0], nat.x[-1])
+            ax[1, i].set_xlim(nat.x[0], nat.x[-1])
+        ax[0, 0].set_ylabel('Frequency')
+        ax[1, 0].set_ylabel('Energy')
+        plt.savefig(plot)
 
     ############################################################################
 
@@ -118,7 +85,7 @@ class Statistics:
             for d in self.distributions:
                 for i in self.interactions:
                     stats[d][i] += [protein_stats[d][i]]
-        return self._merge(stats, self.settings['ligands_equal'])
+        return self._merge(stats)
 
     def _load_protein(self, protein):
         if self.path is not None:
@@ -127,16 +94,12 @@ class Statistics:
                 return stats
 
         print('Computing stats for {}'.format(protein))
-        from containers import Protein
+        
         prot = Protein(protein, self.settings, self.paths)
         ligands = prot.lm.get_xdocked_ligands(self.settings['n_ligs'])
-        if self.settings['crystal-native']:
-            ligands = [ligand.replace('_lig', '_crystal_lig')
-                       for ligand in ligands]
         print(ligands)
         prot.load_docking(ligands, load_fp=True,
-                          load_mcss='mcss' in self.interactions,
-                          load_crystal = self.settings['crystal-native'])
+                          load_mcss='mcss' in self.interactions)
 
         stats = {d: {i: [] for i in self.interactions}
                  for d in self.distributions}
@@ -146,7 +109,7 @@ class Statistics:
                 for d in self.distributions:
                     for i in self.interactions:
                         stats[d][i] += [ligand_stats[d][i]]
-        stats = self._merge(stats, self.settings['poses_equal'])
+        stats = self._merge(stats)
 
         if self.path is not None:
             self._write_protein(protein, stats)
@@ -178,8 +141,7 @@ class Statistics:
                            prot.docking[prot.lm.st][ligand2],
                            self.interactions,
                            prot.lm.mcss if 'mcss' in self.interactions else None,
-                           self.settings['max_poses'],
-                           self.settings['metric'])
+                           self.settings['max_poses'])
 
         stats = {d: {} for d in self.distributions}
         for interaction in self.interactions:
@@ -197,31 +159,39 @@ class Statistics:
 
     def _get_interaction_scores(self, lig_pair, interaction):
         X_native = []
-        for (r1,r2), pp in lig_pair.pose_pairs.items():
-            if max(r1, r2) >= self.settings['native_poses']: continue
-            pp_x = lig_pair.get_feature(interaction, r1, r2)
-            if pp_x is not None and pp.correct():
-                X_native += [pp_x]
+        n1 = min(len(lig_pair.l1.poses), self.settings['native_poses'])
+        n2 = min(len(lig_pair.l2.poses), self.settings['native_poses'])
+        for r1 in range(n1):
+            for r2 in range(n2):
+                pp_x = lig_pair.get_feature(interaction, r1, r2)
+                if pp_x is not None and lig_pair.correct(r1, r2):
+                    X_native += [pp_x]
         X_ref = []
-        for (r1,r2), pp in lig_pair.pose_pairs.items():
-            if max(r1, r2) >= self.settings['reference_poses']: continue
-            pp_x = lig_pair.get_feature(interaction, r1, r2)
-            if pp_x is not None:
-                X_ref += [pp_x]
+        n1 = min(len(lig_pair.l1.poses), self.settings['reference_poses'])
+        n2 = min(len(lig_pair.l2.poses), self.settings['reference_poses'])
+        for r1 in range(n1):
+            for r2 in range(n2):
+                pp_x = lig_pair.get_feature(interaction, r1, r2)
+                if pp_x is not None:
+                    X_ref += [pp_x]
         return np.array(X_native), np.array(X_ref)
 
-    def _merge(self, stats, weight):
+    def _merge(self, stats):
         merged = {}
         for d, interactions in stats.items():
             merged[d] = {}
             for i, des in interactions.items():
-                merged[d][i] = DensityEstimate.merge(des, weight)
+                if des:
+                    merged[d][i] = DensityEstimate.merge(des)
         return merged
 
-def main(args):
-    from settings import feature_defs, paths, stats
-    import sys
-    version, protein, path = args
+def compute(params, paths, feature_defs, path, proteins, merged=None):
     path += '/{}-{}-{}.de'
-    Statistics([protein], feature_defs, stats[version], paths, path=path)
+    stats = Statistics(proteins, feature_defs, params, paths, path=path)
 
+    if merged is not None:
+        stats.write_merged(merged)
+
+def plot(merged):
+    stats = Statistics.read_merged(merged + '/{}_{}.txt')
+    stats.plot_merged('{}/stats.pdf'.format(merged))

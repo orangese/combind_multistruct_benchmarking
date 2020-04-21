@@ -151,7 +151,7 @@ class DensityEstimate:
             return self
         if not self.n_samples:
             return other
-        
+
         de = DensityEstimate(points = self.points,
                              out_of_bounds=self.out_of_bounds,
                              reflect = self.reflect)
@@ -159,15 +159,10 @@ class DensityEstimate:
                            max(self.x[-1], other.x[-1]), self.points)
         de.n_samples = self.n_samples + other.n_samples
         de.fx = (self(de.x)*self.n_samples + other(de.x)*other.n_samples) / de.n_samples
-
         return de
 
     @classmethod
-    def merge(cls, des, weight_equally = True):
-        if weight_equally:
-            for de in des:
-                if de.n_samples:
-                    de.n_samples = 1
+    def merge(cls, des):
         out = des[0]
         for de in des[1:]:
             out = out._average(de)

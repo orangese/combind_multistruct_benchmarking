@@ -1,43 +1,108 @@
-#!/bin/sh
-if "true" : '''\'
-then
-exec "$SCHRODINGER/run" "$0" "$@"
-exit 127
-fi
-'''
+#!/bin/env run
+import os
+import click
+import utils
+import config
 
-import sys
-import dock.prepare_all
-import ifp.fp
-import mcss.mcss
-import score.controller
-import score.scores
-import score.statistics
-from settings import stats
+@click.group()
+@click.option('--data', default='/oak/stanford/groups/rondror/users/jpaggi/negative')
+@click.option('--ligands')
+@click.pass_context
+def main(ctx, data, ligands):
+    paths = {'CODE': os.path.dirname(os.path.realpath(__file__)),
+             'DATA': data}
+    paths.update(config.PATHS)
+    if ligands is not None:
+        paths['PDB'] = ligands
+    paths = utils.resolve(paths)
+    ctx.obj = paths
 
+@main.command()
+@click.option('--stats_version', default='default')
+@click.argument('task')
+@click.argument('proteins', nargs=-1)
+@click.pass_obj
+def prepare(paths, task, stats_version, proteins):
+    """
+    Prep structures and ligands; docking; and featurization.
+    """
+    import dock.prepare_all
+    params = config.STATS[stats_version]
+    proteins = list(proteins)
+    if not proteins:
+        proteins = utils.get_proteins(paths, [])
+    dock.prepare_all.main(params, paths, task, list(proteins))
 
-mode = sys.argv[1]
+@main.command()
+@click.option('--plot', is_flag=True)
+@click.argument('stats_root')
+@click.argument('struct')
+@click.argument('protein')
+@click.argument('queries', nargs=-1)
+@click.pass_obj
+def score(paths, stats_root, struct, protein, queries, plot):
+    """
+    Run ComBind!
+    """
+    import score.scores
+    queries = list(queries)
+    score.scores.main(paths, config.FEATURE_DEFS,
+                      stats_root, struct, protein, queries, plot)
 
+@main.command()
+@click.option('--merged_root')
+@click.option('--stats_version', default='default')
+@click.argument('stats_root')
+@click.argument('proteins', nargs=-1)
+@click.pass_obj
+def statistics(paths, stats_version, stats_root, proteins, merged_root):
+    """
+    Fit statistics to a set of protein–ligand complexes.
+    """
+    import score.statistics
+    params = config.STATS[stats_version]
+    proteins = list(proteins)
+    score.statistics.compute(params, paths, config.FEATURE_DEFS, stats_root,
+                             proteins, merged_root, plot)
 
-if mode == 'prepare':
-        dock.prepare_all.main(sys.argv[1:])
+@main.command()
+@click.argument('merged')
+def plot_statistics(merged):
+    import score.statistics
+    score.statistics.plot(merged)
 
-elif mode == 'ifp':
-	ifp.fp.FP(sys.argv[1:])
+@main.command()
+@click.argument('ifp_version')
+@click.argument('input_file')
+@click.argument('output_file')
+@click.argument('poses', type=int)
+def ifp(ifp_version, input_file, output_file, poses):
+    """
+    Compute interaction fingerprints. (For internal use.)
+    """
+    import ifp.ifp
+    ifp.ifp.IFP(config.IFP[ifp_version], input_file, output_file, poses)
 
-elif mode == 'score_controller':
-	score.controller.main(sys.argv[2:])
+@main.command()
+@click.argument('mode')
+@click.argument('ligand1')
+@click.argument('ligand2')
+@click.argument('ligand1_path')
+@click.argument('ligand2_path')
+@click.argument('init_file')
+@click.argument('mcss_types_file')
+@click.argument('rmsd_file', default='')
+@click.argument('max_poses', type=int, default=0)
+@click.argument('mcss_string_rep', default='')
+def mcss(mode, ligand1, ligand2, ligand1_path, ligand2_path,
+         init_file, mcss_types_file, rmsd_file, max_poses,
+         mcss_string_rep):
+    """
+    Compute substructure similiarity. (For internal use.)
+    """
+    import mcss.mcss
+    mcss.mcss.main(mode, ligand1, ligand2, ligand1_path, ligand2_path,
+                   init_file, mcss_types_file, rmsd_file, max_poses,
+                   mcss_string_rep)
 
-elif mode == 'mcss':
-	mcss.mcss.main(sys.argv[1:])
-
-elif mode == 'score':
-	score.scores.main(sys.argv[1:])
-
-elif mode == 'statistics':
-	score.statistics.main(sys.argv[2:])
-
-else:
-	print('Invalid arguments. Doing nothing.')
-
-
+main()

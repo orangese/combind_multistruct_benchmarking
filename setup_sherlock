@@ -1,0 +1,10 @@
+# Run this before anything else
+
+ml chemistry schrodinger
+
+unset PYTHONPATH
+unset PYTHONHOME
+source ~/schrodinger.ve/bin/activate
+
+export COMBINDHOME=`pwd`
+ml schrodinger
