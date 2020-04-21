@@ -26,7 +26,6 @@ class MCSSController:
 
     MCSSs: {ligand-pair-string: MCSS instance, ...}
     pdb: PDB x-docked pdb ligands
-    chembl: all chembl ligands
     docked: set(string), Set of ligands with docking results
     no_mcss: set(string), Ligands with no init MCSS
     no_rmsd: set(string), Ligands with no MCSS RMSD
@@ -216,10 +215,6 @@ class MCSSController:
     def compute_mcss(self):
         """
         Compute unfinished MCSS features. See above class description for more detail.
-
-        chembl (bool): if True compute MCSS for PDB + CHEMBL ligand pairs,
-                       else only consider PDB ligand pairs.
-        pick_helpers: {pick_helpers_filename: {query_pdb: [chembl, ...]}}
         """
         previous_cwd = os.getcwd()
         os.system('mkdir -p {}'.format(self.root))

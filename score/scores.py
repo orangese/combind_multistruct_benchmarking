@@ -27,7 +27,13 @@ class ScoreContainer:
         self.params = config.STATS[self.settings['stats_version']]
  
         self.predict_data = Protein(prot, params, paths)
-        features = {feature: feature_defs[feature] for feature in self.settings['k_list']}
+        
+        if self.struct is None:
+            self.struct = self.predict_data.lm.st
+
+        features = {feature: feature_defs[feature]
+                    for feature in self.settings['features']}
+
         self.ps = PredictStructs({}, self.predict_data.lm.mcss,
                                  self.stats, features,
                                  self.settings['num_poses'],
@@ -37,8 +43,7 @@ class ScoreContainer:
         tr = {'num_poses': 100,
               'alpha': 1.0,
               'stats_version': 'default',
-              'features': ['hbond', 'sb', 'contact', 'mcss'],
-              'chembl': False}
+              'features': ['hbond', 'sb', 'contact', 'mcss']}
         with open('{}/settings.py'.format(self.root)) as f:
             for line in f:
                 var, val = line.split('=')
@@ -53,13 +58,6 @@ class ScoreContainer:
                 assert os.path.exists(fname), fname
                 stats[dist][interaction] = DensityEstimate.read(fname)
         return stats
-
-    def compute_results_chembl(self, query):
-        assert self.settings['chembl']
-        chembl_ligs = self.predict_data.lm.get_helpers(query, self.settings['chembl_file'],
-                                          num=self.settings['num_pred_chembl'],
-                                          struct=self.struct)
-        return self.compute_results([query]+chembl_ligs)
 
     def compute_results(self, queries):
         self.predict_data.load_docking(queries, load_fp = True,
@@ -256,22 +254,15 @@ class ScoreContainer:
             feature = feature.replace('hbond_', '')
         return '{}{}:{}'.format(name, num, feature)
 
-def main(paths, feature_defs, stats_root, struct, protein, queries, plot=None):
+def main(paths, feature_defs, stats_root, protein, queries,
+         fname='pdb.sc', plot=None, struct=None):
     sc = ScoreContainer(os.getcwd(), paths, feature_defs,
                         stats_root, protein, struct)
 
-    if sc.settings['chembl']:
-        for query in queries:
-            combind_cluster = sc.compute_results_chembl(query)
-            fname = '{}/{}-to-{}.sc'.format(sc.root, query, struct)
-            sc.write_results(combind_cluster, fname)
-    else:
-        # This needs to be before compute results as therein queries is mutated
-        fname = '{}/{}.sc'.format(sc.root, 'pdb' if len(queries) > 1 else queries[0])
-        combind_cluster = sc.compute_results(queries)
-        sc.write_results(combind_cluster, fname)
+    combind_cluster = sc.compute_results(queries)
+    sc.write_results(combind_cluster, fname)
 
-        if plot:
-            for feature in feature_defs:
-                if feature != 'mcss':
-                    sc.plot_interactions(combind_cluster, feature)
+    if plot:
+        for feature in feature_defs:
+            if feature != 'mcss':
+                sc.plot_interactions(combind_cluster, feature)

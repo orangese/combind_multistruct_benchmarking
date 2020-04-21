@@ -36,13 +36,10 @@ FEATURE_DEFS = {
 
 PATHS = {'ROOT': '{DATA}/{protein}',
 
-         'HELPERS_ROOT': '{ROOT}/chembl/helpers',
-         'HELPERS': '{HELPERS_ROOT}/{version}-{helpers}.txt',
          'LIGANDS_ROOT': '{ROOT}/ligands',
          'LIGANDS': '{LIGANDS_ROOT}/{ligand}/{ligand}.mae',
-         'CHEMBL': '{ROOT}/chembl/CHEMBL*.csv',
          'PDB': '{ROOT}/structures/pdb.csv',
-         
+
          'GRID_ROOT': '{ROOT}/docking/grids',
          'GRID': '{GRID_ROOT}/{struct}/{struct}.zip',
          'DOCK': '{ROOT}/docking/{docking_version}/{ligand}-to-{struct}',
