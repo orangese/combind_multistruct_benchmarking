@@ -35,34 +35,36 @@ def prepare(paths, task, stats_version, proteins):
 
 @main.command()
 @click.option('--plot', is_flag=True)
-@click.argument('stats_root')
-@click.argument('struct')
+@click.option('--stats_root', default='{}/stats_data/default'.format(os.environ['COMBINDHOME']))
+@click.option('--struct', default=None)
+@click.option('--fname', default='pdb.sc')
 @click.argument('protein')
 @click.argument('queries', nargs=-1)
 @click.pass_obj
-def score(paths, stats_root, struct, protein, queries, plot):
+def score(paths, stats_root, struct, protein, queries, plot, fname):
     """
     Run ComBind!
     """
     import score.scores
     queries = list(queries)
-    score.scores.main(paths, config.FEATURE_DEFS,
-                      stats_root, struct, protein, queries, plot)
+    score.scores.main(paths, config.FEATURE_DEFS, stats_root, protein, queries,
+                      fname=fname, struct=struct, plot=plot)
 
 @main.command()
-@click.argument('stats_root')
-@click.argument('struct')
+@click.option('--stats_root', default='{}/stats_data/default'.format(os.environ['COMBINDHOME']))
+@click.option('--struct', default=None)
 @click.argument('protein')
+@click.argument('cluster')
 @click.argument('queries', nargs=-1)
 @click.pass_obj
-def screen(paths, stats_root, struct, protein, queries):
+def screen(paths, stats_root, struct, protein, queries, cluster):
     """
     Run ComBind virtual screening!
     """
     import score.scores
     queries = list(queries)
     score.scores.screen(paths, config.FEATURE_DEFS,
-                      stats_root, struct, protein, queries)
+                        stats_root, struct, protein, queries, cluster)
 
 @main.command()
 @click.option('--merged_root')

@@ -7,6 +7,7 @@ from containers import Protein
 from score.prob_opt import PredictStructs
 from score.density_estimate import DensityEstimate
 
+import scipy.stats
 from matplotlib import colors
 from matplotlib.gridspec import GridSpec
 from matplotlib.colors import LinearSegmentedColormap
@@ -26,8 +27,7 @@ class ScoreContainer:
         self.stats = self.read_stats(stats_root)
         self.params = config.STATS[self.settings['stats_version']]
  
-        self.predict_data = Protein(prot, params, paths)
-        
+        self.predict_data = Protein(prot, self.params, paths)
         if self.struct is None:
             self.struct = self.predict_data.lm.st
 
@@ -44,8 +44,10 @@ class ScoreContainer:
               'alpha': 1.0,
               'stats_version': 'default',
               'features': ['hbond', 'sb', 'contact', 'mcss']}
+        
+        settings_file = '{}/settings.py'.format(self.root)
         if os.path.exists(settings_file):
-            with open('{}/settings.py'.format(self.root)) as f:
+            with open(settings_file) as f:
                 for line in f:
                     var, val = line.split('=')
                     tr[var] = eval(val)
@@ -255,22 +257,19 @@ class ScoreContainer:
             feature = feature.replace('hbond_', '')
         return '{}{}:{}'.format(name, num, feature)
 
-def screen(paths, feature_defs, stats_root, struct, protein, queries):
+def screen(paths, feature_defs, stats_root, struct, protein, queries, cluster):
     sc = ScoreContainer(os.getcwd(), paths, feature_defs,
                         stats_root, protein, struct)
 
     if 'all' in queries:
         queries = sc.predict_data.lm.docked(list(sc.predict_data.lm.pdb.keys()))
 
-    #pose_cluster = sc.read_results(cluster)
-    pose_cluster = {'CHEMBL135076_lig': 0,
-                    'CHEMBL85194_lig': 0}
+    pose_cluster = sc.read_results(cluster)
 
     all_ligands = queries + list(pose_cluster.keys())
 
-
-    sc.predict_data.load_docking(all_ligands, load_fp = True,
-                                 #load_mcss = 'mcss' in sc.settings['features'],
+    sc.predict_data.load_docking(all_ligands, load_fp=True,
+                                 load_mcss='mcss' in sc.settings['features'],
                                  st=sc.struct)
 
     sc.ps.ligands = sc.predict_data.docking[sc.struct]
@@ -281,36 +280,58 @@ def screen(paths, feature_defs, stats_root, struct, protein, queries):
         affinities += [sc.predict_data.lm.pdb[query]['AFFINITY']]
         gscores += [ligand.poses[0].gscore]
         cscores += [-sc.ps.score_new_ligand(pose_cluster, ligand)]
+    affinities = np.log10(affinities)-9
+    gscores = np.array(gscores)
+    cscores = np.array(cscores)
 
-    affinities = np.log(affinities)-9
+    queries = np.array(queries)[affinities < 0]
+    gscores = gscores[affinities < 0]
+    cscores = cscores[affinities < 0]
+    affinities = affinities[affinities < 0]
 
-    from scipy import stats
+    def evaluate(scores, plot_fname):
+        def enrich(p=0.1, cut=-7):
+            N = int(p*len(affinities))
+            sorted_affinities = affinities[np.argsort(scores)]
+            top = np.mean(sorted_affinities[:N] < cut)
+            overall = np.mean(sorted_affinities < cut)
+            return (1+top) / (1+overall)
+        
+        mask = np.isin(np.array(queries), list(pose_cluster.keys()))
+        
+        rho, _ = scipy.stats.spearmanr(affinities[~mask], scores[~mask])
+        r, _ = scipy.stats.pearsonr(affinities[~mask], scores[~mask])
+        tau, _ = scipy.stats.kendalltau(affinities[~mask], scores[~mask])
+        print(r, rho, tau, enrich())
 
-    def enrich(affinities, scores, p=0.1, cut=-7):
-        N = int(p*len(affinities))
-        print(N)
-        sorted_affinities = affinities[np.argsort(scores)]
-        top = np.mean(sorted_affinities[:N] < cut)
-        overall = np.mean(sorted_affinities < cut)
-        return  top / overall 
+        plt.scatter(affinities, scores, s=4, c='k')
+        plt.scatter(affinities[mask], scores[mask], s=4, c='r')
 
-    rho, _ = stats.spearmanr(affinities, gscores)
-    r, _ = stats.pearsonr(affinities, gscores)
-    print(rho, r, enrich(affinities, gscores))
-    plt.scatter(affinities, gscores, s=2, c='k')
-    plt.savefig('gscore.pdf')
-    plt.close()
+        x = 0.25*plt.xlim()[1] + 0.75*plt.xlim()[0]
+        y = 0.99*plt.ylim()[1] + 0.01*plt.ylim()[0]
+        t = (r'$r={:.2f}$'
+             "\n"
+             r'$\rho={:.2f}$'
+             "\n"
+             r'$\tau={:.2f}$').format(r, rho, tau)
+        plt.text(x, y, t, fontsize=20,
+                 horizontalalignment='right', verticalalignment='top')
+        plt.xlabel('log10 binding affinity', size=15)
+        plt.ylabel('prediction', size=15)
+        plt.title('{} {}'.format(protein, plot_fname.split('.')[0]))
+        plt.savefig(plot_fname)
+        plt.close()
 
-    rho, _ = stats.spearmanr(affinities, cscores)
-    r, _ = stats.pearsonr(affinities, cscores)
-    print(rho, r, enrich(affinities, cscores))
-    plt.scatter(affinities, cscores, s=2, c='k')
-    plt.savefig('cscore.pdf')
+    evaluate(gscores, 'gscore.pdf')
+    evaluate(cscores, 'cscore.pdf')
 
 def main(paths, feature_defs, stats_root, protein, queries,
          fname='pdb.sc', plot=None, struct=None):
     sc = ScoreContainer(os.getcwd(), paths, feature_defs,
                         stats_root, protein, struct)
+
+    if 'all' in queries:
+        queries = sc.predict_data.lm.docked(list(sc.predict_data.lm.pdb.keys()))
 
     combind_cluster = sc.compute_results(queries)
     sc.write_results(combind_cluster, fname)

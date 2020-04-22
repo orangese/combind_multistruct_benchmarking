@@ -58,7 +58,7 @@ class PredictStructs:
         pose_cluster['test'] = 0
         pose_cluster['test'] = self._best_pose(pose_cluster, 'test')
 
-        return self._partial_log_posterior(pose_cluster, 'test')
+        return self._partial_log_posterior(pose_cluster, 'test') / self._effective_number(pose_cluster, 'test')
 
     def max_posterior(self, max_iterations=1000000, restart=500):
         """
