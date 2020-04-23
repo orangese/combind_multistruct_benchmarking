@@ -6,14 +6,13 @@ import config
 
 @click.group()
 @click.option('--data', default='/oak/stanford/groups/rondror/users/jpaggi/negative')
-@click.option('--ligands')
+@click.option('--ligands', default='{ROOT}/structures/pdb.csv')
 @click.pass_context
 def main(ctx, data, ligands):
     paths = {'CODE': os.path.dirname(os.path.realpath(__file__)),
-             'DATA': data}
+             'DATA': data,
+             'PDB': ligands}
     paths.update(config.PATHS)
-    if ligands is not None:
-        paths['PDB'] = ligands
     paths = utils.resolve(paths)
     ctx.obj = paths
 

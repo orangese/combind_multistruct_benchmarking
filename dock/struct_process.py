@@ -57,5 +57,5 @@ def struct_process():
         with open('process_in.sh', 'w') as f:
             f.write('#!/bin/bash\n')
             f.write(command.format(pdb, pdb))
-        os.system('sbatch -p {} -t 00:30:00 -o slurm.out process_in.sh'.format(queue))
+        os.system('sbatch -p {} -t 01:30:00 -o slurm.out process_in.sh'.format(queue))
         os.chdir('../../..')

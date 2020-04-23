@@ -38,7 +38,6 @@ PATHS = {'ROOT': '{DATA}/{protein}',
 
          'LIGANDS_ROOT': '{ROOT}/ligands',
          'LIGANDS': '{LIGANDS_ROOT}/{ligand}/{ligand}.mae',
-         'PDB': '{ROOT}/structures/pdb.csv',
 
          'GRID_ROOT': '{ROOT}/docking/grids',
          'GRID': '{GRID_ROOT}/{struct}/{struct}.zip',

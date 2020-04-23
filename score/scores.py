@@ -8,6 +8,7 @@ from score.prob_opt import PredictStructs
 from score.density_estimate import DensityEstimate
 
 import scipy.stats
+import sklearn.metrics
 from matplotlib import colors
 from matplotlib.gridspec import GridSpec
 from matplotlib.colors import LinearSegmentedColormap
@@ -43,7 +44,7 @@ class ScoreContainer:
         tr = {'num_poses': 100,
               'alpha': 1.0,
               'stats_version': 'default',
-              'features': ['hbond', 'sb', 'contact', 'mcss']}
+              'features': ['hbond', 'sb', 'contact']}
         
         settings_file = '{}/settings.py'.format(self.root)
         if os.path.exists(settings_file):
@@ -257,6 +258,87 @@ class ScoreContainer:
             feature = feature.replace('hbond_', '')
         return '{}{}:{}'.format(name, num, feature)
 
+def evaluate_screen(title, affinities, gscores, cscores, xscores, ascores, mask):
+    def correlation(scores, plot_fname):
+        rho, _ = scipy.stats.spearmanr(affinities[~mask], scores[~mask])
+        r, _ = scipy.stats.pearsonr(affinities[~mask], scores[~mask])
+        tau, _ = scipy.stats.kendalltau(affinities[~mask], scores[~mask])
+        print(r, rho, tau)
+
+        plt.scatter(affinities, scores, s=4, c='k')
+        plt.scatter(affinities[mask], scores[mask], s=4, c='r')
+
+        x = 0.25*plt.xlim()[1] + 0.75*plt.xlim()[0]
+        y = 0.99*plt.ylim()[1] + 0.01*plt.ylim()[0]
+        t = (r'$r={:.2f}$'
+             "\n"
+             r'$\rho={:.2f}$'
+             "\n"
+             r'$\tau={:.2f}$').format(r, rho, tau)
+        plt.text(x, y, t, fontsize=20,
+                 horizontalalignment='right', verticalalignment='top')
+        plt.xlabel('log10 binding affinity', size=15)
+        plt.ylabel('prediction', size=15)
+        plt.title(plot_fname.split('.')[0])
+        plt.savefig(plot_fname)
+        plt.close()
+
+    correlation(gscores, '{}_gscore.pdf'.format(title))
+    correlation(cscores, '{}_cscore.pdf'.format(title))
+    correlation(xscores, '{}_xscore.pdf'.format(title))
+    correlation(ascores, '{}_ascore.pdf'.format(title))
+
+    # ROC
+    gfpr, gtpr, _ = sklearn.metrics.roc_curve(affinities[~mask]<-6, -gscores[~mask])
+    cfpr, ctpr, _ = sklearn.metrics.roc_curve(affinities[~mask]<-6, -cscores[~mask])
+    xfpr, xtpr, _ = sklearn.metrics.roc_curve(affinities[~mask]<-6, -xscores[~mask])
+    afpr, atpr, _ = sklearn.metrics.roc_curve(affinities[~mask]<-6, -ascores[~mask])
+    plt.plot(gfpr, gtpr, label='Glide   = {:.2f}'.format(sklearn.metrics.auc(gfpr, gtpr)))
+    plt.plot(cfpr, ctpr, label='ComBind = {:.2f}'.format(sklearn.metrics.auc(cfpr, ctpr)))
+    plt.plot(xfpr, xtpr, label='XTAL sim = {:.2f}'.format(sklearn.metrics.auc(xfpr, xtpr)))
+    plt.plot(afpr, atpr, label='active sim = {:.2f}'.format(sklearn.metrics.auc(afpr, atpr)))
+    
+    plt.legend()
+    plt.ylabel('true positive rate', size=15)
+    plt.xlabel('false positive rate', size=15)
+    plt.title(title)
+    plt.savefig('{}_roc.pdf'.format(title))
+    plt.close()
+
+    # log-Adjusted ROC
+    # See https://pubmed.ncbi.nlm.nih.gov/20735049/
+    # Used recently in https://pubmed.ncbi.nlm.nih.gov/28760952/
+    def log_roc(x, y, label='', lam=0.001):
+
+        # Get rid of duplicated x values and those less than lambda.
+        idx = np.array(list(x[:-1] != x[1:]) + [True])
+        idx *= x >= lam
+        x = x[idx]
+        y = y[idx]
+
+        # We need to have a value at lambda, so set a dummy one, if we don't.
+        if x[0] != lam:
+            x = np.array([lam]  + list(x))
+            y = np.array([y[0]] + list(y))
+
+        b = y[1:] - x[1:] * (y[1:] - y[:-1]) / (x[1:] - x[:-1])
+        auc = np.sum((y[1:] - y[:-1]) / np.log(10))
+        auc += np.sum(b * (np.log10(x[1:]) - np.log10(x[:-1])))
+        auc /= np.log10(1/lam)
+
+        plt.plot(np.log10(x), y, label='{} = {:.2f}'.format(label, auc))
+    
+    log_roc(gfpr, gtpr, 'Glide')
+    log_roc(cfpr, ctpr, 'ComBind')
+    log_roc(xfpr, xtpr, 'XTAL sim')
+    log_roc(afpr, atpr, 'active sim')
+    plt.legend()
+    plt.ylabel('true positive rate', size=15)
+    plt.xlabel('log10 false positive rate', size=15)
+    plt.title(title)
+    plt.savefig('{}_logroc.pdf'.format(title))
+    plt.close()
+
 def screen(paths, feature_defs, stats_root, struct, protein, queries, cluster):
     sc = ScoreContainer(os.getcwd(), paths, feature_defs,
                         stats_root, protein, struct)
@@ -274,56 +356,59 @@ def screen(paths, feature_defs, stats_root, struct, protein, queries, cluster):
 
     sc.ps.ligands = sc.predict_data.docking[sc.struct]
 
-    affinities, gscores, cscores = [], [], []
+    affinities, gscores, cscores, xscores, ascores = [], [], [], [], []
     for query in queries:
         ligand = sc.predict_data.docking[sc.struct][query]
         affinities += [sc.predict_data.lm.pdb[query]['AFFINITY']]
         gscores += [ligand.poses[0].gscore]
         cscores += [-sc.ps.score_new_ligand(pose_cluster, ligand)]
+        xscores += [-sc.predict_data.lm.pdb[query]['XTAL_sim']]
+        ascores += [-sc.predict_data.lm.pdb[query]['active_sim']]
     affinities = np.log10(affinities)-9
     gscores = np.array(gscores)
     cscores = np.array(cscores)
+    xscores = np.array(xscores)
+    ascores = np.array(ascores)
+
+    ascores = np.minimum(xscores, ascores)
 
     queries = np.array(queries)[affinities < 0]
     gscores = gscores[affinities < 0]
     cscores = cscores[affinities < 0]
+    xscores = xscores[affinities < 0]
+    ascores = ascores[affinities < 0]
     affinities = affinities[affinities < 0]
-
-    def evaluate(scores, plot_fname):
-        def enrich(p=0.1, cut=-7):
-            N = int(p*len(affinities))
-            sorted_affinities = affinities[np.argsort(scores)]
-            top = np.mean(sorted_affinities[:N] < cut)
-            overall = np.mean(sorted_affinities < cut)
-            return (1+top) / (1+overall)
-        
+    
+    # evaluate performance for subsets of ligands with different
+    # amounts of overlap with the XTAL ligand.
+    for q in [0, 25, 50, 75]:
         mask = np.isin(np.array(queries), list(pose_cluster.keys()))
-        
-        rho, _ = scipy.stats.spearmanr(affinities[~mask], scores[~mask])
-        r, _ = scipy.stats.pearsonr(affinities[~mask], scores[~mask])
-        tau, _ = scipy.stats.kendalltau(affinities[~mask], scores[~mask])
-        print(r, rho, tau, enrich())
+        mask |= np.array(xscores < np.quantile(xscores[affinities==-9], q/100))
+        print(q, mask.sum())
+        title = '{}_{}'.format(protein, q)
+        evaluate_screen(title, affinities, gscores, cscores, xscores, ascores, mask)
 
-        plt.scatter(affinities, scores, s=4, c='k')
-        plt.scatter(affinities[mask], scores[mask], s=4, c='r')
+    # and to closest active...
+    for q in [0, 25, 50, 75]:
+        mask = np.isin(np.array(queries), list(pose_cluster.keys()))
 
-        x = 0.25*plt.xlim()[1] + 0.75*plt.xlim()[0]
-        y = 0.99*plt.ylim()[1] + 0.01*plt.ylim()[0]
-        t = (r'$r={:.2f}$'
-             "\n"
-             r'$\rho={:.2f}$'
-             "\n"
-             r'$\tau={:.2f}$').format(r, rho, tau)
-        plt.text(x, y, t, fontsize=20,
-                 horizontalalignment='right', verticalalignment='top')
-        plt.xlabel('log10 binding affinity', size=15)
-        plt.ylabel('prediction', size=15)
-        plt.title('{} {}'.format(protein, plot_fname.split('.')[0]))
-        plt.savefig(plot_fname)
-        plt.close()
+        mask |= np.array(ascores < np.quantile(ascores[affinities==-9], q/100))
+        print(q, mask.sum())
+        title = '{}_active_{}'.format(protein, q)
+        evaluate_screen(title, affinities, gscores, cscores, xscores, ascores, mask)
 
-    evaluate(gscores, 'gscore.pdf')
-    evaluate(cscores, 'cscore.pdf')
+    mask = np.isin(np.array(queries), list(pose_cluster.keys()))
+    mask |= np.array(xscores < -0.4)
+    print('xscore <= 0.4', mask.sum())
+    title = '{}_{}'.format(protein, 4)
+    evaluate_screen(title, affinities, gscores, cscores, xscores, ascores, mask)
+
+    mask = np.isin(np.array(queries), list(pose_cluster.keys()))
+    mask |= np.array(ascores < -0.4)
+    print('ascore <= 0.4', mask.sum())
+    title = '{}_active_{}'.format(protein, 4)
+    evaluate_screen(title, affinities, gscores, cscores, xscores, ascores, mask)
+
 
 def main(paths, feature_defs, stats_root, protein, queries,
          fname='pdb.sc', plot=None, struct=None):
