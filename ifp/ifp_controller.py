@@ -2,7 +2,7 @@ import os
 from utils import grouper
 
 queue = 'rondror'
-group_size = 50
+group_size = 5
 
 CMD = '{}/main.py ifp {} {} {} {}\n'
 

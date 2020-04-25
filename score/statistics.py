@@ -137,8 +137,8 @@ class Statistics:
                 density_estimate.write(fname)
 
     def _load_ligand_pair(self, prot, protein, ligand1, ligand2):
-        lig_pair = LigPair(prot.docking[prot.lm.st][ligand1],
-                           prot.docking[prot.lm.st][ligand2],
+        lig_pair = LigPair(prot.docking[ligand1],
+                           prot.docking[ligand2],
                            self.interactions,
                            prot.lm.mcss if 'mcss' in self.interactions else None,
                            self.settings['max_poses'])
@@ -158,17 +158,16 @@ class Statistics:
         return stats
 
     def _get_interaction_scores(self, lig_pair, interaction):
+        n1 = min(len(lig_pair.l1.poses), self.settings['max_poses'])
+        n2 = min(len(lig_pair.l2.poses), self.settings['max_poses'])
+        
         X_native = []
-        n1 = min(len(lig_pair.l1.poses), self.settings['native_poses'])
-        n2 = min(len(lig_pair.l2.poses), self.settings['native_poses'])
         for r1 in range(n1):
             for r2 in range(n2):
                 pp_x = lig_pair.get_feature(interaction, r1, r2)
                 if pp_x is not None and lig_pair.correct(r1, r2):
                     X_native += [pp_x]
         X_ref = []
-        n1 = min(len(lig_pair.l1.poses), self.settings['reference_poses'])
-        n2 = min(len(lig_pair.l2.poses), self.settings['reference_poses'])
         for r1 in range(n1):
             for r2 in range(n2):
                 pp_x = lig_pair.get_feature(interaction, r1, r2)

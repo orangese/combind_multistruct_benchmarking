@@ -69,7 +69,7 @@ class ScoreContainer:
                                        st=self.struct)
 
         # Set ligands and optimize!
-        self.ps.ligands = {lig: self.predict_data.docking[self.struct][lig]
+        self.ps.ligands = {lig: self.predict_data.docking[lig]
                            for lig in queries}
         best_cluster = self.ps.max_posterior()
         return best_cluster
@@ -85,7 +85,7 @@ class ScoreContainer:
             f.write('lig,combind_rank,combind_rmsd,glide_rank,glide_rmsd,best_rank,best_rmsd\n')
             glide_cluster, best_cluster = {}, {}
             for lig, combind_pose in sorted(cluster.items()):
-                poses = self.predict_data.docking[self.struct][lig].poses
+                poses = self.predict_data.docking[lig].poses
                 best_rmsd = float('inf')
                 for i, pose in enumerate(poses[:self.settings['num_poses']]):
                     if pose.rmsd is not None and pose.rmsd < best_rmsd:
@@ -114,9 +114,8 @@ class ScoreContainer:
                 cluster[lig] = int(combind_pose)
 
         self.predict_data.load_docking(list(cluster.keys()), load_fp = True,
-                                       load_mcss = 'mcss' in self.settings['features'],
-                                       st = self.struct)
-        self.ps.ligands = {lig: self.predict_data.docking[self.struct][lig]
+                                       load_mcss = 'mcss' in self.settings['features'])
+        self.ps.ligands = {lig: self.predict_data.docking[lig]
                            for lig in list(cluster.keys())}
         return cluster
 ################################################################################
@@ -351,14 +350,13 @@ def screen(paths, feature_defs, stats_root, struct, protein, queries, cluster):
     all_ligands = queries + list(pose_cluster.keys())
 
     sc.predict_data.load_docking(all_ligands, load_fp=True,
-                                 load_mcss='mcss' in sc.settings['features'],
-                                 st=sc.struct)
+                                 load_mcss='mcss' in sc.settings['features'])
 
-    sc.ps.ligands = sc.predict_data.docking[sc.struct]
+    sc.ps.ligands = sc.predict_data.docking
 
     affinities, gscores, cscores, xscores, ascores = [], [], [], [], []
     for query in queries:
-        ligand = sc.predict_data.docking[sc.struct][query]
+        ligand = sc.predict_data.docking[query]
         affinities += [sc.predict_data.lm.pdb[query]['AFFINITY']]
         gscores += [ligand.poses[0].gscore]
         cscores += [-sc.ps.score_new_ligand(pose_cluster, ligand)]

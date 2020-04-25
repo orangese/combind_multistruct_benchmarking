@@ -13,17 +13,17 @@ from dock.dock import dock
 from ifp.ifp_controller import compute_ifp
 from containers import Protein
 
-def main(params, paths, task, proteins):
+def main(params, paths, task, proteins, struct=None):
     for i, protein_name in enumerate(proteins):
         print(protein_name, i)
         os.chdir('{}/{}'.format(paths['DATA'], protein_name))
         protein = Protein(protein_name, params, paths)
-     
+
         if task == 'prep-structs':
             struct_process()
             struct_align()
             struct_sort()
-            make_grids()
+            make_grids(struct)
 
         elif task == 'prep-ligands':
             prep_ligands(protein.lm)

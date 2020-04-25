@@ -108,7 +108,7 @@ class Ligand:
         return self.paths[name].format(**extras)
 
 class LigandManager:
-    def __init__(self, protein, params, paths):
+    def __init__(self, protein, params, paths, struct=None):
         self.protein = protein
         self.params = {k:v for k, v in params.items()}
         self.params['protein'] = protein
@@ -118,19 +118,23 @@ class LigandManager:
         self.pdb = self.read_pdb()
         self.prepped = self.prepped()
 
-        # Set default structure.
-        self.st = None
-        if not os.path.exists(self.path('GRID_ROOT')): return
-        self.grids = sorted([l for l in os.listdir(self.path('GRID_ROOT'))
-                             if l[0] != '.'])
-        if not self.grids: return
+        # Find available docking grids
+        if os.path.exists(self.path('GRID_ROOT')):
+            grids = sorted([l for l in os.listdir(self.path('GRID_ROOT'))
+                            if l[0] != '.'])
         
-        self.st = self.grids[0]
+        # Set default docking grid.
+        if struct is not None:
+            self.st = struct
+        elif grids:
+            self.st = grids[0]
+        else:
+            self.st = None
 
         self.params['struct'] = self.st
-        
-        self.mcss = MCSSController(self)
-        self.helpers = {}
+
+        if self.st in grids:
+            self.mcss = MCSSController(self)
 
     def read_pdb(self):
         pdb = {}
@@ -166,7 +170,7 @@ class LigandManager:
             ligands = ligands[:num]
         return ligands
 
-    def docked(self, ligands, st=None):
+    def docked(self, ligands):
         return [ligand for ligand in ligands
                 if os.path.exists(self.path('DOCK_PV', {'ligand': ligand}))]
 
@@ -175,7 +179,7 @@ class LigandManager:
         return self.paths[name].format(**extras)
 
 class Protein:
-    def __init__(self, protein, params, paths):
+    def __init__(self, protein, params, paths, struct=None):
         """
         protein (str): name of protein, should be name of directory in root
             of data directory.
@@ -186,28 +190,17 @@ class Protein:
         self.params = {k:v for k, v in params.items()}
         self.params['protein'] = protein
         self.paths = paths
+        self.lm = LigandManager(protein, self.params, self.paths, struct)
         
-        self.lm = LigandManager(protein, self.params, self.paths)
+        self.docking = {}
 
-        if self.lm.st:
-            self.docking = {self.lm.st: {}}
-        else:
-            self.docking = {}
-
-    def load_docking(self, ligands, load_fp=False, load_crystal=False,
-                     load_mcss=False, st=None):
-        if st is None:
-            st = self.lm.st
-
-        if st not in self.docking:
-            self.docking[st] = {}
-
+    def load_docking(self, ligands, load_fp=False, load_mcss=False):
         for ligand in ligands:
-            params = {'struct': st}
+            params = {'struct': self.lm.st}
             params.update(self.params)
-            self.docking[st][ligand] = Ligand(ligand, params, self.paths)
-            self.docking[st][ligand].load_poses(load_fp)
+            self.docking[ligand] = Ligand(ligand, params, self.paths)
+            self.docking[ligand].load_poses(load_fp)
 
         if load_mcss:
-            ligands = ligands+list(self.docking[st].keys())
+            ligands = ligands+list(self.docking.keys())
             self.lm.mcss.load_rmsds(ligands, self.params['max_poses'])

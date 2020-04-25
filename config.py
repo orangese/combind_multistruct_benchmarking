@@ -13,6 +13,20 @@ STATS = {'default': {'version'         : 'default',
                      'n_ligs'          : 20,
                      'max_poses'       : 100,
                      'stats_sd'        : 0.03,
+                     'stats_points'    : 100},
+          'paper': {'version'          : 'paper',
+                     'ifp_version'     : 'default',
+                     'mcss_version'    : 'mcss16',
+                     'mcss_func'       : StringFunction('min'),
+                     'mcss_rel_min'    : 0.5,
+                     'mcss_abs_min'    : 10,
+                     'mcss_domain'     : (0, 6),
+                     'docking_version' : 'paper',
+                     'pdb_order'       : 'First',
+                     'native_thresh'   : 2.0,
+                     'n_ligs'          : 20,
+                     'max_poses'       : 100,
+                     'stats_sd'        : 0.03,
                      'stats_points'    : 100}}
 
 IFP = {'default': {'version'           : 'default',
@@ -23,7 +37,8 @@ IFP = {'default': {'version'           : 'default',
                    'sb_dist_opt'       : 4.0,
                    'sb_dist_cut'       : 5.0,
                    'contact_scale_opt' : 1.25,
-                   'contact_scale_cut' : 1.75},}
+                   'contact_scale_cut' : 1.75}
+      }
 
 FEATURE_DEFS = {
     'mcss'           : [],

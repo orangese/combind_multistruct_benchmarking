@@ -19,6 +19,7 @@ NENHANCED_SAMPLING   4
 modes = {'confgen_es4': {
                        'name':     'confgen_es4',
                        'template': GLIDE_ES4},
+         'paper': {'name': 'paper'}
         }
 
 queue = 'rondror'

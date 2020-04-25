@@ -18,10 +18,11 @@ def main(ctx, data, ligands):
 
 @main.command()
 @click.option('--stats_version', default='default')
+@click.option('--struct', default=None)
 @click.argument('task')
 @click.argument('proteins', nargs=-1)
 @click.pass_obj
-def prepare(paths, task, stats_version, proteins):
+def prepare(paths, task, stats_version, proteins, struct):
     """
     Prep structures and ligands; docking; and featurization.
     """
@@ -30,7 +31,7 @@ def prepare(paths, task, stats_version, proteins):
     proteins = list(proteins)
     if not proteins:
         proteins = utils.get_proteins(paths, [])
-    dock.prepare_all.main(params, paths, task, list(proteins))
+    dock.prepare_all.main(params, paths, task, list(proteins), struct)
 
 @main.command()
 @click.option('--plot', is_flag=True)
@@ -79,7 +80,7 @@ def statistics(paths, stats_version, stats_root, proteins, merged_root):
     params = config.STATS[stats_version]
     proteins = list(proteins)
     score.statistics.compute(params, paths, config.FEATURE_DEFS, stats_root,
-                             proteins, merged_root, plot)
+                             proteins, merged_root)
 
 @main.command()
 @click.argument('merged')
