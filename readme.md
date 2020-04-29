@@ -106,10 +106,26 @@ cd
 $SCHRODINGER/run schrodinger_virtualenv.py schrodinger.ve
 source schrodinger.ve/bin/activate
 pip install --upgrade numpy sklearn scipy pandas
+
+cd combind
+ln -s schrodinger_activate ~/schrodinger.ve/bin/activate
 ```
 
-Run `source schrodinger.ve/bin/activate` to activate the environment in
+This last line is just there to provide a standardized way to access the
+activation script.
+
+Run `source schrodinger_activate` to activate the environment in
 the future, you'll need to do this everytime before running ComBind.
 This is included in the setup_sherlock script; you can source the
 script by running `source setup_sherlock`.
 
+Unfortunately, there is a bug in the maestro file parser in the version of
+rdkit provided by schrodinger, so we want need to use a more up-to-date version.
+Rdkit can't be pip installed, so instead, we'll create a conda environment to
+use with RDKIT and add a link to it so we can access it in a standardized way.
+Note that this interpretter is needed only for the fingerprinting code.
+
+```
+conda create -n combind_rdit rdkit numpy click pandas
+ln -s path/to/conda/envs/combind_rdkit/bin/python rdpython
+```

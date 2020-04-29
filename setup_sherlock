@@ -4,7 +4,7 @@ ml chemistry schrodinger
 
 unset PYTHONPATH
 unset PYTHONHOME
-source ~/schrodinger.ve/bin/activate
+source schrodinger_activate
 
 export COMBINDHOME=`pwd`
 ml schrodinger

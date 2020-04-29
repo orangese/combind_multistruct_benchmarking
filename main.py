@@ -98,7 +98,7 @@ def ifp(ifp_version, input_file, output_file, poses):
     Compute interaction fingerprints. (For internal use.)
     """
     import ifp.ifp
-    ifp.ifp.IFP(config.IFP[ifp_version], input_file, output_file, poses)
+    ifp.ifp.ifp(config.IFP[ifp_version], input_file, output_file, poses)
 
 @main.command()
 @click.argument('mode')
