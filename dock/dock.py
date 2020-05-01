@@ -16,9 +16,31 @@ PRECISION   SP
 NENHANCED_SAMPLING   4
 '''
 
+CORE = '''GRIDFILE   ../../grids/{}/{}.zip
+LIGANDFILE   ../../../structures/ligands/{}.mae
+REF_LIGAND_FILE ../../../structures/ligands/{}.mae
+CORECONS_FALLBACK True
+CORE_SNAP True
+CORE_RESTRAIN True
+CORE_FILTER True
+CORE_POS_MAX_RMSD 3.0
+USE_REF_LIGAND True
+DOCKING_METHOD   confgen
+CANONICALIZE   True
+LIGAND_START 1
+LIGAND_END 1
+POSES_PER_LIG   100
+POSTDOCK_NPOSE   100
+WRITEREPT   True
+PRECISION   SP
+NENHANCED_SAMPLING  4
+'''
+
 modes = {'confgen_es4': {
                        'name':     'confgen_es4',
                        'template': GLIDE_ES4},
+         'core': {'name': 'core',
+                   'template': CORE},
          'paper': {'name': 'paper'}
         }
 
