@@ -79,24 +79,29 @@ class Ligand:
 
     def parse_ifp_file(self):
         ifps = {}
-        try:
-            with open(self.path('IFP')) as f:
-                pose_num = 0
-                for line in f:
-                    if line.strip() == '': continue
-                    if line[:4] == 'Pose':
-                        pose_num = int(line.strip().split(' ')[1])
-                        ifps[pose_num] = {}
-                        continue
-                    sc_key, sc = line.strip().split('=')
-                    i,r,ss = sc_key.split('-')
-                    i = int(i)
-                    sc = float(sc)
-                    prev_sc = ifps[(i, r)] if (i,r) in ifps[pose_num] else 0
-                    ifps[pose_num][(i,r)] = max(prev_sc, sc)
+        if os.path.exists(self.path('IFP')):
+            df = pd.read_csv(self.path('IFP'))
+            for _, row in df.iterrows():
+                pose = row['pose']
+                res = row['protein_res']
+                i = row['label']
+                
+                if i == 'saltbridge':
+                    i = 1
+                elif i == 'hbond_donor':
+                    i = 2
+                elif i == 'hbond_acceptor':
+                    i = 3
+                elif i == 'contact':
+                    i = 11
+                else:
+                    assert False, i
 
-        except Exception as e:
-            print(e)
+                if pose not in ifps:
+                    ifps[pose] = {}
+                ifps[pose][(i,res)] = row['score']
+
+        else:
             print(self.path('IFP'), 'fp not found')
         if len(ifps) == 0:
             print('check', self.path('IFP'))

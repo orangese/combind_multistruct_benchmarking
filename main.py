@@ -79,6 +79,8 @@ def statistics(paths, stats_version, stats_root, proteins, merged_root):
     import score.statistics
     params = config.STATS[stats_version]
     proteins = list(proteins)
+    if not proteins:
+        proteins = utils.get_proteins(paths, [])
     score.statistics.compute(params, paths, config.FEATURE_DEFS, stats_root,
                              proteins, merged_root)
 

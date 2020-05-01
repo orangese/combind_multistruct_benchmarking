@@ -1,29 +1,42 @@
 import os
-from utils import grouper
+import subprocess
+from schrodinger.structure import StructureReader, StructureWriter
 
-queue = 'rondror'
-group_size = 50
+def process(input_file, output_file):
+    with StructureReader(input_file) as reader, \
+        StructureWriter(output_file) as writer:
+        for st in reader:
+            # Remove explicit stereochemistry specifications. These cause
+            # errors in downstream steps.
+            for k in st.property.keys():
+                if 's_st_EZ_' in k:
+                    st.property.pop(k)
 
-def _prep_ligands(ligands, root):   
-    os.system('mkdir -p {}'.format(root))
-    os.system('rm {}/*.sbatch'.format(root))
-    os.system('rm {}/slurm*'.format(root))
+            # Give each atom a unique name, ligands generated from smiles
+            # strings will not have any atom name by default.
+            names = set()
+            counts = {}
+            for atom in st.atom:
+                if not atom.pdbname.strip():
+                    if atom.element not in counts: counts[atom.element] = 0
+                    counts[atom.element] += 1
+                    atom.pdbname = atom.element + str(counts[atom.element])
+                    
+                    assert atom.pdbname not in names, atom.pdbname
+                    names.add(atom.pdbname)
+            writer.append(st)
 
-    for i, ligs in enumerate(grouper(group_size, ligands)):
-        batch_file = '{}/batch-{}.sbatch'.format(root, i)
-        with open(batch_file, 'w') as batch:
-            batch.write('#!/bin/bash\n')
-            batch.write('#SBATCH --chdir={}\n'.format(root))
-            batch.write('#SBATCH -t 1:00:00\n')
-            batch.write('#SBATCH -p {}\n'.format(queue))
-            for name, smiles in ligs:
-                batch.write('cd {0}; ligprep -WAIT -epik -ismi {0}.smi -omae {0}.mae; cd ..\n'.format(name))
-                os.system('rm -rf {}/{}'.format(root, name))
-                os.system('mkdir {}/{}'.format(root, name))
+def prep_ligand(root, name, smiles):
+    smi_file = '{}/{}.smi'.format(root, name)
+    mae_noname_file = '{}/{}_nonames.mae'.format(root, name)
+    mae_file = '{}/{}.mae'.format(root, name)
+    cmd = 'ligprep -WAIT -epik -ismi {} -omae {}'.format(smi_file, mae_noname_file)
 
-                with open('{0}/{1}/{1}.smi'.format(root, name), 'w') as fp:
-                    fp.write('{} {}\n'.format(smiles, name))
-        os.system('sbatch {}'.format(batch_file))
+    with open(smi_file, 'w') as fp:
+        fp.write('{} {}\n'.format(smiles, name))
+
+    subprocess.run(cmd, shell=True, cwd=root)
+    process(mae_noname_file, mae_file)
 
 def prep_ligands(lm):
     unfinished = []
@@ -33,4 +46,11 @@ def prep_ligands(lm):
 
     if unfinished:
         print('Processing {} ligands'.format(len(unfinished)))
-        _prep_ligands(unfinished, lm.path('LIGANDS_ROOT'))
+        os.system('mkdir -p {}'.format(root))
+        
+        for name, smiles in unfinished:
+            path = '{}/{}'.format(root, name)
+            os.system('rm -rf {}'.format(path))
+            os.system('mkdir {}'.format(path))
+
+            prep_ligand(path, name, smiles)

@@ -11,9 +11,14 @@ import rdkit
 def read_mae(mae, poses):
     if mae[-2:] == 'gz':
         with gzip.open(mae) as fp:
-            mols = [mol for mol in MaeMolSupplier(fp, removeHs=False)]
+            mols = []
+            for mol in MaeMolSupplier(fp, removeHs=False):
+                if mol is None:
+                    print(mae)
+                    exit()
+                mols += [mol]
     else:
-        mols = [mol for mol in MaeMolSupplier(fp, removeHs=False)]
+        mols = [mol for mol in MaeMolSupplier(mae, removeHs=False)]
     return mols
 
 def resname(atom):
@@ -126,11 +131,13 @@ def _symetric_charged_ligand_atoms(ligand):
     smartss = [('[CX3](=O)[O-]', 2, [1, 2]),
                ('[CX3](=[NH2X3+])[NH2X3]', 1, [1, 2])]
 
+    idx_to_atom = {atom.GetIdx(): atom for atom in ligand}
+
     for smarts, k, v in smartss:
         mol = Chem.MolFromSmarts(smarts)
         matches = ligand[0].GetOwningMol().GetSubstructMatches(mol)
         for match in matches:
-            ligand_groups[match[k]] = [ligand[match[_v]] for _v in v]
+            ligand_groups[match[k]] = [idx_to_atom[match[_v]] for _v in v]
     return ligand_groups
 
 def saltbridge_compute(protein, ligand, settings):

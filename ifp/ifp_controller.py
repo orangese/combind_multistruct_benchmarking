@@ -4,7 +4,7 @@ from utils import grouper
 queue = 'rondror'
 group_size = 25
 
-CMD = '{code}/rdpython {code}/main.py ifp {version} {input} {output} {poses}\n'
+CMD = '{rdpython} {code}/main.py ifp {version} {input} {output} {poses}\n'
 
 def compute_ifp(lm):
     cwd = os.getcwd()
@@ -24,13 +24,12 @@ def _compute_ifp(lm, fp_list):
         print(len(fp_list), 'fp left')
     for i, ligands in enumerate(grouper(group_size, fp_list)):
         with open('{}fp.sh'.format(i), 'w') as f:
-            f.write('#!/bin/bash\n')
+            f.write('#!/bin/sh\n')
             for ligand in ligands:
-                input_file = lm.path('DOCK_PV', {'ligand': ligand})
-                output_file = lm.path('IFP', {'ligand': ligand})
-                f.write(CMD.format(code=lm.path('CODE'),
+                f.write(CMD.format(rdpython=os.environ['RDPYTHON'],
+                                   code=lm.path('CODE'),
                                    version=lm.params['ifp_version'],
-                                   input=input_file,
-                                   output=output_file,
+                                   input=lm.path('DOCK_PV', {'ligand': ligand}),
+                                   output=lm.path('IFP', {'ligand': ligand}),
                                    poses=lm.params['max_poses']))
         os.system('sbatch -t 02:00:00 -p {} {}fp.sh'.format(queue, i))

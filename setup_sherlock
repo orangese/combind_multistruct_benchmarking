@@ -7,4 +7,5 @@ unset PYTHONHOME
 source schrodinger_activate
 
 export COMBINDHOME=`pwd`
+export RDPYTHON=`readlink -f rdpython`
 ml schrodinger
