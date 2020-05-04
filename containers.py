@@ -43,6 +43,9 @@ class Ligand:
         if load_fp:  
             fps = self.parse_ifp_file()
 
+        if len(rmsds) < len(gscores):
+            assert False, 'Not all RMSDs calculated for {}'.format(self.ligand)
+
         self.poses = [Pose(rmsds[i], gscores[i], fps.get(i, {}))
                       for i in range(len(gscores))]
 

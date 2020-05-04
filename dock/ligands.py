@@ -44,6 +44,8 @@ def prep_ligands(lm):
         if name not in lm.prepped:
             unfinished += [(name, info['SMILES'])]
 
+    root = lm.path('LIGANDS_ROOT')
+
     if unfinished:
         print('Processing {} ligands'.format(len(unfinished)))
         os.system('mkdir -p {}'.format(root))
