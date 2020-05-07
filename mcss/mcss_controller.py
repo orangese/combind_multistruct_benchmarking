@@ -51,7 +51,7 @@ class MCSSController:
 
     def __init__(self, lm):
         self.lm = lm
-        self.pdb = lm.get_xdocked_ligands(lm.params['n_ligs'])
+        self.pdb = lm.get_xdocked_ligands()
         self.docked  = set(lm.docked(self.pdb))
 
         self.MCSSs = {}

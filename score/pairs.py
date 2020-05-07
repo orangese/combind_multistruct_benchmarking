@@ -38,14 +38,15 @@ class LigPair:
         return self.pose_pairs[key].correct()
 
     def _init_pose_pair(self, rank1, rank2):
+        pose1 = self.l1.poses[rank1]
+        pose2 = self.l2.poses[rank2]
         if 'mcss' in self.features:
             mcss_score = self.mcss.get_rmsd(self.l1.ligand, self.l2.ligand,
-                                            rank1, rank2)
+                                            pose1.rank, pose2.rank)
         else:
             mcss_score = None
 
-        self.pose_pairs[(rank1, rank2)] = PosePair(self.l1.poses[rank1],
-                                                   self.l2.poses[rank2],
+        self.pose_pairs[(rank1, rank2)] = PosePair(pose1, pose2,
                                                    mcss_score,
                                                    self.features,
                                                    self.native_thresh)

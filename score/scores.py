@@ -43,9 +43,9 @@ class ScoreContainer:
     def read_settings(self):
         tr = {'num_poses': 100,
               'alpha': 1.0,
-              'stats_version': 'default',
-              'features': ['hbond', 'sb', 'contact']}
-        
+              'stats_version': 'rd1_all',
+              'features': ['hbond', 'sb', 'contact', 'mcss']}
+
         settings_file = '{}/settings.py'.format(self.root)
         if os.path.exists(settings_file):
             with open(settings_file) as f:
@@ -63,10 +63,20 @@ class ScoreContainer:
                 stats[dist][interaction] = DensityEstimate.read(fname)
         return stats
 
-    def compute_results(self, queries):
-        self.predict_data.load_docking(queries, load_fp = True,
-                                       load_mcss = 'mcss' in self.settings['features'],
-                                       st=self.struct)
+    def compute_results(self, queries, xtal=[]):
+        self.predict_data.load_docking(queries, load_fp=True,
+                                       load_mcss='mcss' in self.settings['features'])
+
+        for ligand in xtal:
+            self.predict_data.docking[ligand].load_native_poses(True,
+                                                                self.params['native_thresh'])
+
+            if not self.predict_data.docking[ligand].poses:
+                print(('WARNING: Ligand {} '
+                      'was specified as an XTAL ligand '
+                      'but it has no correct poses. It is being removed from '
+                      'the query list').format(ligand))
+                queries.remove(ligand)
 
         # Set ligands and optimize!
         self.ps.ligands = {lig: self.predict_data.docking[lig]
@@ -92,11 +102,11 @@ class ScoreContainer:
                         best_cluster[lig] = i
                         best_rmsd = pose.rmsd
                 
-                best_pose = best_cluster[lig] if lig in best_cluster else None
+                best_pose = best_cluster[lig] if lig in best_cluster else 0
                 f.write(','.join(map(str, [lig,
-                                           combind_pose, poses[combind_pose].rmsd,
-                                           0, poses[0].rmsd,
-                                           best_pose, best_rmsd
+                                           poses[combind_pose].rank, poses[combind_pose].rmsd,
+                                           poses[0].rank, poses[0].rmsd,
+                                           poses[best_pose].rank, poses[best_pose].rmsd
                                            ]))+'\n')
             f.write('combind={},glide={},best={}\n'.format(
                     self.ps.log_posterior(cluster),
@@ -296,7 +306,7 @@ def evaluate_screen(title, affinities, gscores, cscores, xscores, ascores, mask)
     plt.plot(cfpr, ctpr, label='ComBind = {:.2f}'.format(sklearn.metrics.auc(cfpr, ctpr)))
     plt.plot(xfpr, xtpr, label='XTAL sim = {:.2f}'.format(sklearn.metrics.auc(xfpr, xtpr)))
     plt.plot(afpr, atpr, label='active sim = {:.2f}'.format(sklearn.metrics.auc(afpr, atpr)))
-    
+
     plt.legend()
     plt.ylabel('true positive rate', size=15)
     plt.xlabel('false positive rate', size=15)
@@ -357,11 +367,13 @@ def screen(paths, feature_defs, stats_root, struct, protein, queries, cluster):
     affinities, gscores, cscores, xscores, ascores = [], [], [], [], []
     for query in queries:
         ligand = sc.predict_data.docking[query]
+
         affinities += [sc.predict_data.lm.pdb[query]['AFFINITY']]
         gscores += [ligand.poses[0].gscore]
         cscores += [-sc.ps.score_new_ligand(pose_cluster, ligand)]
         xscores += [-sc.predict_data.lm.pdb[query]['XTAL_sim']]
         ascores += [-sc.predict_data.lm.pdb[query]['active_sim']]
+
     affinities = np.log10(affinities)-9
     gscores = np.array(gscores)
     cscores = np.array(cscores)
@@ -389,7 +401,6 @@ def screen(paths, feature_defs, stats_root, struct, protein, queries, cluster):
     # and to closest active...
     for q in [0, 25, 50, 75]:
         mask = np.isin(np.array(queries), list(pose_cluster.keys()))
-
         mask |= np.array(ascores < np.quantile(ascores[affinities==-9], q/100))
         print(q, mask.sum())
         title = '{}_active_{}'.format(protein, q)
@@ -409,14 +420,14 @@ def screen(paths, feature_defs, stats_root, struct, protein, queries, cluster):
 
 
 def main(paths, feature_defs, stats_root, protein, queries,
-         fname='pdb.sc', plot=None, struct=None):
+         xtal=[], fname='pdb.sc', plot=None, struct=None):
     sc = ScoreContainer(os.getcwd(), paths, feature_defs,
                         stats_root, protein, struct)
 
     if 'all' in queries:
         queries = sc.predict_data.lm.docked(list(sc.predict_data.lm.pdb.keys()))
 
-    combind_cluster = sc.compute_results(queries)
+    combind_cluster = sc.compute_results(queries, xtal)
     sc.write_results(combind_cluster, fname)
 
     if plot:

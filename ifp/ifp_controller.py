@@ -32,4 +32,4 @@ def _compute_ifp(lm, fp_list):
                                    input=lm.path('DOCK_PV', {'ligand': ligand}),
                                    output=lm.path('IFP', {'ligand': ligand}),
                                    poses=lm.params['max_poses']))
-        os.system('sbatch -t 02:00:00 -p {} {}fp.sh'.format(queue, i))
+        os.system('sbatch -t 02:00:00 -p {} --wrap="sh {}fp.sh"'.format(queue, i))

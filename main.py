@@ -35,23 +35,25 @@ def prepare(paths, task, stats_version, proteins, struct):
 
 @main.command()
 @click.option('--plot', is_flag=True)
-@click.option('--stats_root', default='{}/stats_data/default'.format(os.environ['COMBINDHOME']))
+@click.option('--stats_root', default='{}/stats_data/rd1'.format(os.environ['COMBINDHOME']))
 @click.option('--struct', default=None)
 @click.option('--fname', default='pdb.sc')
+@click.option('--xtal', multiple=True)
 @click.argument('protein')
 @click.argument('queries', nargs=-1)
 @click.pass_obj
-def score(paths, stats_root, struct, protein, queries, plot, fname):
+def score(paths, stats_root, struct, protein, queries, plot, fname, xtal):
     """
     Run ComBind!
     """
     import score.scores
     queries = list(queries)
+    xtal = list(xtal)
     score.scores.main(paths, config.FEATURE_DEFS, stats_root, protein, queries,
-                      fname=fname, struct=struct, plot=plot)
+                      xtal=xtal, fname=fname, struct=struct, plot=plot)
 
 @main.command()
-@click.option('--stats_root', default='{}/stats_data/default'.format(os.environ['COMBINDHOME']))
+@click.option('--stats_root', default='{}/stats_data/rd1'.format(os.environ['COMBINDHOME']))
 @click.option('--struct', default=None)
 @click.argument('protein')
 @click.argument('cluster')

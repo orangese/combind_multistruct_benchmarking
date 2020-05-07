@@ -15,13 +15,15 @@ import re
 from mcss.mcss_controller import MCSSController
 
 class Pose:
-    def __init__(self, rmsd, gscore, fp):
+    def __init__(self, rank, rmsd, gscore, fp):
         """
+        rank (int): rank in original docking output.
         rmsd (float): RMSD to crystallographic pose
         gscore (float): glide score
         fp ({(int, string): float}): dict mapping (interactiontype, resname)
             to interaction score
         """
+        self.rank = rank
         self.rmsd = rmsd
         self.gscore = gscore
         self.fp = fp
@@ -36,6 +38,10 @@ class Ligand:
 
         self.poses = None
 
+    def load_native_poses(self, load_fp, thresh):
+        self.load_poses(load_fp)
+        self.poses = [pose for pose in self.poses if pose.rmsd <= thresh]
+
     def load_poses(self, load_fp):
         gscores, rmsds = self.parse_glide_output()
 
@@ -46,7 +52,7 @@ class Ligand:
         if len(rmsds) < len(gscores):
             assert False, 'Not all RMSDs calculated for {}'.format(self.ligand)
 
-        self.poses = [Pose(rmsds[i], gscores[i], fps.get(i, {}))
+        self.poses = [Pose(i, rmsds[i], gscores[i], fps.get(i, {}))
                       for i in range(len(gscores))]
 
     def parse_glide_output(self):
@@ -127,6 +133,7 @@ class LigandManager:
         self.prepped = self.prepped()
 
         # Find available docking grids
+        grids = []
         if os.path.exists(self.path('GRID_ROOT')):
             grids = sorted([l for l in os.listdir(self.path('GRID_ROOT'))
                             if l[0] != '.'])
@@ -169,7 +176,7 @@ class LigandManager:
             return self.pdb[ligand]
         return None
 
-    def get_xdocked_ligands(self, num):
+    def get_xdocked_ligands(self, num=1000):
         ligands = self.docked(self.get_pdb())[:num+1]
         self_docked = self.st+'_lig'
         if self_docked in ligands:
