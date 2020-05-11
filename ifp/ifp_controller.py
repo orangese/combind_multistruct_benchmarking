@@ -2,7 +2,7 @@ import os
 from utils import grouper
 
 queue = 'rondror'
-group_size = 25
+group_size = 100
 
 CMD = '{rdpython} {code}/main.py ifp {version} {input} {output} {poses}\n'
 
@@ -25,6 +25,8 @@ def _compute_ifp(lm, fp_list):
     for i, ligands in enumerate(grouper(group_size, fp_list)):
         with open('{}fp.sh'.format(i), 'w') as f:
             f.write('#!/bin/sh\n')
+            f.write('unset PYTHONPATH\n')
+            f.write('unset PYTHONHOME\n')
             for ligand in ligands:
                 f.write(CMD.format(rdpython=os.environ['RDPYTHON'],
                                    code=lm.path('CODE'),

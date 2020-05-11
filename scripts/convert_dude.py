@@ -4,6 +4,7 @@ import click
 from glob import glob
 import os
 from schrodinger.structure import StructureReader
+from schrodinger.structutils.analyze import generate_smiles
 
 @click.command()
 @click.argument('dude_dir', type=click.Path(exists=True))
@@ -45,5 +46,9 @@ def main(dude_dir, combind_dir):
 
 		ligand.write(combind_path + '/structures/raw/XTAL_lig.mae')
 		receptor.write(combind_path + '/structures/raw/XTAL_prot.mae')
+
+		with open(combind_path + '/structures/pdb.csv', 'w') as fp:
+			fp.write('ID,SMILES\n')
+			fp.write('XTAL,{}\n'.format(generate_smiles(ligand)))
 
 main()
