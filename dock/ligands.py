@@ -9,7 +9,7 @@ def process(input_file, output_file):
             # Remove explicit stereochemistry specifications. These cause
             # errors in downstream steps.
             for k in st.property.keys():
-                if 's_st_EZ_' in k:
+                if 's_st_EZ_' in k or 'Chiral' in k:
                     st.property.pop(k)
 
             # Give each atom a unique name, ligands generated from smiles

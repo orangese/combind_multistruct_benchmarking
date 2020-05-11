@@ -7,44 +7,27 @@ from score.pairs import LigPair
 
 class PredictStructs:
     """
-    ligands ({name: containers.Ligand, })
-    mcss (mcss.MCSSController): All applicable RMSDs should be loaded.
     stats ({feature: {'native': score.DensityEstimate, 'reference': score.DensityEstimate}})
     features ([str, ]): Features to use when computing similarity scores.
     max_poses (int): Maximum number of poses to consider.
     alpha (float): Factor to which to weight the glide scores.
     """
-    def __init__(self, ligands, mcss, stats, features, max_poses, alpha):
-        self.ligands = ligands
-        self.mcss = mcss
+    def __init__(self, stats, features, max_poses, alpha):
         self.stats = stats
         self.features = features
         self.max_poses = max_poses
         self.alpha = float(alpha)
 
+        self.ligands = {}
+        self.mcss = None
         self.log_likelihood_ratio_cache = {}
         self.lig_pairs = {}
 
-        self._validate()
-
-    def _validate(self):
-        if 'mcss' in self.features:
-            assert self.mcss is not None
-            for lig1 in self.ligands:
-                for lig2 in self.ligands:
-                    if lig1 == lig2: continue
-                    try:
-                        self.mcss.get_rmsd(lig1, lig2, 0, 0)
-                    except KeyError:
-                        assert False
-
-        for feature in self.features:
-            assert feature in self.stats['native']
-            assert feature in self.stats['reference']
-        
-        assert type(self.ligands) == dict
-        assert self.alpha >= 0
-        assert self.max_poses > 0
+    def set_ligands(self, ligands, mcss):
+        self.ligands = ligands
+        self.mcss = mcss
+        self.log_likelihood_ratio_cache = {}
+        self.lig_pairs = {}
 
     def score_new_ligand(self, pose_cluster, ligand):
         # Clear caches of test ligand
@@ -60,7 +43,7 @@ class PredictStructs:
 
         return self._partial_log_posterior(pose_cluster, 'test') / self._effective_number(pose_cluster, 'test')
 
-    def max_posterior(self, max_iterations=1000000, restart=500):
+    def max_posterior(self, max_iterations, restart):
         """
         Computes the pose cluster maximizing the posterior likelihood.
 
@@ -72,7 +55,6 @@ class PredictStructs:
         max_iterations (int): Maximum number of iterations to attempt before exiting.
         restart (int): Number of times to run the optimization
         """
-        self._validate()
         best_score = -float('inf')
         for i in range(restart):
             if i == 0:
@@ -90,30 +72,6 @@ class PredictStructs:
             print('cluster {}, score {}'.format(i, score))
 
         return best_cluster
-
-    def _anneal_cluster(self, pose_cluster, iterations):
-        iterations = 1000
-
-        def T(i):
-            T0 = 10
-            return T0 * (0.99**i)
-
-        for i in range(iterations):
-            for query in np.random.permutation(list(pose_cluster.keys())):
-                current_pose = pose_cluster[query]
-                current_plp = self._partial_log_posterior(pose_cluster, query)
-
-                candidate_pose = np.random.randint(self._num_poses(query))
-                pose_cluster[query] = candidate_pose
-                candidate_plp = self._partial_log_posterior(pose_cluster, query)
-
-                acceptance = np.exp((candidate_plp - current_plp) / T(i))
-
-                if (1 - acceptance) < np.random.random():
-                    pose_cluster[query] = candidate_pose
-                else:
-                    pose_cluster[query] = current_pose
-        return self.log_posterior(pose_cluster), pose_cluster
 
     def _optimize_cluster(self, pose_cluster, max_iterations):
         """
