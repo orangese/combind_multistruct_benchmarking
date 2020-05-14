@@ -192,8 +192,15 @@ def similarity(input_csv, root, data, protein):
             mol = Chem.MolFromSmiles(ligand['SMILES'])
             active_fps += [get_fp(mol)]
 
+        decoy = pd.read_csv('{}/decoy.csv'.format(cwd))
+        decoy_fps = []
+        for i, ligand in decoy.iterrows():
+            mol = Chem.MolFromSmiles(ligand['SMILES'])
+            decoy_fps += [get_fp(mol)]
+
         df['XTAL_sim'] = 0
         df['active_sim'] = 0
+        df['decoy_sim'] = 0
         for i, ligand in df.iterrows():
             try:
                 mol = Chem.MolFromSmiles(ligand['SMILES'])
@@ -201,7 +208,9 @@ def similarity(input_csv, root, data, protein):
                 df.loc[i, 'XTAL_sim'] = DataStructs.TanimotoSimilarity(fp, ref_fp)
                 df.loc[i, 'active_sim'] = max(DataStructs.TanimotoSimilarity(fp, active_fp)
                                               for active_fp in active_fps)
+                df.loc[i, 'decoy_sim'] = max(DataStructs.TanimotoSimilarity(fp, decoy_fp)
+                                             for decoy_fp in decoy_fps)
             except:
-                print()
+                pass
         df.to_csv(sim_fname, index=False)
 main()
