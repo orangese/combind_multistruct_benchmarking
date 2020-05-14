@@ -270,14 +270,23 @@ def screen(paths, params, features, stats_root, protein, queries,
     cluster = sc.read_results(pose_fname)
     sc.load_docking(queries + list(cluster.keys()))
 
-    gscores, cscores = [], []
+    gscores, cscores, gscores_cpose, cscores_gpose = [], [], [], []
     for query in queries:
+        _cluster = {k:v for k, v in cluster.items()}
         ligand = sc.predict_data.docking[query]
-        gscores += [ligand.poses[0].gscore]
-        cscores += [-sc.ps.score_new_ligand(cluster, ligand)]
+        cpose = sc.ps.score_new_ligand(_cluster, ligand)
+        gpose = 0
+
+        gscores += [ligand.poses[gpose].gscore]
+        gscores_cpose += [ligand.poses[cpose].gscore]
+        
+        _cluster['test'] = cpose
+        cscores += [-sc.ps.normalized_partial_log_posterior(_cluster, 'test')]
+        _cluster['test'] = gpose
+        cscores_gpose += [-sc.ps.normalized_partial_log_posterior(_cluster, 'test')]
 
     with open(score_fname, 'w') as fp:
-        fp.write(','.join(['ID', 'GSCORE', 'CSCORE'])+'\n')
-        for line in zip(queries, gscores, cscores):
+        fp.write(','.join(['ID', 'GSCORE', 'CSCORE', 'GSCORE_CPOSE', 'CSCORE_GPOSE'])+'\n')
+        for line in zip(queries, gscores, cscores, gscores_cpose, cscores_gpose):
             fp.write(','.join(map(str, line))+'\n')
  
