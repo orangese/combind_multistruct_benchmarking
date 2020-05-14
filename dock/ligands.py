@@ -1,6 +1,7 @@
 import os
 import subprocess
 from schrodinger.structure import StructureReader, StructureWriter
+from multiprocessing import Pool
 
 def process(input_file, output_file):
     with StructureReader(input_file) as reader, \
@@ -27,6 +28,9 @@ def process(input_file, output_file):
             writer.append(st)
 
 def prep_ligand(root, name, smiles):
+    os.system('rm -rf {}'.format(root))
+    os.system('mkdir {}'.format(root))
+
     smi_file = '{}/{}.smi'.format(root, name)
     mae_noname_file = '{}/{}_nonames.mae'.format(root, name)
     mae_file = '{}/{}.mae'.format(root, name)
@@ -36,23 +40,22 @@ def prep_ligand(root, name, smiles):
         fp.write('{} {}\n'.format(smiles, name))
 
     subprocess.run(cmd, shell=True, cwd=root)
+    if not os.path.exists(mae_noname_file):
+        print('ligprep failed on {}, "{}".'.format(name, smiles))
+        print(cmd)
+        return
     process(mae_noname_file, mae_file)
 
-def prep_ligands(lm):
+def prep_ligands(lm, processes=1):
     unfinished = []
     for name, info in lm.pdb.items():
         if name not in lm.prepped:
-            unfinished += [(name, info['SMILES'])]
-
-    root = lm.path('LIGANDS_ROOT')
+            path = '{}/{}'.format(lm.path('LIGANDS_ROOT'), name)
+            unfinished += [(path, name, info['SMILES'])]
 
     if unfinished:
         print('Processing {} ligands'.format(len(unfinished)))
-        os.system('mkdir -p {}'.format(root))
-        
-        for name, smiles in unfinished:
-            path = '{}/{}'.format(root, name)
-            os.system('rm -rf {}'.format(path))
-            os.system('mkdir {}'.format(path))
+        os.system('mkdir -p {}'.format(lm.path('LIGANDS_ROOT')))
 
-            prep_ligand(path, name, smiles)
+        with Pool(processes=processes) as pool:
+            pool.starmap(prep_ligand, unfinished)

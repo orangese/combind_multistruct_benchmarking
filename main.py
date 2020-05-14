@@ -17,12 +17,13 @@ def main(ctx, data, ligands):
     ctx.obj = paths
 
 @main.command()
-@click.option('--stats_version', default='default')
+@click.option('--stats_version', default='rd1')
 @click.option('--struct', default=None)
+@click.option('--processes', default=1)
 @click.argument('task')
 @click.argument('proteins', nargs=-1)
 @click.pass_obj
-def prepare(paths, task, stats_version, proteins, struct):
+def prepare(paths, task, stats_version, proteins, struct, processes):
     """
     Prep structures and ligands; docking; and featurization.
     """
@@ -31,7 +32,7 @@ def prepare(paths, task, stats_version, proteins, struct):
     proteins = list(proteins)
     if not proteins:
         proteins = utils.get_proteins(paths, [])
-    dock.prepare_all.main(params, paths, task, list(proteins), struct)
+    dock.prepare_all.main(params, paths, task, list(proteins), struct, processes)
 
 @main.command()
 @click.option('--stats-version', default='rd1')

@@ -13,7 +13,7 @@ from dock.dock import dock
 from ifp.ifp_controller import compute_ifp
 from containers import Protein
 
-def main(params, paths, task, proteins, struct=None):
+def main(params, paths, task, proteins, struct, processes):
     for i, protein_name in enumerate(proteins):
         print(protein_name, i)
         os.chdir('{}/{}'.format(paths['DATA'], protein_name))
@@ -26,7 +26,7 @@ def main(params, paths, task, proteins, struct=None):
             make_grids(struct)
 
         elif task == 'prep-ligands':
-            prep_ligands(protein.lm)
+            prep_ligands(protein.lm, processes)
 
         elif task == 'dock':
             dock(protein.lm, mode=params['docking_version'])

@@ -1,20 +1,104 @@
+"""
+# Convert raw dud-e download into combind format.
+cd /oak/stanford/groups/rondror/users/jpaggi/VS/DUDE
+python $COMBINDHOME/scripts/run_dude.py convert dude/dud38 combind
+python $COMBINDHOME/scripts/run_dude.py convert dude/diverse combind
+python $COMBINDHOME/scripts/run_dude.py convert dude/gpcr combind
+
+# Dock ligands and compute interaction fingerprints
+./main.py --ligands '{ROOT}/subset.csv' --data /oak/stanford/groups/rondror/users/jpaggi/VS/DUDE/combind prepare prep-structs
+./main.py --ligands '{ROOT}/subset.csv' --data /oak/stanford/groups/rondror/users/jpaggi/VS/DUDE/combind prepare prep-ligands
+./main.py --ligands '{ROOT}/subset.csv' --data /oak/stanford/groups/rondror/users/jpaggi/VS/DUDE/combind prepare dock
+./main.py --ligands '{ROOT}/subset.csv' --data /oak/stanford/groups/rondror/users/jpaggi/VS/DUDE/combind prepare ifp
+
+# Setup cross-validation sets.
+mkdir $i/scores
+mkdir $i/scores/subset10_rd1
+python $COMBINDHOME/scripts/run_dude.py setup $i/subset.csv $i/scores/subset10_rd1
+
+# Compute MCSS for each set of "helper ligands".
+./main.py --ligands '{ROOT}/scores/subset10_rd1/0/binder.csv' --data /oak/stanford/groups/rondror/users/jpaggi/VS/DUDE/combind prepare mcss
+
+# Make predictions with ComBind
+python $COMBINDHOME/scripts/run_dude.py combind $i/subset.csv $i/scores/subset10_rd1 . $i
+
+# Make predictions with AUTOQSAR
+python $COMBINDHOME/scripts/run_dude.py autoqsar $i/subset.csv $i/scores/subset10_rd1
+
+# Annotate with similarity to the XTAL ligand and helper ligands.
+python $COMBINDHOME/scripts/run_dude.py similarity $i/subset.csv $i/scores/subset10_rd1 . $i
+
+# Useful for submitting jobs for each protein
+sbatch -p rondror -t 03:00:00 -J $i -o ~/temp/$i.log --wrap="$CMD"
+for i in $(ls --color=none); do $CMD; done;
+"""
+
+import os
+import sys
 import click
 import pandas as pd
 import numpy as np
-import os
-from subprocess import run
 from glob import glob
+from subprocess import run
+
 import scipy.stats
 import sklearn.metrics
+
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit import DataStructs
-import pandas as pd
-import sys
+
+from schrodinger.structure import StructureReader
+from schrodinger.structutils.analyze import generate_smiles
 
 @click.group()
 def main():
     pass
+
+@main.command()
+@click.argument('dude_dir', type=click.Path(exists=True))
+@click.argument('combind_dir', type=click.Path(exists=True))
+def convert(dude_dir, combind_dir):
+    for dude_path in glob(dude_dir + '/*'):
+        protein = dude_path.split('/')[-1]
+        combind_path = combind_dir + '/' + protein
+
+        if os.path.exists(combind_path):
+            print(combind_path, 'already exists')
+            continue
+
+        actives = pd.read_csv(dude_path + '/' + 'actives_final.ism',
+                              sep=' ', names=['SMILES', 'ID', 'CHEMBL'])
+        decoys = pd.read_csv(dude_path + '/' + 'decoys_final.ism',
+                              sep=' ', names=['SMILES', 'ID', 'CHEMBL'])
+
+        actives['AFFINITY'] = 1
+        decoys['AFFINITY'] = 1e6
+
+        all_ligands = pd.concat([actives, decoys])
+
+        np.random.seed(42)
+        subset_ligands = pd.concat([actives, decoys.sample(1000)])
+
+        with StructureReader(dude_path + '/crystal_ligand.mol2') as st:
+            ligand = list(st)[0]
+
+        with StructureReader(dude_path + '/receptor.pdb') as st:
+            receptor = list(st)[0]
+
+        os.mkdir(combind_path)
+        os.mkdir(combind_path + '/structures')
+        os.mkdir(combind_path + '/structures/raw')
+
+        all_ligands.to_csv(combind_path + '/all.csv', index=False)
+        subset_ligands.to_csv(combind_path + '/subset.csv', index=False)
+
+        ligand.write(combind_path + '/structures/raw/XTAL_lig.mae')
+        receptor.write(combind_path + '/structures/raw/XTAL_prot.mae')
+
+        with open(combind_path + '/structures/pdb.csv', 'w') as fp:
+            fp.write('ID,SMILES\n')
+            fp.write('XTAL,{}\n'.format(generate_smiles(ligand)))
 
 @main.command()
 @click.option('--n-train', default=10)
@@ -24,10 +108,13 @@ def main():
 @click.argument('root')
 def setup(input_csv, root, n_train, n_folds, affinity_cut):
     np.random.seed(42)
-    os.mkdir(root)
     df = pd.read_csv(input_csv)
     for i in range(n_folds):
         cwd = '{}/{}'.format(root, i)
+        if os.path.exists(cwd):
+            print(cwd, 'exists. not overwriting.')
+            continue
+
         decoy_csv  = '{}/{}/decoy.csv'.format(root, i)
         binder_csv = '{}/{}/binder.csv'.format(root, i)
         train_csv  = '{}/{}/train.csv'.format(root, i)
@@ -59,7 +146,6 @@ def autoqsar(input_csv, root, affinity_cut):
         run('$SCHRODINGER/utilities/autoqsar autoqsar.qzip -WAIT -test  -i {} -pred autoqsar_preds.csv'.format(input_csv),
             shell=True, cwd=cwd)
 
-# for i in $(ls --color=none); do python ~/combind_dev/scripts/random_binders.py combind $i/subset.csv $i/scores/subset10_rd1 . $i; done;
 @main.command()
 @click.argument('input_csv', type=click.Path(exists=True))
 @click.argument('root')
@@ -81,7 +167,6 @@ def combind(input_csv, root, data, protein):
 def get_fp(mol):
     return AllChem.GetMorganFingerprint(mol, 2)
 
-# for i in $(ls --color=none); do python ~/combind_dev/scripts/random_binders.py similarity $i/subset.csv $i/scores/subset10_rd1 . $i; done;
 @main.command()
 @click.argument('input_csv', type=click.Path(exists=True))
 @click.argument('root')
@@ -94,10 +179,13 @@ def similarity(input_csv, root, data, protein):
     ref_mol = Chem.MolFromSmiles(ref_smiles)
     ref_fp = get_fp(ref_mol)
 
-    
     df = pd.read_csv(input_csv)
-    
     for cwd in glob(root + '/[0-9]'):
+        sim_fname = '{}/similarity.csv'.format(cwd)
+        if os.path.exists(sim_fname):
+            print(sim_fname, 'exists. not overwriting.')
+            continue
+
         active = pd.read_csv('{}/binder.csv'.format(cwd))
         active_fps = []
         for i, ligand in active.iterrows():
@@ -115,224 +203,5 @@ def similarity(input_csv, root, data, protein):
                                               for active_fp in active_fps)
             except:
                 print()
-        df.to_csv('{}/similarity.csv'.format(cwd), index=False)
+        df.to_csv(sim_fname, index=False)
 main()
-
-def load_autoqsar(cwd):
-    autoqsar = pd.read_csv(cwd+'/autoqsar_preds.csv')
-
-    autoqsar['pred_cat'] = autoqsar['s_autoqsar_Pred_Class'] == '<1000.00'
-    autoqsar['AUTOQSAR'] = 1 - autoqsar['r_autoqsar_Pred_Prob']
-    autoqsar.loc[autoqsar['pred_cat'], 'AUTOQSAR'] = 1 - autoqsar.loc[autoqsar['pred_cat'], 'AUTOQSAR']
-    autoqsar = autoqsar[['ID', 'AUTOQSAR']]
-    autoqsar = autoqsar.set_index('ID')
-    return autoqsar
-
-def load_combind(cwd):
-    combind = pd.read_csv(cwd+'/combind_preds.csv')
-    combind['ID'] = [s.replace('_lig', '') for s in combind['ID']]
-    combind = combind.set_index('ID')
-    combind = - combind
-    return combind
-
-def load_affinity(input_csv):
-    affinity = pd.read_csv(input_csv)
-    affinity = affinity[['ID', 'CHEMBL', 'AFFINITY']]
-    affinity = affinity.set_index('ID')
-    return affinity
-
-def load_train(cwd):
-    train = pd.read_csv(cwd+'/train.csv')
-    train = train['ID']
-    return train
-
-def load_similarity():
-    similarity = pd.read_csv(cwd+'/similarity.csv')
-    similarity = similarity[['ID', 'XTAL_sim', 'active_sim']].set_index('ID')
-    return similarity
-
-def load(cut=float('inf')):
-    autoqsar = load_autoqsar()
-    combind = load_combind()
-    affinity = load_affinity()
-    train = load_train()
-    similarity = load_similarity()
-    
-    df = affinity.join(combind).join(autoqsar).join(similarity)
-    df = df.fillna(0)
-    df = df.loc[~df.index.isin(train)]
-    df = df.loc[df['active_sim'] < cut]
-    return df
-
-def log_roc(ax, x, y, label='', lam=0.001):
-    # Get rid of duplicated x values and those less than lambda.
-    idx = np.array(list(x[:-1] != x[1:]) + [True])
-    idx *= x >= lam
-    x = x[idx]
-    y = y[idx]
-
-    # We need to have a value at lambda, so set a dummy one, if we don't.
-    if x[0] != lam:
-        y = np.array([lam*y[0]/x[0]] + list(y))
-        x = np.array([lam]  + list(x))
-
-    b = y[1:] - x[1:] * (y[1:] - y[:-1]) / (x[1:] - x[:-1])
-    auc = np.sum((y[1:] - y[:-1]) / np.log(10))
-    auc += np.sum(b * (np.log10(x[1:]) - np.log10(x[:-1])))
-    auc /= np.log10(1/lam)
-
-    ax.plot(np.log10(x), y, label='{} = {:.2f}'.format(label, auc))
-    
-def roc(ax, x, y, label=''):
-    auc = metrics.auc(x, y)
-    ax.plot(fpr, tpr, label='{} = {:.2f}'.format(label, auc))
-
-def plot(df, metrics=['GSCORE', 'CSCORE', 'AUTOQSAR']):
-    print(df.shape)
-    f, ax = plt.subplots(1, 2, figsize=(12, 5))
-
-    for metric in metrics:
-        fpr, tpr, _ = metrics.roc_curve(df['AFFINITY'] < 1000, df[metric])
-        roc(ax[0], fpr, tpr, label=metric)
-        log_roc(ax[1], fpr, tpr, label=metric)
-    ax[0].legend()
-    ax[1].legend()
-    plt.show()
-
-"""
-# Build and then test qsar models using Schrodinger's autoqsar tool
-
-# Categorical model
-$SCHRODINGER/utilities/autoqsar model.qzip -WAIT -build -i train.csv -y AFFINITY -cat -cuts 1000
-$SCHRODINGER/utilities/autoqsar model.qzip -WAIT -test  -i test.csv  -pred autoqsar_preds.csv
-
-# Quantitative model
-$SCHRODINGER/utilities/autoqsar model.qzip -WAIT -build -i train.csv -y AFFINITY -num -log -scale 1.0e-9
-$SCHRODINGER/utilities/autoqsar model.qzip -WAIT -test  -i test.csv  -pred autoqsar_preds.csv
-"""
-
-def something():
-    affinities = np.log10(affinities)-9
-    gscores = np.array(gscores)
-    cscores = np.array(cscores)
-    xscores = np.array(xscores)
-    ascores = np.array(ascores)
-
-    ascores = np.minimum(xscores, ascores)
-
-    queries = np.array(queries)[affinities < 0]
-    gscores = gscores[affinities < 0]
-    cscores = cscores[affinities < 0]
-    xscores = xscores[affinities < 0]
-    ascores = ascores[affinities < 0]
-    affinities = affinities[affinities < 0]
-    
-    # evaluate performance for subsets of ligands with different
-    # amounts of overlap with the XTAL ligand.
-    for q in [0, 25, 50, 75]:
-        mask = np.isin(np.array(queries), list(pose_cluster.keys()))
-        mask |= np.array(xscores < np.quantile(xscores[affinities==-9], q/100))
-        print(q, mask.sum())
-        title = '{}_{}'.format(protein, q)
-        evaluate_screen(title, affinities, gscores, cscores, xscores, ascores, mask)
-
-    # and to closest active...
-    for q in [0, 25, 50, 75]:
-        mask = np.isin(np.array(queries), list(pose_cluster.keys()))
-        mask |= np.array(ascores < np.quantile(ascores[affinities==-9], q/100))
-        print(q, mask.sum())
-        title = '{}_active_{}'.format(protein, q)
-        evaluate_screen(title, affinities, gscores, cscores, xscores, ascores, mask)
-
-    mask = np.isin(np.array(queries), list(pose_cluster.keys()))
-    mask |= np.array(xscores < -0.4)
-    print('xscore <= 0.4', mask.sum())
-    title = '{}_{}'.format(protein, 4)
-    evaluate_screen(title, affinities, gscores, cscores, xscores, ascores, mask)
-
-    mask = np.isin(np.array(queries), list(pose_cluster.keys()))
-    mask |= np.array(ascores < -0.4)
-    print('ascore <= 0.4', mask.sum())
-    title = '{}_active_{}'.format(protein, 4)
-    evaluate_screen(title, affinities, gscores, cscores, xscores, ascores, mask)
-
-def evaluate_screen(title, affinities, gscores, cscores, xscores, ascores, mask):
-    def correlation(scores, plot_fname):
-        rho, _ = scipy.stats.spearmanr(affinities[~mask], scores[~mask])
-        r, _ = scipy.stats.pearsonr(affinities[~mask], scores[~mask])
-        tau, _ = scipy.stats.kendalltau(affinities[~mask], scores[~mask])
-        print(r, rho, tau)
-
-        plt.scatter(affinities, scores, s=4, c='k')
-        plt.scatter(affinities[mask], scores[mask], s=4, c='r')
-
-        x = 0.25*plt.xlim()[1] + 0.75*plt.xlim()[0]
-        y = 0.99*plt.ylim()[1] + 0.01*plt.ylim()[0]
-        t = (r'$r={:.2f}$'
-             "\n"
-             r'$\rho={:.2f}$'
-             "\n"
-             r'$\tau={:.2f}$').format(r, rho, tau)
-        plt.text(x, y, t, fontsize=20,
-                 horizontalalignment='right', verticalalignment='top')
-        plt.xlabel('log10 binding affinity', size=15)
-        plt.ylabel('prediction', size=15)
-        plt.title(plot_fname.split('.')[0])
-        plt.savefig(plot_fname)
-        plt.close()
-
-    correlation(gscores, '{}_gscore.pdf'.format(title))
-    correlation(cscores, '{}_cscore.pdf'.format(title))
-    correlation(xscores, '{}_xscore.pdf'.format(title))
-    correlation(ascores, '{}_ascore.pdf'.format(title))
-
-    # ROC
-    gfpr, gtpr, _ = sklearn.metrics.roc_curve(affinities[~mask]<-6, -gscores[~mask])
-    cfpr, ctpr, _ = sklearn.metrics.roc_curve(affinities[~mask]<-6, -cscores[~mask])
-    xfpr, xtpr, _ = sklearn.metrics.roc_curve(affinities[~mask]<-6, -xscores[~mask])
-    afpr, atpr, _ = sklearn.metrics.roc_curve(affinities[~mask]<-6, -ascores[~mask])
-    plt.plot(gfpr, gtpr, label='Glide   = {:.2f}'.format(sklearn.metrics.auc(gfpr, gtpr)))
-    plt.plot(cfpr, ctpr, label='ComBind = {:.2f}'.format(sklearn.metrics.auc(cfpr, ctpr)))
-    plt.plot(xfpr, xtpr, label='XTAL sim = {:.2f}'.format(sklearn.metrics.auc(xfpr, xtpr)))
-    plt.plot(afpr, atpr, label='active sim = {:.2f}'.format(sklearn.metrics.auc(afpr, atpr)))
-
-    plt.legend()
-    plt.ylabel('true positive rate', size=15)
-    plt.xlabel('false positive rate', size=15)
-    plt.title(title)
-    plt.savefig('{}_roc.pdf'.format(title))
-    plt.close()
-
-    # log-Adjusted ROC
-    # See https://pubmed.ncbi.nlm.nih.gov/20735049/
-    # Used recently in https://pubmed.ncbi.nlm.nih.gov/28760952/
-    def log_roc(x, y, label='', lam=0.001):
-
-        # Get rid of duplicated x values and those less than lambda.
-        idx = np.array(list(x[:-1] != x[1:]) + [True])
-        idx *= x >= lam
-        x = x[idx]
-        y = y[idx]
-
-        # We need to have a value at lambda, so set a dummy one, if we don't.
-        if x[0] != lam:
-            x = np.array([lam]  + list(x))
-            y = np.array([y[0]] + list(y))
-
-        b = y[1:] - x[1:] * (y[1:] - y[:-1]) / (x[1:] - x[:-1])
-        auc = np.sum((y[1:] - y[:-1]) / np.log(10))
-        auc += np.sum(b * (np.log10(x[1:]) - np.log10(x[:-1])))
-        auc /= np.log10(1/lam)
-
-        plt.plot(np.log10(x), y, label='{} = {:.2f}'.format(label, auc))
-    
-    log_roc(gfpr, gtpr, 'Glide')
-    log_roc(cfpr, ctpr, 'ComBind')
-    log_roc(xfpr, xtpr, 'XTAL sim')
-    log_roc(afpr, atpr, 'active sim')
-    plt.legend()
-    plt.ylabel('true positive rate', size=15)
-    plt.xlabel('log10 false positive rate', size=15)
-    plt.title(title)
-    plt.savefig('{}_logroc.pdf'.format(title))
-    plt.close()
