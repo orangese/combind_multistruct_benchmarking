@@ -27,6 +27,8 @@ def load_combind(cwd):
     combind = pd.read_csv(cwd+'/combind_preds.csv')
     combind['ID'] = [s.replace('_lig', '') for s in combind['ID']]
     combind = combind.set_index('ID')
+    combind.loc[:, 'CSCORE'] *= -1
+    combind.loc[:, 'CSCORE_GPOSE'] *= -1
     combind[combind > 0] = 0
     return combind
 
@@ -132,6 +134,8 @@ def plot_cat_all(xtal_cut, active_cut, decoy_cut,
             df = load(input_csv, cwd, cat='<1000.00', xtal_cut=xtal_cut, active_cut=active_cut, decoy_cut=decoy_cut)
             df.loc[:, 'GSCORE'] *= -1
             df.loc[:, 'CSCORE'] *= -1
+            df.loc[:, 'GSCORE_CPOSE'] *= -1
+            df.loc[:, 'CSCORE_GPOSE'] *= -1
             _aucs, _logaucs = plot_cat(df.loc[~df['train']], ax, scores, colors)
             aucs += [_aucs]
             logaucs += [_logaucs]

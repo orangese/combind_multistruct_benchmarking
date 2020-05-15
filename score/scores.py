@@ -281,9 +281,9 @@ def screen(paths, params, features, stats_root, protein, queries,
         gscores_cpose += [ligand.poses[cpose].gscore]
         
         _cluster['test'] = cpose
-        cscores += [-sc.ps.normalized_partial_log_posterior(_cluster, 'test')]
+        cscores += [sc.ps.normalized_partial_log_posterior(_cluster, 'test')]
         _cluster['test'] = gpose
-        cscores_gpose += [-sc.ps.normalized_partial_log_posterior(_cluster, 'test')]
+        cscores_gpose += [sc.ps.normalized_partial_log_posterior(_cluster, 'test')]
 
     with open(score_fname, 'w') as fp:
         fp.write(','.join(['ID', 'GSCORE', 'CSCORE', 'GSCORE_CPOSE', 'CSCORE_GPOSE'])+'\n')
