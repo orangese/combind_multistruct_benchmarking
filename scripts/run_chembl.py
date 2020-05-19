@@ -40,6 +40,8 @@ python $COMBINDHOME/scripts/run_chembl.py similarity $i/chembl/chosen.csv $i/sco
 # Useful for submitting jobs for each protein
 sbatch -p rondror -t 03:00:00 -J $i -o ~/temp/$i.log --wrap="$CMD"
 for i in $(ls --color=none); do $CMD; done;
+
+for i in $(ls --color=none); do sbatch -p rondror -t 03:00:00 -J $i -o ~/temp/$i.log --wrap="python $COMBINDHOME/scripts/run_chembl.py combind $i/chembl/chosen.csv $i/scores/rd2 . $i --version rd2"; done;
 """
 
 import os
@@ -169,17 +171,18 @@ def autoqsar(input_csv, root):
 @click.argument('root')
 @click.argument('data')
 @click.argument('protein')
-def combind(input_csv, root, data, protein):
+@click.option('--version', default='rd1')
+def combind(input_csv, root, data, protein, version):
     input_csv = os.path.abspath(input_csv)
     root = os.path.abspath(root)
     data = os.path.abspath(data)
     for cwd in glob(root + '/[0-9]'):
         if not os.path.exists('{}/combind_poses.sc'.format(cwd)):
-            run('$COMBINDHOME/main.py --data {} --ligands {}/binder.csv score {} all --pose-fname combind_poses.sc'.format(data, cwd, protein),
+            run('$COMBINDHOME/main.py --data {} --ligands {}/binder.csv score --stats-version {} --stats-root {}/stats_data/{} {} all --pose-fname combind_poses.sc'.format(data, cwd, version, os.environ['COMBINDHOME'], version, protein),
                 shell=True, cwd=cwd)
 
         if not os.path.exists('{}/combind_preds.csv'.format(cwd)):
-            run('$COMBINDHOME/main.py --data {} --ligands {} screen {} all --pose-fname combind_poses.sc --score-fname combind_preds.csv'.format(data, input_csv, protein),
+            run('$COMBINDHOME/main.py --data {} --ligands {} screen --stats-version {} --stats-root {}/stats_data/{} {} all --pose-fname combind_poses.sc --score-fname combind_preds.csv'.format(data, input_csv, version, os.environ['COMBINDHOME'], version, protein),
                 shell=True, cwd=cwd)
 
 def get_fp(mol):

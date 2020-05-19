@@ -275,7 +275,15 @@ def _piecewise(data, opt, cut):
 def _groupby_subset(df, index, col):
     return df[index+[col]].groupby(index)
 
+def nodigits(s):
+    return ''.join([i for i in s if not i.isdigit()])
+
+
 def compute_scores(raw, settings):
+    if settings['level'] == 'atom':
+        raw['protein_res'] = [r['protein_res']+':'+nodigits(r['protein_atom'])
+                              for _, r in raw.iterrows()]
+
     scores = []
     for label, group in raw.groupby('label'):
         group = group.copy()
@@ -306,9 +314,7 @@ def compute_scores(raw, settings):
                                       'score').idxmax()
             idx = idx['score']
             group = group.loc[idx]
-        group = _groupby_subset(group,
-                                ['pose', 'label', 'protein_res'],
-                                'score').sum()
+        group = _groupby_subset(group, ['pose', 'label', 'protein_res'], 'score').sum()
         scores += [group]
     return pd.concat(scores).sort_index()
 
