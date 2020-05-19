@@ -44,8 +44,19 @@ class PredictStructs:
         return pose_cluster['test']
 
     def normalized_partial_log_posterior(self, pose_cluster, query):
-        return (- self._partial_log_posterior(pose_cluster, query)
+        return (self._partial_log_posterior(pose_cluster, query)
                  / self._effective_number(pose_cluster, query))
+
+
+    def weighted_partial_log_posterior(self, pose_cluster, weights, query):
+        log_odds = 0
+        for ligname in pose_cluster:
+            if ligname == query: continue
+            log_odds += weights[ligname]*self._log_likelihood_ratio_pair(pose_cluster, query, ligname)
+
+        log_prior = -self._get_physics_score(query, pose_cluster[query])
+        log_prior *= self.alpha * self._effective_number(pose_cluster, query)
+        return (log_odds + log_prior) / self._effective_number(pose_cluster, query)
 
     def max_posterior(self, max_iterations, restart):
         """

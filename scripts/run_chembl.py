@@ -174,7 +174,7 @@ def combind(input_csv, root, data, protein):
     root = os.path.abspath(root)
     data = os.path.abspath(data)
     for cwd in glob(root + '/[0-9]'):
-        if not os.path.exists('{}/combind_preds.csv'.format(cwd)):
+        if not os.path.exists('{}/combind_poses.sc'.format(cwd)):
             run('$COMBINDHOME/main.py --data {} --ligands {}/binder.csv score {} all --pose-fname combind_poses.sc'.format(data, cwd, protein),
                 shell=True, cwd=cwd)
 

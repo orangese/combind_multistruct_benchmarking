@@ -1,6 +1,7 @@
 import os
 import sys
 import numpy as np
+import pandas as pd
 
 from containers import Protein
 from score.prob_opt import PredictStructs
@@ -268,25 +269,34 @@ def screen(paths, params, features, stats_root, protein, queries,
     if 'all' in queries:
         queries = sc.predict_data.lm.docked(list(sc.predict_data.lm.pdb.keys()))
     cluster = sc.read_results(pose_fname)
+
+
+    def f(x):
+        x = np.log10(x) - 9
+        return -2*x + -16
+
+    weights = {lig: 1 #f(sc.predict_data.lm.lookup(lig)['AFFINITY'])
+               for lig in cluster}
+
     sc.load_docking(queries + list(cluster.keys()))
 
-    gscores, cscores, gscores_cpose, cscores_gpose = [], [], [], []
+    df = pd.DataFrame([],
+        columns=['GPOSE', 'CPOSE', 'GSCORE', 'CSCORE', 'GSCORE_CPOSE', 'CSCORE_GPOSE'],
+        index=queries)
+    df.index.name = 'ID'
     for query in queries:
         _cluster = {k:v for k, v in cluster.items()}
         ligand = sc.predict_data.docking[query]
         cpose = sc.ps.score_new_ligand(_cluster, ligand)
         gpose = 0
-
-        gscores += [ligand.poses[gpose].gscore]
-        gscores_cpose += [ligand.poses[cpose].gscore]
+        
+        df.loc[query, 'GPOSE'] = gpose
+        df.loc[query, 'CPOSE'] = cpose
+        df.loc[query, 'GSCORE'] = ligand.poses[gpose].gscore
+        df.loc[query, 'GSCORE_CPOSE'] =ligand.poses[cpose].gscore
         
         _cluster['test'] = cpose
-        cscores += [sc.ps.normalized_partial_log_posterior(_cluster, 'test')]
+        df.loc[query, 'CSCORE'] = -sc.ps.weighted_partial_log_posterior(_cluster, weights, 'test')
         _cluster['test'] = gpose
-        cscores_gpose += [sc.ps.normalized_partial_log_posterior(_cluster, 'test')]
-
-    with open(score_fname, 'w') as fp:
-        fp.write(','.join(['ID', 'GSCORE', 'CSCORE', 'GSCORE_CPOSE', 'CSCORE_GPOSE'])+'\n')
-        for line in zip(queries, gscores, cscores, gscores_cpose, cscores_gpose):
-            fp.write(','.join(map(str, line))+'\n')
- 
+        df.loc[query, 'CSCORE_GPOSE'] = -sc.ps.weighted_partial_log_posterior(_cluster, weights, 'test')
+    df.to_csv(score_fname)

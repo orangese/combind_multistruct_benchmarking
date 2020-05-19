@@ -27,8 +27,6 @@ def load_combind(cwd):
     combind = pd.read_csv(cwd+'/combind_preds.csv')
     combind['ID'] = [s.replace('_lig', '') for s in combind['ID']]
     combind = combind.set_index('ID')
-    combind.loc[:, 'CSCORE'] *= -1
-    combind.loc[:, 'CSCORE_GPOSE'] *= -1
     combind[combind > 0] = 0
     return combind
 
@@ -116,7 +114,7 @@ def plot_cat(df, ax, scores, colors):
         logaucs += [log_roc(ax[1], fpr, tpr, color=colors[score])]
     return aucs, logaucs
 
-def plot_cat_all(xtal_cut, active_cut, decoy_cut,
+def plot_cat_all(xtal_cut, active_cut, decoy_cut, weight=1,
                  scores = ['CSCORE', 'GSCORE', 'AUTOQSAR'],
                  colors = {'GSCORE': 'b', 'CSCORE': 'g', 'AUTOQSAR':'m'},
                  names = {'GSCORE': 'Glide', 'CSCORE': 'ComBind', 'AUTOQSAR':'AUTOQSAR'}):
@@ -136,6 +134,8 @@ def plot_cat_all(xtal_cut, active_cut, decoy_cut,
             df.loc[:, 'CSCORE'] *= -1
             df.loc[:, 'GSCORE_CPOSE'] *= -1
             df.loc[:, 'CSCORE_GPOSE'] *= -1
+            df['CSCORE'] = df['GSCORE_CPOSE'] + weight*(df['CSCORE']-df['GSCORE_CPOSE'])
+
             _aucs, _logaucs = plot_cat(df.loc[~df['train']], ax, scores, colors)
             aucs += [_aucs]
             logaucs += [_logaucs]
@@ -195,7 +195,7 @@ def plot_num(ax, mask, affinities, scores, plot=True):
         ax.set_xlabel('log10 binding affinity', size=15)
     return tau, r
 
-def plot_num_all(affinity_cut, xtal_cut, active_cut, plot=True):
+def plot_num_all(affinity_cut, xtal_cut, active_cut, plot=True, weight=1.0):
     data = []
     for protein in os.listdir('/Users/jpaggi/sherlock/oak/users/jpaggi/VS/CHEMBL'):
         taus, rs = [], []
@@ -208,9 +208,11 @@ def plot_num_all(affinity_cut, xtal_cut, active_cut, plot=True):
                       cwd, xtal_cut=xtal_cut, active_cut=active_cut, train_fname='binder.csv',
                       num=True)
             df = df.loc[df['LOGAFFINITY'] < affinity_cut]
-            
+
             if sum(~df['train']) < 30:
                 continue
+
+            df['CSCORE'] = df['GSCORE_CPOSE'] + weight*(df['CSCORE']-df['GSCORE_CPOSE'])
 
             if plot:
                 f, ax = plt.subplots(1, 3, figsize=(16, 4))

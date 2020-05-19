@@ -65,8 +65,8 @@ def score(paths, stats_root, protein, struct, queries, pose_fname, xtal,
                        max_iterations=max_iterations, restart=restart)
 
 @main.command()
-@click.option('--stats_version', default='rd1')
-@click.option('--stats_root', default='{}/stats_data/rd1'.format(os.environ['COMBINDHOME']))
+@click.option('--stats-version', default='rd1')
+@click.option('--stats-root', default='{}/stats_data/rd1'.format(os.environ['COMBINDHOME']))
 @click.option('--struct', default=None)
 @click.option('--pose-fname', default='poses.sc')
 @click.option('--score-fname', default='combind_preds.csv')
