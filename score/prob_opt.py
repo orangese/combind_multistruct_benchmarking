@@ -29,35 +29,6 @@ class PredictStructs:
         self.log_likelihood_ratio_cache = {}
         self.lig_pairs = {}
 
-    def score_new_ligand(self, pose_cluster, ligand):
-        # Clear caches of test ligand
-        for k in [k for k in self.lig_pairs if 'test' in k]:
-            del self.lig_pairs[k]
-
-        for k in [k for k in self.log_likelihood_ratio_cache if 'test' in k]:
-            del self.log_likelihood_ratio_cache[k]
-
-        self.ligands['test'] = ligand
-        pose_cluster['test'] = 0
-        pose_cluster['test'] = self._best_pose(pose_cluster, 'test')
-
-        return pose_cluster['test']
-
-    def normalized_partial_log_posterior(self, pose_cluster, query):
-        return (self._partial_log_posterior(pose_cluster, query)
-                 / self._effective_number(pose_cluster, query))
-
-
-    def weighted_partial_log_posterior(self, pose_cluster, weights, query):
-        log_odds = 0
-        for ligname in pose_cluster:
-            if ligname == query: continue
-            log_odds += weights[ligname]*self._log_likelihood_ratio_pair(pose_cluster, query, ligname)
-
-        log_prior = -self._get_physics_score(query, pose_cluster[query])
-        log_prior *= self.alpha * self._effective_number(pose_cluster, query)
-        return (log_odds + log_prior) / self._effective_number(pose_cluster, query)
-
     def max_posterior(self, max_iterations, restart):
         """
         Computes the pose cluster maximizing the posterior likelihood.
