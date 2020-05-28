@@ -1,15 +1,20 @@
 """
-for i in *; do python ~/combind/dock/ifd.py setup $i; done;
-for i in */docking/ifd/*; do cd $i; if [ ! -f *.log ]; then echo $i; sbatch -p owners -t 12:00:00 -n 6 --wrap="sh ${i##*/}.sh" -J ${i##*/}; fi; cd /oak/stanford/groups/rondror/users/jpaggi/combind; done;
-for i in */docking/ifd/*; do cd $i; echo $i;  if [ -f ${i##*/}-out.maegz ]; then python ~/combind/dock/ifd.py extract *_out.mae ${i##*/}-out.maegz ${i##*/}_pv.maegz; fi; cd /oak/stanford/groups/rondror/users/jpaggi/combind; done;
-for i in */docking/ifd/*; do cd $i; echo $i;  if [ -f ${i##*/}-out.maegz ]; then python ~/combind/dock/ifd.py rmsd ${i##*/}_pv.maegz; fi; cd /oak/stanford/groups/rondror/users/jpaggi/combind; done;
+# Schrodinger interpreters
+for i in *; do python ~/combind/dock/ifd.py setup-stage1 $i; done;
+for i in *; do python ~/combind/dock/ifd.py setup-stage2 /oak/stanford/groups/rondror/users/jpaggi/combind/$i/docking/ifd2; done;
+for i in *; do python ~/combind/dock/ifd.py setup-stage3 /oak/stanford/groups/rondror/users/jpaggi/combind/$i/docking/ifd2; done;
 
-# start to end of glide1
-# check that all glide1 subjobs complete
-# prime (in serial) through end of glide2
-# check that all glide2 subjobs complete
-# score.
+# python 3.8 interpreter (conda activate mol)
+python ~/combind/dock/ifd.py run '*/docking/ifd2/*/*-stage1.inp' '*/docking/ifd2/*/*-stage1.log'
+python ~/combind/dock/ifd.py run '*/docking/ifd2/*/*-stage2.inp' '*/docking/ifd2/*/*-stage2.log' --time 12:00:00 --queue rondror --n-jobs 100
+python ~/combind/dock/ifd.py run '*/docking/ifd2/*/*-stage3.inp' '*/docking/ifd2/*/*-stage3.log'
 
+# Runs in serial...
+for i in *; do python ~/combind/dock/ifd2.py kick-stage2 $i/docking/ifd2; done;
+
+# Schrodinger interpreters
+for i in */docking/ifd2/*; do cd $i; if [[ -f ${i##*/}-stage3-out.maegz && ! -f ${i##*/}_pv.maegz ]]; then echo $i; python ~/combind/dock/ifd.py extract *_out.mae ${i##*/}-stage3-out.maegz ${i##*/}_pv.maegz; fi; cd /oak/stanford/groups/rondror/users/jpaggi/combind; done;
+for i in */docking/ifd2/*; do cd $i; if [[ -f ${i##*/}_pv.maegz && ! -f rmsd.csv ]]; then echo $i; python ~/combind/dock/ifd.py rmsd ${i##*/}_pv.maegz; fi; cd /oak/stanford/groups/rondror/users/jpaggi/combind; done;
 """
 
 import os
@@ -19,8 +24,88 @@ import subprocess
 from glob import glob
 import pandas as pd
 
+def wildcard(path):
+    resolved = glob(path)
+    assert len(resolved) < 2, (path, resolved)
 
-template="""INPUT_FILE  {grid}_out.mae
+    if not resolved:
+        return None
+    return resolved[0]
+
+def get_all_jobs(pattern):
+    jobs = {}
+    for job in glob(pattern):
+        name = job.split('/')[-1].split('.')[0]
+        cwd = '/'.join(job.split('/')[:-1])
+        jobs[name] = cwd
+    return jobs
+
+def get_running_jobs(all_jobs, running=True):
+    cmd = ['squeue', '-u', os.environ['USER'], '-o', '%.50j']
+    if running:
+        cmd += ['-t', 'RUNNING']
+    slurm = subprocess.run(cmd, capture_output=True, encoding='utf-8')
+
+    jobs = []
+    for job in slurm.stdout.split('\n'):
+        job = job.strip()
+        if job in all_jobs:
+            jobs += [job]
+    return set(jobs)
+
+def get_completed_jobs(pattern):
+    jobs = {}
+    for job in glob(pattern):
+        
+        with open(job) as fp:
+            txt = fp.read()
+
+        if 'IFD Job Completed' in txt:
+            name = job.split('/')[-1].split('.')[0]
+            cwd = '/'.join(job.split('/')[:-1])
+            jobs[name] = cwd
+    return jobs
+
+@click.group()
+def main():
+    pass
+
+@main.command()
+@click.argument('input_pattern')
+@click.argument('completed_pattern')
+@click.option('--time', default='2:00:00')
+@click.option('--queue', default='owners')
+@click.option('--n-jobs', default=200)
+def run(input_pattern, completed_pattern, time, queue, n_jobs):
+    
+    print('Launching {} at {}'.format(input_pattern, datetime.now()))
+
+    all_jobs = get_all_jobs(input_pattern)
+    
+    queued_jobs = get_running_jobs(all_jobs, running=False)
+    running_jobs = get_running_jobs(all_jobs)
+    
+    completed_jobs = get_completed_jobs(completed_pattern)
+    remaining_jobs = {k: v for k, v in all_jobs.items()
+                      if k not in completed_jobs and k not in queued_jobs}
+
+    print('{} total jobs.'.format(len(all_jobs)))
+    print('{} completed jobs.'.format(len(completed_jobs)))
+    print('{} queued jobs.'.format(len(queued_jobs)))
+    print('{} running jobs.'.format(len(running_jobs)))
+    print('{} remaining jobs.'.format(len(remaining_jobs)))
+
+    to_submit = min(len(remaining_jobs), max(0, n_jobs-len(queued_jobs)))
+    print('Submitting {} more jobs.'.format(to_submit))
+
+    for name, cwd in sorted(remaining_jobs.items())[:to_submit]:
+        cmd = 'sbatch -p {0} -t {1} --wrap="sh {2}.sh" -J {2}'.format(queue, time, name)
+        print(cwd, cmd)
+        subprocess.run(cmd, cwd=cwd, shell=True)
+
+################################################################################
+
+template_stage1="""INPUT_FILE  {grid}_out.mae
 
 STAGE VDW_SCALING
   BINDING_SITE ligand L:{resid}
@@ -37,40 +122,38 @@ STAGE INITIAL_DOCKING
   VARIANTS_TO_RUN A,B,C,D,E,F,G
   DOCKING_RINGCONFCUT 2.5
   DOCKING_AMIDE_MODE penal
-
-STAGE COMPILE_RESIDUE_LIST
-  DISTANCE_CUTOFF 5.0
-
-STAGE PRIME_REFINEMENT
-  NUMBER_OF_PASSES  1
-  USE_MEMBRANE no
-  OPLS_VERSION OPLS3e
-
-STAGE GLIDE_DOCKING2
-  BINDING_SITE ligand Z:999
-  INNERBOX 5.0
-  OUTERBOX auto
-  LIGAND_FILE {ligand}.mae
-  LIGANDS_TO_DOCK existing
-  DOCKING_PRECISION SP
-  DOCKING_CANONICALIZE False
-  DOCKING_RINGCONFCUT 2.5
-  DOCKING_AMIDE_MODE penal
-
-STAGE SCORING
-  SCORE_NAME  r_psp_IFDScore
-  TERM 1.000,r_psp_Prime_Energy,1
-  TERM 9.057,r_i_glide_gscore,0
-  TERM 1.428,r_i_glide_ecoul,0
-  REPORT_FILE report.csv
 """
 
-def ifd(ligand, grid, root):
+@main.command()
+@click.argument('root')
+def setup_stage1(root):
+    from schrodinger.structure import StructureReader
+    df = pd.read_csv('{}/structures/pdb.csv'.format(root))
+    grid = [fname for fname in os.listdir('{}/docking/grids'.format(root)) if fname[0] != '.']
+    assert len(grid) ==  1
+    grid = grid[0]
+    print(grid)
+    for _, row in df.iterrows():
+        print(row['ID'])
+        _setup_stage1(row['ID']+'_lig', grid, root)
+
+@main.command()
+@click.argument('cwd')
+def check_stage1(cwd):
+    print(cwd, _check_stage1(cwd))
+
+@main.command()
+@click.argument('cwd')
+def clear_stage1(cwd):
+    if _check_stage1(cwd):
+        print(cwd)
+
+def _setup_stage1(ligand, grid, root):
     from schrodinger.structure import StructureReader
     name = '{}-to-{}'.format(ligand, grid)
     cwd = '{}/docking/ifd2/{}'.format(root, name)
 
-    cmd = ('{}/ifd -NGLIDECPU 1 -NPRIMECPU 6 {}.inp -HOST localhost'
+    cmd = ('{}/ifd -NGLIDECPU 1 -NPRIMECPU 1 {}-stage1.inp -HOST localhost'
            ' -SUBHOST localhost -WAIT -STRICT -RESTART'
            ).format(os.environ['SCHRODINGER'], name)
 
@@ -98,117 +181,242 @@ def ifd(ligand, grid, root):
 
     os.system('cp {}/structures/aligned/{}/rot-{}_query.mae {}/{}_out.mae'.format(root, grid, grid, cwd, grid))
 
-    with open('{}/{}.inp'.format(cwd, name), 'w') as fp:
-        fp.write(template.format(grid=grid, ligand=ligand, resid=resid))
+    with open('{}/{}-stage1.inp'.format(cwd, name), 'w') as fp:
+        fp.write(template_stage1.format(grid=grid, ligand=ligand, resid=resid))
 
-    with open('{}/{}.sh'.format(cwd, name), 'w') as fp:
+    with open('{}/{}-stage1.sh'.format(cwd, name), 'w') as fp:
         fp.write(cmd + '\n')
 
-def get_all_jobs(pattern):
-    jobs = []
-    for job in glob(pattern):
-        job = job.split('/')[-1]
-        jobs += [job]
-    return set(jobs)
+def _clear_stage1(cwd, name):
+    os.system('rm -rf {}/{}-stage1*'.format(cwd, name))
+    os.system('rm slurm*')
+    os.system('rm sh*')
 
-def get_running_jobs(all_jobs, running=True):
-    cmd = ['squeue', '-u', os.environ['USER'], '-o', '%.20j']
-    if running:
-        cmd += ['-t', 'RUNNING']
-    slurm = subprocess.run(cmd, capture_output=True, encoding='utf-8')
+def _attempted_stage1(cwd, name):
+    return os.path.exists('{}/{}-stage1.log'.format(cwd, name))
 
-    jobs = []
-    for job in slurm.stdout.split('\n'):
-        job = job.strip()
-        if job in all_jobs:
-            jobs += [job]
-    return set(jobs)
+def _get_stage1_workdir(cwd):
+    workdir = sorted(glob(cwd + '/*-stage1_workdir/initial_docking_dir*'))
+    if not workdir:
+        return False
+    return workdir[-1]
 
-def get_completed_jobs(pattern):
-    pattern += '/*-out.maegz'
-    jobs = []
-    for job in glob(pattern):
-        jobs += [job.split('/')[-1].split('-out.maegz')[0]]
-    return set(jobs)
+def _check_stage1(cwd):
+    workdir = _get_stage1_workdir(cwd)
+    if not workdir:
+        return False
 
-@click.group()
-def main():
-    pass
-
-def wildcard(path):
-    resolved = glob(path)
-    assert len(resolved) < 2, (path, resolved)
-
-    if not resolved:
-        return None
-    return resolved[0]
-
-@main.command()
-@click.argument('workdir')
-def check_initial(workdir):
     failed = []
     for i, a in enumerate(['A','B','C','D','E','F','G']):
         pv  = wildcard('{}/*scale_lig1_G_batchglide_0000{}_pv.maegz'.format(workdir, i))
         log = wildcard('{}/*scale_lig1_{}.log'.format(workdir, a))
 
-        if pv:
-            continue
+        if pv: continue
 
-        with open(log) as fp:
-            txt = fp.read()
+        if log:
+            with open(log) as fp:
+                txt = fp.read()
 
-        phrases = ['** NO ACCEPTABLE LIGAND POSES WERE FOUND **',
-                   'NO VALID POSES AFTER MINIMIZATION: SKIPPING.']
+            phrases = ['** NO ACCEPTABLE LIGAND POSES WERE FOUND **',
+                       'NO VALID POSES AFTER MINIMIZATION: SKIPPING.',
+                       'GLIDE WARNING: Skipping refinement, etc. because rough-score step failed.']
 
-        if any(phrase in txt for phrase in phrases):
-            continue
-
+            if any(phrase in txt for phrase in phrases):
+                continue
         failed += [a]
+    return not bool(failed)
 
-    print(workdir, failed)
+################################################################################
+
+template_stage2="""{inputs}
+
+STAGE COMPILE_RESIDUE_LIST
+  DISTANCE_CUTOFF 5.0
+
+STAGE PRIME_REFINEMENT
+  NUMBER_OF_PASSES  1
+  USE_MEMBRANE no
+  OPLS_VERSION OPLS3e
+
+STAGE GLIDE_DOCKING2
+  BINDING_SITE ligand Z:999
+  INNERBOX 5.0
+  OUTERBOX auto
+  LIGAND_FILE {ligand}.mae
+  LIGANDS_TO_DOCK existing
+  DOCKING_PRECISION SP
+  DOCKING_CANONICALIZE False
+  DOCKING_RINGCONFCUT 2.5
+  DOCKING_AMIDE_MODE penal
+"""
 
 @main.command()
 @click.argument('root')
-def setup(root):
-    from schrodinger.structure import StructureReader
-    df = pd.read_csv('{}/structures/pdb.csv'.format(root))
-    grid = [fname for fname in os.listdir('{}/docking/grids'.format(root)) if fname[0] != '.']
-    assert len(grid) ==  1
-    grid = grid[0]
-    print(grid)
-    for _, row in df.iterrows():
-        print(row['ID'])
-        ifd(row['ID']+'_lig', grid, root)
+def setup_stage2(root):
+    for cwd in glob(root+'/*'):
+        name = cwd.split('/')[-1]
+        ligand = name.split('-to-')[0]
+
+        if os.path.exists('{}/{}-stage2.inp'.format(cwd, name)):
+            print('input file exists. not overwriting.')
+            continue
+
+        if not _check_stage1(cwd):
+            continue
+        
+        stage1_dir = _get_stage1_workdir(cwd)
+        assert stage1_dir
+        inputs = []
+        for pv in glob('{}/*-scale_lig1_*_pv-*.maegz'.format(stage1_dir)):
+            inputs += ['INPUT_FILE  {}'.format(pv)]
+        inputs = '\n'.join(sorted(inputs))
+
+        with open('{}/{}-stage2.inp'.format(cwd, name), 'w') as fp:
+            fp.write(template_stage2.format(inputs=inputs, ligand=ligand))
+
+        cmd = ('{}/ifd -NGLIDECPU 1 -NPRIMECPU 1 {}-stage2.inp -HOST localhost'
+               ' -SUBHOST localhost -WAIT -STRICT -RESTART'
+               ).format(os.environ['SCHRODINGER'], name)
+
+        with open('{}/{}-stage2.sh'.format(cwd, name), 'w') as fp:
+            fp.write(cmd + '\n')
 
 @main.command()
-@click.argument('pattern')
-def run(pattern):
-    n_jobs = 100
-    print('Launching {} at {}'.format(pattern, datetime.now()))
+@click.argument('cwd')
+def check_stage2(cwd):
+    print(cwd, _check_stage2(cwd))
 
-    all_jobs = get_all_jobs(pattern)
-    queued_jobs = get_running_jobs(all_jobs, running=False)
-    running_jobs = get_running_jobs(all_jobs)
-    completed_jobs = get_completed_jobs(pattern)
-    remaining_jobs = all_jobs.difference(queued_jobs.union(completed_jobs))
-
-    print('{} total jobs.'.format(len(all_jobs)))
-    print('{} completed jobs.'.format(len(completed_jobs)))
-    print('{} queued jobs.'.format(len(queued_jobs)))
-    print('{} running jobs.'.format(len(running_jobs)))
-    print('{} remaining jobs.'.format(len(remaining_jobs)))
-
-    to_submit = min(len(remaining_jobs), max(0, n_jobs-len(queued_jobs)))
-    print('Submitting {} more jobs.'.format(to_submit))
-
-    for job in sorted(remaining_jobs)[:to_submit]:
-        cmd = 'sbatch -p owners -t 12:00:00 -n 6 --wrap="sh {0}.sh" -J {0}'.format(job)
-        cwd = glob(pattern[:-1]+job)[0]
-
+@main.command()
+@click.argument('cwd')
+def clear_stage2(cwd):
+    if _check_stage2(cwd):
         print(cwd)
-        print(cmd)
 
-        subprocess.run(cmd, cwd=cwd, shell=True)
+@main.command()
+@click.argument('root')
+def kick_stage2(root):
+    for cwd in glob(root+'/*'):
+        name = cwd.split('/')[-1]
+        ligand = name.split('-to-')[0]
+
+        if os.path.exists('{}/{}-stage2.log'.format(cwd, name)):
+            with open('{}/{}-stage2.log'.format(cwd, name)) as fp:
+                txt = fp.read()
+            if not 'IFD Job Completed' in txt:
+                continue
+        else:
+            continue
+
+        todo = _check_stage2(cwd)
+
+        if not todo:
+            continue
+
+        if len(todo) > 5:
+            print('More than 5 jobs failed completed...')
+            print(todo)
+            continue
+
+        print(todo)
+        
+        stage2_dir = _get_stage2_workdir(cwd)
+        assert stage2_dir
+
+        for job in todo:
+            print('cd', stage2_dir)
+            print('glide {}-1.inp -WAIT -O'.format(job))
+            print('cp {}-1_pv.maegz {}-1_pv-1.maegz'.format(job, job))
+
+            subprocess.run('glide {}-1.inp -WAIT -O'.format(job), cwd=stage2_dir, shell=True)
+            subprocess.run('cp {}-1_pv.maegz {}-1_pv-1.maegz'.format(job, job), cwd=stage2_dir, shell=True)
+
+def _get_stage2_workdir(cwd):
+    workdir = sorted(glob(cwd + '/*-stage2_workdir/glide_docking_dir*'))
+    if not workdir:
+        return False
+    return workdir[-1]
+
+def _check_stage2(cwd):
+    workdir = _get_stage2_workdir(cwd)
+    if not workdir: return True
+
+    stage1_workdir = _get_stage1_workdir(cwd)
+    assert stage1_workdir
+
+    stage1s = [pv.split('/')[-1].split('.')[0]
+               for pv in glob('{}/*pv-*.maegz'.format(stage1_workdir))]
+
+    failed = []
+    for stage1 in stage1s:
+        pv  = '{}/{}-1_pv-1.maegz'.format(workdir, stage1)
+        log = '{}/{}-1.log'.format(workdir, stage1)
+        
+        if os.path.exists(pv):
+            continue
+
+        if os.path.exists(log):
+            with open(log) as fp:
+                txt = fp.read()
+
+            phrases = ['** NO ACCEPTABLE LIGAND POSES WERE FOUND **',
+                       'NO VALID POSES AFTER MINIMIZATION: SKIPPING.',
+                       'No Ligand Poses were written to external file',
+                       'GLIDE WARNING: Skipping refinement, etc. because rough-score step failed.']
+
+            if any(phrase in txt for phrase in phrases):
+                continue
+        failed += [stage1]
+    return failed
+
+def _clear_stage2(cwd):
+    to_delete = ' '.join(glob('{}/*stage2*'.format(cwd)))
+    print(to_delete)
+    os.system('rm -rf {}'.format(to_delete))
+
+
+################################################################################
+
+template_stage3="""{inputs}
+STAGE SCORING
+  SCORE_NAME  r_psp_IFDScore
+  TERM 1.000,r_psp_Prime_Energy,1
+  TERM 9.057,r_i_glide_gscore,0
+  TERM 1.428,r_i_glide_ecoul,0
+  REPORT_FILE report.csv
+"""
+
+@main.command()
+@click.argument('root')
+def setup_stage3(root):
+    for cwd in glob(root+'/*'):
+        name = cwd.split('/')[-1]
+        ligand = name.split('-to-')[0]
+
+        if os.path.exists('{}/{}-stage3.inp'.format(cwd, name)):
+            print('input file exists. not overwriting.')
+            continue
+
+        if _check_stage2(cwd):
+            continue
+        
+        stage2_dir = _get_stage2_workdir(cwd)
+        assert stage2_dir
+        inputs = []
+        for pv in glob('{}/*-1_pv-1.maegz'.format(stage2_dir)):
+            inputs += ['INPUT_FILE  {}'.format(pv)]
+        inputs = '\n'.join(sorted(inputs))
+
+        with open('{}/{}-stage3.inp'.format(cwd, name), 'w') as fp:
+            fp.write(template_stage3.format(inputs=inputs))
+
+        cmd = ('{}/ifd -NGLIDECPU 1 -NPRIMECPU 1 {}-stage3.inp -HOST localhost'
+               ' -SUBHOST localhost -WAIT -STRICT -RESTART'
+               ).format(os.environ['SCHRODINGER'], name)
+
+        with open('{}/{}-stage3.sh'.format(cwd, name), 'w') as fp:
+            fp.write(cmd + '\n')
+
+################################################################################
 
 @main.command()
 @click.argument('receptor')
