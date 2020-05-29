@@ -72,7 +72,7 @@ class CHEMBLDB:
         return rows[0][0]
 
     def molregno_and_assay_to_activities(self, molregno, assay):
-        self.cur.execute("SELECT standard_type, standard_value, standard_units, relation, comment FROM activities WHERE molregno=? AND assay_id=?", (molregno, assay))
+        self.cur.execute("SELECT standard_type, standard_value, standard_units, relation FROM activities WHERE molregno=? AND assay_id=?", (molregno, assay))
         return self.cur.fetchall()
 
     def chembl_to_activities(self, chembl, protein_complex):
@@ -89,7 +89,7 @@ class CHEMBLDB:
         return pd.DataFrame(activities,
                             columns=['ligand_chembl_id', 'mw_freebase', 'canonical_smiles',
                                      'standard_type', 'standard_value',
-                                     'standard_units', 'relation', 'comment'])
+                                     'standard_units', 'relation'])
 
     def uniprot_to_chembl(self, uniprot):
         for chembl_id in self.uniprot_chembl.loc[uniprot]:
@@ -109,8 +109,7 @@ def get_activities(chembl, chembldb, uniprot_chembl, protein_complex):
     with CHEMBLDB(chembldb, uniprot_chembl) as chembldb:
         activities = chembldb.chembl_to_activities(chembl, protein_complex)
     activities['target_chembl_id'] = chembl
-    duds = [('Not Active' in s) for s in activities['comment']]
-    return activities[~duds]
+    return activities
 
 def filter_activities(activities, activity_type):
     # Standardize units
@@ -119,11 +118,6 @@ def filter_activities(activities, activity_type):
         mask = activities['standard_units'] == unit
         activities.loc[mask, 'standard_value'] *= relation
         activities.loc[mask, 'standard_units'] = unit
-
-    # Most nonbinders don't have equality relation.
-    mask  = activities['standard_value'] > AFFINITY_THRESH
-    mask *= activities['relation'].isin(['>', '>='])
-    activities.loc[mask, 'relation'] = '='
 
     # Filter
     mask = activities['standard_value'].notna()
@@ -201,6 +195,7 @@ def is_macrocycle(st):
 def _get_properties(smiles):
     properties = {}
     st, properties['stereo'] = get_structure(smiles)
+    properties['SMILES'] = generate_smiles(st)
     properties['macrocycle'] = is_macrocycle(st)
     properties['molw'] = st.total_weight
     return pd.Series(properties)
@@ -226,10 +221,10 @@ def filter_properties(activities):
 
 
 @click.command()
-@click.option('--protein_complex', is_flag=True)
+@click.option('--protein-complex', is_flag=True)
 @click.option('--activity_type', default='all')
 @click.argument('uniprot_or_chembl')
-@click.argument('chembldb', default='/oak/stanford/groups/rondror/users/jpaggi/pldb_data//raw/chembl_25.db')
+@click.argument('chembldb', default='/oak/stanford/groups/rondror/users/jpaggi/pldb_data/raw/chembl_25.db')
 @click.argument('uniprot_chembl', default='/oak/stanford/groups/rondror/users/jpaggi/pldb_data/raw/uniprot-chembl.tsv')
 def main(protein_complex, activity_type, uniprot_or_chembl,
          chembldb, uniprot_chembl):
@@ -244,6 +239,8 @@ def main(protein_complex, activity_type, uniprot_or_chembl,
     activities = filter_activities(activities, activity_type)
     activities = get_properties(activities)
     activities = filter_properties(activities)
+    activities['AFFINITY'] = activities['standard_value']
+    activities['ID'] = activities['ligand_chembl_id']
     activities.to_csv('{}_{}.csv'.format(chembl, activity_type), index=False)
 
 if __name__ == '__main__':
