@@ -62,9 +62,9 @@ with open('scaffold_examples_pymol.txt', 'w') as fp:
 	        if pair[-2] == 0:
 	            rank = ''
 	        elif pair[-2] < 10:
-	            rank = ' {}'.format(pair[-2])
+	            rank = '_0{}'.format(pair[-2])
 	        else:
-	            rank = str(pair[-1])
+	            rank = '_{}'.format(pair[-2])
 	        fp.write('load {0}/docking/confgen_es4/{1}-to-{3}/{1}-to-{3}_pv.maegz\n'.format(*pair))
 	        fp.write('set_name {1}-to-{3}_pv.{1}{8}, {1}_dock\n'.format(*(pair+(rank,))))
 	        fp.write('ungroup {1}_dock\n'.format(*pair))
@@ -72,9 +72,9 @@ with open('scaffold_examples_pymol.txt', 'w') as fp:
 	        if pair[-1] == 0:
 	            rank = ''
 	        elif pair[-1] < 10:
-	            rank = ' {}'.format(pair[-1])
+	            rank = '_0{}'.format(pair[-1])
 	        else:
-	            rank = str(pair[-1])
+	            rank = '_{}'.format(pair[-1])
 	        fp.write('load {0}/docking/confgen_es4/{2}-to-{3}/{2}-to-{3}_pv.maegz\n'.format(*pair))
 	        fp.write('set_name {2}-to-{3}_pv.{2}{8}, {2}_dock\n'.format(*(pair+(rank,))))
 	        fp.write('ungroup {2}_dock\n'.format(*pair))
@@ -89,8 +89,8 @@ with open('scaffold_examples_pymol.txt', 'w') as fp:
 	            fp.write('util.cbag {1}*\n'.format(*pair))
 	            fp.write('util.cbay {2}*\n'.format(*pair))
 	        else:
-	            fp.write('util.cbag {1}*\n'.format(*pair))
-	            fp.write('util.cbay {2}*\n'.format(*pair))
+	            fp.write('util.cbag {2}*\n'.format(*pair))
+	            fp.write('util.cbay {1}*\n'.format(*pair))
 	        fp.write('util.cbaw {3}*\n'.format(*pair))
 	        fp.write('zoom {3}_lig\n'.format(*pair))
 	        fp.write('\n')
