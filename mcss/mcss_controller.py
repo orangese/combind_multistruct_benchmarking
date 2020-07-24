@@ -35,10 +35,10 @@ class MCSSController:
         versus docking performance.
     """
 
-    INIT_GROUP_SIZE = 500
+    INIT_GROUP_SIZE = 200
     RMSD_GROUP_SIZE = 5
 
-    QUEUE = 'rondror'
+    QUEUE = 'owners'
     
     TEMPLATE = ('#!/bin/bash\n'
                 '#SBATCH -p {}\n'
@@ -51,8 +51,6 @@ class MCSSController:
 
     def __init__(self, lm):
         self.lm = lm
-        self.pdb = lm.get_xdocked_ligands()
-        self.docked  = set(lm.docked(self.pdb))
 
         self.MCSSs = {}
         self.no_mcss = set([])
@@ -212,7 +210,7 @@ class MCSSController:
                 self.MCSSs[mcss.name] = mcss
 
     # All of below are relevant for computation only
-    def compute_mcss(self):
+    def compute_mcss(self, ligands):
         """
         Compute unfinished MCSS features. See above class description for more detail.
         """
@@ -220,10 +218,12 @@ class MCSSController:
         os.system('mkdir -p {}'.format(self.root))
         os.chdir(self.root)
 
-        print("{} ligands".format(len(self.pdb)))
-
         self._collate_mcss()
-        self._add_pdb_to_pdb()
+        if type(ligands[0]) == list:
+            for _ligands in ligands:
+                self._add_pdb_to_pdb(_ligands)
+        else:
+            self._add_pdb_to_pdb(ligands)
         self._execute()
         os.chdir(previous_cwd)
     
@@ -248,20 +248,20 @@ class MCSSController:
         with open('mcss_temp.csv', 'w') as fp:
             for mcss in self.MCSSs.values():
                 fp.write(str(mcss)+'\n')
-        
+
         os.system('mv mcss_temp.csv {}'.format(self.mcss_file))
         
         for temp in temp_init_files:
             os.system('rm {}'.format(temp))
 
     # Methods to add ligand pairs
-    def _add_pdb_to_pdb(self):
+    def _add_pdb_to_pdb(self, ligands):
         """
         Add all pdb to pdb ligand pairs
         """
         compute_rmsds = True
-        for i, l1 in enumerate(self.pdb):
-            for l2 in self.pdb[i+1:]:
+        for i, l1 in enumerate(ligands):
+            for l2 in ligands[i+1:]:
                 self._add(l1, l2, compute_rmsds)
 
     def _add(self, l1, l2, compute_rmsd):
@@ -277,8 +277,8 @@ class MCSSController:
         if name not in self.MCSSs:
             self.no_mcss.add((l1,l2))
         elif (    compute_rmsd
-              and (l1 in self.docked)
-              and (l2 in self.docked)
+              and self.lm.docked([l1])
+              and self.lm.docked([l2])
               and self.is_valid(self.MCSSs[name])
               and not os.path.exists(self.rmsd_file.format(name))):
             self.no_rmsd.add((l1, l2))

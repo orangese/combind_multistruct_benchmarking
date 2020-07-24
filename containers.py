@@ -59,31 +59,35 @@ class Ligand:
         if not os.path.exists(self.path('DOCK')):
             return [], []
 
-        gscores, rmsds = [], []
-        with open(self.path('DOCK_REPT')) as fp:
-            for line in fp:
-                line = line.strip().split()
-                if len(line) <= 1: continue
-                lig, _lig = self.params['ligand'], line[1]
-                if not (_lig == lig or _lig == lig+'_out' or _lig == '1'):
-                    continue
+        gscores = []
+        if os.path.exists(self.path('DOCK_REPT')):
+            with open(self.path('DOCK_REPT')) as fp:
+                for line in fp:
+                    line = line.strip().split()
+                    if len(line) <= 1: continue
+                    lig, _lig = self.params['ligand'], line[1]
+                    if not (_lig == lig or _lig == lig+'_out' or _lig == '1'):
+                        continue
 
-                if _lig == '1':
-                    score = line[2]
-                else:
-                    score = line[3]
-                    
-                gscores.append(float(score))
+                    if _lig == '1':
+                        score = line[2]
+                    else:
+                        score = line[3]
+                        
+                    gscores.append(float(score))
 
+        rmsds = []
         if os.path.exists(self.path('DOCK_RMSD')):
-            rmsds = []
             with open(self.path('DOCK_RMSD')) as fp:
                 for line in fp:
                     line = line.strip().split(',')
                     if line[3] == '"RMSD"': continue
                     rmsds.append(float(line[3].strip('"')))
-        else:
+        
+        if not rmsds and gscores:
             rmsds = [None]*len(gscores)
+        elif rmsds and not gscores:
+            gscores = [None]*len(rmsds)
         return gscores, rmsds
 
     def parse_ifp_file(self):
@@ -151,10 +155,16 @@ class LigandManager:
         if self.st in grids:
             self.mcss = MCSSController(self)
 
-    def read_pdb(self):
+    def add_ligands(self, fname):
+        self.pdb.update(self.read_pdb(fname))
+
+    def read_pdb(self, fname=None):
+        if fname == None:
+            fname = self.path('PDB')
+
         pdb = {}
-        if os.path.exists(self.path('PDB')):
-            for _, row in pd.read_csv(self.path('PDB')).iterrows():
+        if os.path.exists(fname):
+            for _, row in pd.read_csv(fname).iterrows():
                 name = '{}_lig'.format(row['ID'])
                 assert 'SMILES' in row
                 pdb[name] = row

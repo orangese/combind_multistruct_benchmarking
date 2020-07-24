@@ -29,7 +29,7 @@ class ScoreContainer:
         self.restart = restart
         self.stats = self.read_stats(stats_root)
         self.ps = PredictStructs(self.stats, self.features, self.num_poses, self.alpha)
-        
+
         # Initialize docking data.
         self.predict_data = Protein(prot, params, paths)
         if struct is not None:
@@ -255,7 +255,15 @@ def score(paths, params, features, stats_root, protein, queries,
                         max_iterations=max_iterations, restart=restart)
 
     if 'all' in queries:
+        assert len(queries) == 1
         queries = sc.predict_data.lm.docked(list(sc.predict_data.lm.pdb.keys()))
+
+    if 'cross' in queries:
+        assert len(queries) == 1
+        queries = sc.predict_data.lm.docked(list(sc.predict_data.lm.pdb.keys()))
+        self_dock = sc.predict_data.lm.st + '_lig'
+        if self_dock in queries:
+            queries.remove(self_dock)
 
     cluster = sc.compute_results(queries, xtal)
     sc.write_results(cluster, pose_fname)

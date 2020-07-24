@@ -5,7 +5,7 @@ import utils
 import config
 
 @click.group()
-@click.option('--data', default='/oak/stanford/groups/rondror/users/jpaggi/negative')
+@click.option('--data', default='/oak/stanford/groups/rondror/users/jpaggi/combind')
 @click.option('--ligands', default='{ROOT}/structures/pdb.csv')
 @click.pass_context
 def main(ctx, data, ligands):
@@ -20,10 +20,11 @@ def main(ctx, data, ligands):
 @click.option('--stats_version', default='rd1')
 @click.option('--struct', default=None)
 @click.option('--processes', default=1)
+@click.option('--more-ligands', default=None)
 @click.argument('task')
 @click.argument('proteins', nargs=-1)
 @click.pass_obj
-def prepare(paths, task, stats_version, proteins, struct, processes):
+def prepare(paths, task, stats_version, proteins, struct, processes, more_ligands):
     """
     Prep structures and ligands; docking; and featurization.
     """
@@ -32,7 +33,7 @@ def prepare(paths, task, stats_version, proteins, struct, processes):
     proteins = list(proteins)
     if not proteins:
         proteins = utils.get_proteins(paths, [])
-    dock.prepare_all.main(params, paths, task, list(proteins), struct, processes)
+    dock.prepare_all.main(params, paths, task, list(proteins), struct, processes, more_ligands)
 
 @main.command()
 @click.option('--stats-version', default='rd1')
@@ -59,6 +60,7 @@ def score(paths, stats_root, protein, struct, queries, pose_fname, xtal,
     params = config.STATS[stats_version]
     features = {feature: config.FEATURE_DEFS[feature]
                 for feature in features.split(',')}
+
     score.scores.score(paths, params, features, stats_root, protein, queries,
                        xtal=xtal, struct=struct, pose_fname=pose_fname,
                        alpha=alpha, num_poses=num_poses,

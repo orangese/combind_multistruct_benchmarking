@@ -59,7 +59,7 @@ modes = {'confgen_es4': {
         }
 
 queue = 'rondror'
-group_size = 5
+group_size = 20
 
 dock_cmd = 'glide -WAIT {}-to-{}.in\n' 
 rmsd_cmd = 'run rmsd.py -use_neutral_scaffold -pv second -c rmsd.csv ../../../structures/ligands/{}.mae {}-to-{}_pv.maegz\n'
@@ -83,7 +83,12 @@ def get_state(ligand, grid):
         else: return 0
     if os.path.exists(log):
         logtxt = open(log).read()
-        if 'Total elapsed time' in logtxt or 'GLIDE FATAL ERROR' in logtxt:
+        phrases = ['** NO ACCEPTABLE LIGAND POSES WERE FOUND **',
+                   'NO VALID POSES AFTER MINIMIZATION: SKIPPING.',
+                   'No Ligand Poses were written to external file',
+                   'GLIDE WARNING: Skipping refinement, etc. because rough-score step failed.']
+
+        if any(phrase in logtxt for phrase in phrases):
             return 0
     if not os.path.exists(inp_lig) or not os.path.exists(inp_grid):
         return 0
@@ -102,7 +107,6 @@ def write_inp_files(all_pairs, mode):
             f.write(TEMPLATE.format(grid, grid, ligand, ligand))
 
 def proc_all(all_pairs, dock=False, rmsd=False):
-
     for i,group in enumerate(grouper(group_size, all_pairs)):
         with open('dock{}.sh'.format(i),'w') as f:
             f.write('#!/bin/bash\n')

@@ -99,7 +99,7 @@ def results(data, helpers, alpha=1.0, method='standard',
     return perf['glide_correct'][0], perf['combind_correct'][0]
 
 def load(version, helpers, root, mcss):
-    data_root = '/Users/jpaggi/sherlock/oak/users/jpaggi'
+    data_root = '/Users/jpaggi/sherlock/oak/users/jpaggi/combind_initial_submission'
     if version == 'sp':
         if root == 'bpp_data':
             _version = 'stats41'

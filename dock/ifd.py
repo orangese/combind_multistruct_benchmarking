@@ -7,10 +7,10 @@ for i in *; do python ~/combind/dock/ifd.py setup-stage3 /oak/stanford/groups/ro
 # python 3.8 interpreter (conda activate mol)
 python ~/combind/dock/ifd.py run '*/docking/ifd2/*/*-stage1.inp' '*/docking/ifd2/*/*-stage1.log'
 python ~/combind/dock/ifd.py run '*/docking/ifd2/*/*-stage2.inp' '*/docking/ifd2/*/*-stage2.log' --time 12:00:00 --queue rondror --n-jobs 100
-python ~/combind/dock/ifd.py run '*/docking/ifd2/*/*-stage3.inp' '*/docking/ifd2/*/*-stage3.log'
+python ~/combind/dock/ifd.py run '*/docking/ifd2/*/*-stage3.inp' '*/docking/ifd2/*/*-stage3.log' --n-jobs 500
 
 # Runs in serial...
-for i in *; do python ~/combind/dock/ifd2.py kick-stage2 $i/docking/ifd2; done;
+for i in *; do python ~/combind/dock/ifd.py kick-stage2 $i/docking/ifd2; done;
 
 # Schrodinger interpreters
 for i in */docking/ifd2/*; do cd $i; if [[ -f ${i##*/}-stage3-out.maegz && ! -f ${i##*/}_pv.maegz ]]; then echo $i; python ~/combind/dock/ifd.py extract *_out.mae ${i##*/}-stage3-out.maegz ${i##*/}_pv.maegz; fi; cd /oak/stanford/groups/rondror/users/jpaggi/combind; done;
@@ -295,6 +295,7 @@ def clear_stage2(cwd):
 @main.command()
 @click.argument('root')
 def kick_stage2(root):
+    
     for cwd in glob(root+'/*'):
         name = cwd.split('/')[-1]
         ligand = name.split('-to-')[0]
@@ -328,7 +329,14 @@ def kick_stage2(root):
             print('cp {}-1_pv.maegz {}-1_pv-1.maegz'.format(job, job))
 
             subprocess.run('glide {}-1.inp -WAIT -O'.format(job), cwd=stage2_dir, shell=True)
-            subprocess.run('cp {}-1_pv.maegz {}-1_pv-1.maegz'.format(job, job), cwd=stage2_dir, shell=True)
+
+@main.command()
+@click.argument('job')
+def merge(job):
+    from schrodinger.structure import StructureReader
+    with StructureReader('{}-1_pv.maegz'.format(job)) as sts:
+        st = next(sts).merge(next(sts))
+        st.write('{}-1_pv-1.maegz'.format(job))
 
 def _get_stage2_workdir(cwd):
     workdir = sorted(glob(cwd + '/*-stage2_workdir/glide_docking_dir*'))
@@ -448,7 +456,7 @@ def extract(receptor, ifd_out, pv):
                     st.append(pv)
                     break
             else:
-                assert False
+                print('no ligand?')
 
 @main.command()
 @click.argument('pv')
