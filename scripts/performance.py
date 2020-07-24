@@ -4,8 +4,7 @@ import sys
 data = []
 for path in sys.argv[1:]:
 	_data = pd.read_csv(path)
-	_data = _data.loc[_data['glide_rmsd'] != 'None']
-	_data = _data.loc[_data['combind_rmsd'] != 'best=0']
+	_data = _data.iloc[:-1]
 	if not len(_data):
 		print(path)
 	data += [_data]
