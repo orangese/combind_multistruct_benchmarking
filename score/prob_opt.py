@@ -20,12 +20,14 @@ class PredictStructs:
 
         self.ligands = {}
         self.mcss = None
+        self.shape = None
         self.log_likelihood_ratio_cache = {}
         self.lig_pairs = {}
 
-    def set_ligands(self, ligands, mcss):
+    def set_ligands(self, ligands, mcss, shape):
         self.ligands = ligands
         self.mcss = mcss
+        self.shape = shape
         self.log_likelihood_ratio_cache = {}
         self.lig_pairs = {}
 
@@ -193,7 +195,7 @@ class PredictStructs:
         if (ligname1, ligname2) not in self.lig_pairs:
             self.lig_pairs[(ligname1, ligname2)] = LigPair(self.ligands[ligname1],
                                                            self.ligands[ligname2],
-                                                           self.features, self.mcss,
+                                                           self.features, self.mcss, self.shape,
                                                            self.max_poses)
 
         return self.lig_pairs[(ligname1, ligname2)].get_feature(feature, pose1, pose2)

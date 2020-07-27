@@ -12,9 +12,9 @@ stats_version/
                   best_mcss.txt
                   best_affinity.txt
 
-for i in $(ls --color=none /oak/stanford/groups/rondror/users/jpaggi/combind); do python scripts/benchmark_pose_pred.py stats rd2 /oak/stanford/groups/rondror/users/jpaggi/temp/rd2 $i; done;
-for i in $(ls --color=none /oak/stanford/groups/rondror/users/jpaggi/combind); do python scripts/benchmark_pose_pred.py setup-pdb rd2  $i; done;
-for i in /oak/stanford/groups/rondror/users/jpaggi/combind/*/scores/rd2/pdb/standard/*/*.sh; do cd ${i%/*}; sh ${i##*/}; cd /oak/stanford/groups/rondror/users/jpaggi/combind ; done;
+for i in $(ls --color=none /oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems); do python scripts/benchmark_pose_pred.py stats rd1 /oak/stanford/groups/rondror/users/jpaggi/temp/shape $i; done;
+for i in $(ls --color=none /oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems); do python scripts/benchmark_pose_pred.py setup-pdb rd1  $i --features shape; done;
+n02 login ~/combind]$ for i in /oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems/*/scores/rd1/pdb/standard/0.5-shape/*.sh; do if [ ! -f ${i/.sh/.sc} ]; then cd ${i%/*}; sh ${i##*/}; cd /oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems ; fi; done;
 python scripts/performance.py /oak/stanford/groups/rondror/users/jpaggi/combind/*/scores/rd2/pdb/*/*/*.sc
 """
 
@@ -39,7 +39,7 @@ def main():
 @click.argument('stats_version')
 @click.argument('stats_root')
 @click.argument('protein')
-@click.option('--data', default='/oak/stanford/groups/rondror/users/jpaggi/combind')
+@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems')
 @click.option('--ligands', default='{ROOT}/structures/pdb.csv')
 def stats(stats_version, stats_root, protein, data, ligands):
     import score.statistics
@@ -66,7 +66,7 @@ def stats(stats_version, stats_root, protein, data, ligands):
 @click.argument('protein')
 @click.option('--alpha', default=1.0)
 @click.option('--features', default='mcss,hbond,sb,contact')
-@click.option('--data', default='/oak/stanford/groups/rondror/users/jpaggi/combind')
+@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems')
 @click.option('--ligands', default='{ROOT}/structures/pdb.csv')
 def setup_pdb(stats_version, protein, alpha, features, data, ligands):
     cwd = '{data}/{protein}/scores/{stats_version}/pdb/standard/{alpha}-{features}'

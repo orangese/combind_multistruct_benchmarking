@@ -46,7 +46,8 @@ class ScoreContainer:
 
     def load_docking(self, ligands, xtal=[]):
         self.predict_data.load_docking(ligands, load_fp=True,
-                                       load_mcss='mcss' in self.features)
+                                       load_mcss='mcss' in self.features,
+                                       load_shape='shape' in self.features)
 
         for ligand in xtal:
             self.predict_data.docking[ligand].load_native_poses(True,
@@ -60,7 +61,7 @@ class ScoreContainer:
                 ligands.remove(ligand)
 
         ligands = {lig: self.predict_data.docking[lig] for lig in ligands}
-        self.ps.set_ligands(ligands, self.predict_data.lm.mcss)
+        self.ps.set_ligands(ligands, self.predict_data.lm.mcss, self.predict_data.lm.shape)
 
     def compute_results(self, queries, xtal=[]):
         self.load_docking(queries, xtal)

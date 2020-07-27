@@ -13,6 +13,7 @@ from dock.grids import make_grids
 from dock.dock import dock
 
 from ifp.ifp_controller import compute_ifp
+from shape.shape_controller import ShapeController
 from containers import Protein
 
 def main(params, paths, task, proteins, struct, processes, more_ligands):
@@ -39,6 +40,17 @@ def main(params, paths, task, proteins, struct, processes, more_ligands):
 
         elif task == 'ifp':
             compute_ifp(protein.lm)
+
+        elif task == 'shape':
+            if more_ligands:
+                fnames = glob(more_ligands.format(protein=protein_name))
+                fnames += [protein.lm.path('PDB')]
+                ligands = [list(protein.lm.read_pdb().keys())
+                           +list(protein.lm.read_pdb(fname).keys())
+                           for fname in fnames]
+            else:
+                ligands = list(protein.lm.pdb.keys())
+            protein.lm.shape.compute(ligands)
 
         elif task == 'mcss':
             if more_ligands:

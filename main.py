@@ -17,7 +17,7 @@ def main(ctx, data, ligands):
     ctx.obj = paths
 
 @main.command()
-@click.option('--stats_version', default='rd1')
+@click.option('--stats-version', default='rd1')
 @click.option('--struct', default=None)
 @click.option('--processes', default=1)
 @click.option('--more-ligands', default=None)

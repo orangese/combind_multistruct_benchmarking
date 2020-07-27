@@ -4,11 +4,12 @@ class LigPair:
     """
     Computes and stores overlap scores for a ligand pair.
     """
-    def __init__(self, l1, l2, features, mcss, max_poses, native_thresh=2.0):
+    def __init__(self, l1, l2, features, mcss, shape, max_poses, native_thresh=2.0):
         self.l1 = l1
         self.l2 = l2
         self.max_poses = max_poses
         self.mcss = mcss
+        self.shape = shape
         self.features = features
         self.native_thresh = native_thresh
 
@@ -28,13 +29,16 @@ class LigPair:
 
         if feature == 'mcss':
             return self.pose_pairs[key].mcss_score
+
+        if feature == 'shape':
+            return self.pose_pairs[key].shape_score
+
         return self.pose_pairs[key].tanimoto(feature)
 
     def correct(self, rank1, rank2):
         key = (rank1, rank2)
         if key not in self.pose_pairs:
             self._init_pose_pair(rank1, rank2)
-
         return self.pose_pairs[key].correct()
 
     def _init_pose_pair(self, rank1, rank2):
@@ -46,8 +50,14 @@ class LigPair:
         else:
             mcss_score = None
 
+        if 'shape' in self.features:
+            shape_score = self.shape.get(self.l1.ligand, self.l2.ligand,
+                                         pose1.rank, pose2.rank)
+        else:
+            shape_score = None
+
         self.pose_pairs[(rank1, rank2)] = PosePair(pose1, pose2,
-                                                   mcss_score,
+                                                   mcss_score, shape_score,
                                                    self.features,
                                                    self.native_thresh)
 
@@ -60,10 +70,11 @@ class PosePair:
     """
     Computes overlap scores for a pair of poses.
     """
-    def __init__(self, pose1, pose2, mcss_score, features, native_thresh):
+    def __init__(self, pose1, pose2, mcss_score, shape_score, features, native_thresh):
         self.pose1 = pose1
         self.pose2 = pose2
         self.mcss_score = mcss_score
+        self.shape_score = shape_score
         self.features = features
         self.native_thresh = native_thresh
 

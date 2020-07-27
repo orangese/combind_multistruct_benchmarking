@@ -13,6 +13,7 @@ import pandas as pd
 from schrodinger.structure import SmilesStructure
 import re
 from mcss.mcss_controller import MCSSController
+from shape.shape_controller import ShapeController
 
 class Pose:
     def __init__(self, rank, rmsd, gscore, fp):
@@ -154,6 +155,7 @@ class LigandManager:
 
         if self.st in grids:
             self.mcss = MCSSController(self)
+            self.shape = ShapeController(self)
 
     def add_ligands(self, fname):
         self.pdb.update(self.read_pdb(fname))
@@ -219,7 +221,7 @@ class Protein:
         
         self.docking = {}
 
-    def load_docking(self, ligands, load_fp=False, load_mcss=False):
+    def load_docking(self, ligands, load_fp=False, load_mcss=False, load_shape=False):
         for ligand in ligands:
             params = {'struct': self.lm.st}
             params.update(self.params)
@@ -229,3 +231,7 @@ class Protein:
         if load_mcss:
             ligands = ligands+list(self.docking.keys())
             self.lm.mcss.load_rmsds(ligands, self.params['max_poses'])
+
+        if load_shape:
+            ligands = ligands+list(self.docking.keys())
+            self.lm.shape.load(ligands)

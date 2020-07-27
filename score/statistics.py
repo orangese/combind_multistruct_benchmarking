@@ -99,7 +99,8 @@ class Statistics:
         ligands = prot.lm.get_xdocked_ligands(self.settings['n_ligs'])
         print(ligands)
         prot.load_docking(ligands, load_fp=True,
-                          load_mcss='mcss' in self.interactions)
+                          load_mcss='mcss' in self.interactions,
+                          load_shape='shape' in self.interactions)
 
         stats = {d: {i: [] for i in self.interactions}
                  for d in self.distributions}
@@ -140,7 +141,8 @@ class Statistics:
         lig_pair = LigPair(prot.docking[ligand1],
                            prot.docking[ligand2],
                            self.interactions,
-                           prot.lm.mcss if 'mcss' in self.interactions else None,
+                           prot.lm.mcss  if 'mcss' in self.interactions else None,
+                           prot.lm.shape if 'shape' in self.interactions else None,
                            self.settings['max_poses'])
 
         stats = {d: {} for d in self.distributions}
