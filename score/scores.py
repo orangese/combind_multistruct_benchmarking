@@ -61,7 +61,8 @@ class ScoreContainer:
                 ligands.remove(ligand)
 
         ligands = {lig: self.predict_data.docking[lig] for lig in ligands}
-        self.ps.set_ligands(ligands, self.predict_data.lm.mcss, self.predict_data.lm.shape)
+        self.ps.set_ligands(ligands, self.predict_data.lm.mcss,
+                            self.predict_data.lm.shape, xtal)
 
     def compute_results(self, queries, xtal=[]):
         self.load_docking(queries, xtal)

@@ -24,10 +24,11 @@ class PredictStructs:
         self.log_likelihood_ratio_cache = {}
         self.lig_pairs = {}
 
-    def set_ligands(self, ligands, mcss, shape):
+    def set_ligands(self, ligands, mcss, shape, xtal=set()):
         self.ligands = ligands
         self.mcss = mcss
         self.shape = shape
+        self.xtal = xtal
         self.log_likelihood_ratio_cache = {}
         self.lig_pairs = {}
 
@@ -150,7 +151,7 @@ class PredictStructs:
         if pair_key not in self.log_likelihood_ratio_cache:
             log_likelihood = 0
             for feature in self.features:
-                _, p_x_native, p_x = self._likelihoods_for_pair_and_single_feature(feature,
+                x, p_x_native, p_x = self._likelihoods_for_pair_and_single_feature(feature,
                                                                                    pose_cluster,
                                                                                    ligname1,
                                                                                    ligname2)
@@ -160,7 +161,13 @@ class PredictStructs:
                 assert p_x_native != 0.0
                 assert p_x != 0.0
 
+                # log_likelihood += self.W[feature] * x
                 log_likelihood += np.log(p_x_native) - np.log(p_x)
+
+            if ligname1 in self.xtal or ligname2 in self.xtal:
+                pass
+            else:
+                log_likelihood = np.log(np.exp(log_likelihood)/2+1/2)
             self.log_likelihood_ratio_cache[pair_key] = log_likelihood
         return self.log_likelihood_ratio_cache[pair_key]
 
@@ -171,7 +178,7 @@ class PredictStructs:
         """
         x = self._get_feature(feature, ligname1, ligname2,
                               pose_cluster[ligname1], pose_cluster[ligname2])
-        
+
         if x is None: return 0.0, 1.0, 1.0
 
         p_x_native  = self.stats['native'][feature](x)
