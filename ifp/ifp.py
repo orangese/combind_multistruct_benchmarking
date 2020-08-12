@@ -8,18 +8,21 @@ import rdkit
 
 ################################################################################
 
-def read_mae(mae, poses):
-    if mae[-2:] == 'gz':
-        with gzip.open(mae) as fp:
-            mols = []
-            for mol in MaeMolSupplier(fp, removeHs=False):
-                if mol is None:
-                    print(mae)
-                    exit()
-                mols += [mol]
-    else:
-        mols = [mol for mol in MaeMolSupplier(mae, removeHs=False)]
-    return mols
+def _convert_mae(original_mae, converted_mae, poses):
+    from schrodinger.structure import StructureReader, StructureWriter
+    with StructureReader(original_mae) as sts, StructureWriter(converted_mae) as writer:
+        for i, st in enumerate(sts):
+            if i > poses:
+                break
+            for k in st.property.keys():
+                if 'title' not in k:
+                    st.property.pop(k)
+            writer.append(st)
+
+def convert_mae(original_mae, converted_mae, poses=float('inf')):
+    imp = 'import sys; sys.path.append("{}"); import ifp'.format(os.path.dirname(os.path.abspath(__file__)))
+    cmd = 'ifp._convert_mae("{}", "{}", {})'.format(original_mae, converted_mae, poses)
+    os.system('run python3 -c \'{};{}\''.format(imp, cmd))
 
 def resname(atom):
     info = atom.GetPDBResidueInfo()
@@ -117,7 +120,7 @@ def hbond_compute(protein, ligand, settings):
 
 ################################################################################
 
-def _symetric_charged_protein_atoms(protein):
+def _symmetric_charged_protein_atoms(protein):
     protein_groups = {}
     for protein_atom in protein:
         if atomname(protein_atom) in ['OD1', 'OD2', 'OE1', 'OE2', 'NH1', 'NH2']:
@@ -126,7 +129,7 @@ def _symetric_charged_protein_atoms(protein):
             protein_groups[(resname(protein_atom))] += [protein_atom]
     return protein_groups
 
-def _symetric_charged_ligand_atoms(ligand):
+def _symmetric_charged_ligand_atoms(ligand):
     ligand_groups = {}
     smartss = [('[CX3](=O)[O-]', 2, [1, 2]),
                ('[CX3](=[NH2X3+])[NH2X3]', 1, [1, 2])]
@@ -146,8 +149,8 @@ def saltbridge_compute(protein, ligand, settings):
     # we consider not just the atom that is arbitrarily assigned a formal
     # charge, but also the atom that is charged in the other resonance
     # structure.
-    protein_groups = _symetric_charged_protein_atoms(protein)
-    ligand_groups = _symetric_charged_ligand_atoms(ligand)
+    protein_groups = _symmetric_charged_protein_atoms(protein)
+    ligand_groups = _symmetric_charged_ligand_atoms(ligand)
 
     saltbridges = []
     for protein_atom in protein:
@@ -196,7 +199,7 @@ def contact_compute(protein, ligand, settings):
         if protein_atom.GetAtomicNum() not in settings['nonpolar']: continue
         for ligand_atom in ligand:
             if ligand_atom.GetAtomicNum() not in settings['nonpolar']: continue
-    
+
             vdw = settings['nonpolar'][ligand_atom.GetAtomicNum()]
             vdw += settings['nonpolar'][protein_atom.GetAtomicNum()]
             dist = distance(protein_atom, ligand_atom)
@@ -212,10 +215,13 @@ def contact_compute(protein, ligand, settings):
 
 ################################################################################
 
-def _protein_coords(protein):
-    return np.array([coords(atom) for atom in protein])
+def _mol_to_np(mol):
+    return np.array([atom for atom in mol.GetAtoms() if atom.GetAtomicNum() != 1])
 
-def _get_relevent_atoms(protein, ligand, protein_coords, overall_cut):
+def _atoms_to_coords(atoms):
+    return np.array([coords(atom) for atom in atoms])
+
+def _relevent_atoms(protein, ligand, protein_coords, overall_cut):
     ligand_coords  = np.array([coords(atom) for atom in ligand])
     
     protein_coords = np.expand_dims(protein_coords, 1)
@@ -230,35 +236,28 @@ def _fingerprint(protein, ligand, protein_coords, settings):
     # Here protein and ligand should be a numpy array of rdkit atoms
     # and protein_coords should be a numpy array of protein atomic
     # coordinates.
-    protein = _get_relevent_atoms(protein, ligand, protein_coords, settings['overall_cut'])
+    protein = _relevent_atoms(protein, ligand, protein_coords, settings['overall_cut'])
 
     fp  = hbond_compute(protein, ligand, settings)
     fp += saltbridge_compute(protein, ligand, settings)
     fp += contact_compute(protein, ligand, settings)
     return pd.DataFrame.from_dict(fp)
 
-def fingerprint(protein, ligand, settings):
-    _ligand = np.array([atom for atom in ligand.GetAtoms() if atom.GetAtomicNum() != 1])
-    _protein = np.array([atom for atom in protein.GetAtoms() if atom.GetAtomicNum() != 1])
-    protein_coords = _protein_coords(_protein)
-    return _fingerprint(_protein, _ligand, protein_coords, settings)
-
 def fingerprint_poseviewer(protein, ligands, settings):
-
-    # Get heavy atoms and position matrix to optimize look-up of relevent atoms.
-    _ligands = [np.array([atom for atom in ligand.GetAtoms() if atom.GetAtomicNum() != 1])
-                for ligand in ligands]
-    _protein = np.array([atom for atom in protein.GetAtoms() if atom.GetAtomicNum() != 1])
-    protein_coords = _protein_coords(_protein)
+    _protein = _mol_to_np(protein)
+    protein_coords = _atoms_to_coords(_protein)
 
     fps = []
-    for i, ligand in enumerate(_ligands):
+    for i, ligand in enumerate(ligands):
+        ligand = _mol_to_np(ligand)
         fps += [_fingerprint(_protein, ligand, protein_coords, settings)]
         fps[-1]['pose'] = i
     fps = pd.concat(fps, ignore_index=True, sort=False)
+
     if 'hydrogen' not in fps:
         fps['hydrogen'] = ''
     fps.loc[fps['hydrogen'].isna(), 'hydrogen'] = ''
+
     return fps
 
 ################################################################################
@@ -277,7 +276,6 @@ def _groupby_subset(df, index, col):
 
 def nodigits(s):
     return ''.join([i for i in s if not i.isdigit()])
-
 
 def compute_scores(raw, settings):
     if settings['level'] == 'atom':
@@ -320,15 +318,20 @@ def compute_scores(raw, settings):
 
 ################################################################################
 
-def ifp(settings, input_file, output_file, poses):
+def ifp(settings, input_file, output_file, poses, convert=False):
     settings['nonpolar'] = {6:1.7, 9:1.47, 17:1.75, 35:1.85, 53:1.98}
     settings['overall_cut'] = max(settings['hbond_dist_cut'], settings['sb_dist_cut'],
                                   settings['contact_scale_cut']*2*max(settings['nonpolar'].values()))
 
-    protein, *ligands = read_mae(input_file, poses)
-    ligands = ligands[:poses]
+    if convert:
+        temp = tempfile.NamedTemporaryFile(suffix='.maegz')
+        convert_mae(input_file, temp.name, poses)
+        input_file = temp.name
 
-    fps = fingerprint_poseviewer(protein, ligands, settings)
+    with gzip.open(input_file) as fp:
+        mols =  MaeMolSupplier(fp, removeHs=False)
+        protein = next(mols)
+        fps = fingerprint_poseviewer(protein, mols, settings)
     scores = compute_scores(fps, settings)
 
     fps = fps.set_index(['pose', 'label', 'protein_res', 'protein_atom', 'ligand_atom'])
@@ -339,3 +342,25 @@ def ifp(settings, input_file, output_file, poses):
 
     fps.to_csv(raw_file)
     scores.to_csv(output_file)
+
+################################################################################
+
+@click.command()
+@click.argument('input_file')
+@click.argument('output_file')
+@click.argument('poses', default=100)
+@click.option('--convert', is_flag=True)
+@click.option('--level', default='residue')
+@click.option('--hbond_dist_cut', default=4.0)
+@click.option('--hbond_dist_opt', default=3.5)
+@click.option('--hbond_angle_cut', default=90.0)
+@click.option('--hbond_angle_opt', default=60.0)
+@click.option('--sb_dist_cut', default=5.0)
+@click.option('--sb_dist_opt', default=4.0)
+@click.option('--contact_scale_cut', default=1.75)
+@click.option('--contact_scale_opt', default=1.50)
+def main(input_file, output_file, poses, convert, **settings):
+    ifp(settings, input_file, output_file, poses, convert)
+
+if __name__ == '__main__':
+    main()
