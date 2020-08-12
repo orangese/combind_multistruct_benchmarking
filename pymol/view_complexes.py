@@ -25,7 +25,7 @@ def load_crystal_protein(protein, ligand):
     cmd.set_name('{}_prot'.format(ligand), 'prot_{}'.format(ligand))
 
 def load_crystal_pose(protein, ligand):
-    cmd.load('{}/ligands/prepared_ligands/{}_lig/{}_lig.mae'.format(protein, ligand, ligand))
+    cmd.load('{}/structures/ligands/{}_lig.mae'.format(protein, ligand, ligand))
     cmd.set_name('{}_lig'.format(ligand), 'crystal_{}'.format(ligand))
 
 ###################################################################
@@ -46,18 +46,21 @@ def load_pose(protein, ligand, struct, pose, prefix):
 
 def load_top_glide(protein, n = 1):
     n = int(n)
+    grid = None
     for prot in sorted(glob('{}/structures/proteins/*_prot.mae'.format(protein)))[:n]:
         pdb = prot.split('/')[-1].split('_')[0]
+        if grid is None:
+            grid = pdb
         print(pdb)
-        load_pose(protein, pdb, 0, 'glide')
+        load_pose(protein, pdb, grid, 0, 'glide')
     cmd.show('sticks', "glide_*")
     cmd.hide('lines', 'element h')
     cmd.hide('everything', 'element H and not (element N+O extend 1)')
 
 def load_results(protein, scores):
-    struct = scores.split('/')[-1].split('.')[0].split('-to-')[1]
+    struct = glob('{}/docking/grids/*'.format(protein))[0].split('/')[-1]
     load_crystal_protein(protein, struct)
-    with open('{}/scores/{}'.format(protein, scores)) as fp:
+    with open(scores) as fp:
         fp.readline()
         for line in fp:
             if line[:3] == 'com': continue

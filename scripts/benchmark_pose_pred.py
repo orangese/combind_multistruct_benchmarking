@@ -93,7 +93,7 @@ def setup_pdb(stats_version, protein, alpha, features, data, ligands):
 @click.argument('protein')
 @click.option('--alpha', default=1.0)
 @click.option('--features', default='mcss,hbond,sb,contact')
-@click.option('--data', default='/oak/stanford/groups/rondror/users/jpaggi/combind')
+@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems')
 @click.option('--ligands', default='{ROOT}/structures/pdb.csv')
 def setup_pdb_xtal(stats_version, protein, alpha, features, data, ligands):
     cwd = '{data}/{protein}/scores/{stats_version}/pdb/crystal/{alpha}-{features}'
@@ -105,6 +105,7 @@ def setup_pdb_xtal(stats_version, protein, alpha, features, data, ligands):
            '--pose-fname poses.sc  --num-poses 100 --xtal {st}_lig')
 
     st = glob('{data}/{protein}/docking/grids/*'.format(data=data, protein=protein))
+    print('{data}/{protein}/docking/grids/*'.format(data=data, protein=protein))
     assert len(st) == 1, st
     st = st[0].split('/')[-1]
 
@@ -118,8 +119,6 @@ def setup_pdb_xtal(stats_version, protein, alpha, features, data, ligands):
     with open(cwd + '/poses.sh', 'w') as fp:
         fp.write(cmd + '\n')
 
-
-# cd
 @main.command()
 @click.argument('stats_version')
 @click.argument('protein')
