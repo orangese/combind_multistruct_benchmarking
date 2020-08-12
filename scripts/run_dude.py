@@ -31,6 +31,9 @@ python $COMBINDHOME/scripts/run_dude.py similarity $i/subset.csv $i/scores/subse
 # Useful for submitting jobs for each protein
 sbatch -p rondror -t 03:00:00 -J $i -o ~/temp/$i.log --wrap="$CMD"
 for i in $(ls --color=none); do $CMD; done;
+
+# Dummy autoqsar:
+for i in *; for j in {0..6}; do cut -f 2 -d , $i/subset.csv | tail -n +2 | awk 'BEGIN { print "ID,s_autoqsar_Pred_Class,r_autoqsar_Pred_Prob" } { print $1","1000","1 }' > $i/scores/subset1_rd1/$j/autoqsar_preds.csv; done;
 """
 
 import os
@@ -103,10 +106,11 @@ def convert(dude_dir, combind_dir):
 @main.command()
 @click.option('--n-train', default=10)
 @click.option('--n-folds', default=7)
+@click.option('--xtal', default='')
 @click.option('--affinity-cut', default=1000)
 @click.argument('input_csv')
 @click.argument('root')
-def setup(input_csv, root, n_train, n_folds, affinity_cut):
+def setup(input_csv, root, n_train, n_folds, affinity_cut, xtal):
     np.random.seed(42)
     df = pd.read_csv(input_csv)
     for i in range(n_folds):
@@ -121,6 +125,10 @@ def setup(input_csv, root, n_train, n_folds, affinity_cut):
 
         binders = df.loc[df['AFFINITY'] < affinity_cut]
         binders = binders.sample(n_train)
+
+        if xtal:
+            binders = pd.concat([binders, pd.read_csv(xtal).loc[:1]])
+            binders['AFFINITY'] = 1.0
 
         decoys = df.loc[df['AFFINITY'] >= affinity_cut]
         decoys = decoys.sample(n_train)
@@ -151,7 +159,27 @@ def autoqsar(input_csv, root, affinity_cut):
 @click.argument('root')
 @click.argument('data')
 @click.argument('protein')
-def combind(input_csv, root, data, protein):
+@click.option('--xtal', is_flag=True)
+def combind(input_csv, root, data, protein, xtal):
+    xtal = '--xtal XTAL_lig' if xtal else ''
+    input_csv = os.path.abspath(input_csv)
+    root = os.path.abspath(root)
+    data = os.path.abspath(data)
+    for cwd in glob(root + '/[0-9]'):
+        if not os.path.exists('{}/combind_poses.sc'.format(cwd)):
+            run('$COMBINDHOME/main.py --data {} --ligands {}/binder.csv score {} all --pose-fname combind_poses.sc {}'.format(data, cwd, protein, xtal),
+                shell=True, cwd=cwd)
+
+        if not os.path.exists('{}/combind_preds.csv'.format(cwd)):
+            run('$COMBINDHOME/main.py --data {} --ligands {} screen {} all --pose-fname combind_poses.sc --score-fname combind_preds.csv'.format(data, input_csv, protein, xtal),
+                shell=True, cwd=cwd)
+
+@main.command()
+@click.argument('input_csv', type=click.Path(exists=True))
+@click.argument('root')
+@click.argument('data')
+@click.argument('protein')
+def combind_xtal(input_csv, root, data, protein):
     input_csv = os.path.abspath(input_csv)
     root = os.path.abspath(root)
     data = os.path.abspath(data)

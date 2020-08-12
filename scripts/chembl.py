@@ -1,6 +1,7 @@
 import sqlite3
 import os
 import pandas as pd
+import numpy as np
 from schrodinger.structure import SmilesStructure, StructureReader
 from schrodinger.structutils.analyze import generate_smiles
 import click
@@ -72,7 +73,7 @@ class CHEMBLDB:
         return rows[0][0]
 
     def molregno_and_assay_to_activities(self, molregno, assay):
-        self.cur.execute("SELECT standard_type, standard_value, standard_units, relation, comment FROM activities WHERE molregno=? AND assay_id=?", (molregno, assay))
+        self.cur.execute("SELECT standard_type, standard_value, standard_units, relation, activity_comment FROM activities WHERE molregno=? AND assay_id=?", (molregno, assay))
         return self.cur.fetchall()
 
     def chembl_to_activities(self, chembl, protein_complex):
@@ -109,8 +110,15 @@ def get_activities(chembl, chembldb, uniprot_chembl, protein_complex):
     with CHEMBLDB(chembldb, uniprot_chembl) as chembldb:
         activities = chembldb.chembl_to_activities(chembl, protein_complex)
     activities['target_chembl_id'] = chembl
+
+    activities.loc[activities['comment'].isin([None]), 'comment'] = ''
     duds = [('Not Active' in s) for s in activities['comment']]
-    return activities[~duds]
+    duds = np.array(duds)
+    activities.loc[duds, 'standard_units'] = 'nM'
+    activities.loc[duds, 'standard_value'] = 10**6
+    activities.loc[duds, 'relation'] = '='
+    
+    return activities
 
 def filter_activities(activities, activity_type):
     # Standardize units
@@ -123,6 +131,7 @@ def filter_activities(activities, activity_type):
     # Most nonbinders don't have equality relation.
     mask  = activities['standard_value'] > AFFINITY_THRESH
     mask *= activities['relation'].isin(['>', '>='])
+    activities.loc[mask, 'standard_value'] = 10**6
     activities.loc[mask, 'relation'] = '='
 
     # Filter
@@ -134,7 +143,7 @@ def filter_activities(activities, activity_type):
     print('Removing {} rows b/c standard_value is 0'.format(len(mask)-sum(mask)))
     activities = activities.loc[mask]
 
-    mask = activities['canonical_smiles'] != None
+    mask = ~activities['canonical_smiles'].isin([None])
     print('Removing {} rows b/c canonical_smiles is None'.format(len(mask)-sum(mask)))
     activities = activities.loc[mask]
 
@@ -154,7 +163,7 @@ def filter_activities(activities, activity_type):
     activities = activities.loc[mask]
 
     if activity_type == 'all':
-        activity_types = ['EC50', 'IC50', 'Ki', 'Kd']
+        activity_types = ['IC50', 'Ki', 'Kd']
     else:
         activity_types = [activity_type]
     mask = activities['standard_type'].isin(activity_types)
@@ -173,6 +182,13 @@ def filter_activities(activities, activity_type):
 
 ################################################################################
 
+def desalt(st):
+    atoms = []
+    for mol in st.molecule:
+        if len(mol.atom) > len(atoms):
+            atoms = [a.index for a in mol.atom]
+    return st.extract(atoms)
+
 def get_structure(smiles):
     smi = SmilesStructure(smiles)
     try:
@@ -186,12 +202,7 @@ def get_structure(smiles):
             print('Error processing {}'.format(smiles))
             return SmilesStructure('C').get3dStructure(), False
 
-    # Desalt.
-    atoms = []
-    for mol in st.molecule:
-        if len(mol.atom) > len(atoms):
-            atoms = [a.index for a in mol.atom]
-    st = st.extract(atoms)
+    st = desalt(st)
     return st, stereo
 
 def is_macrocycle(st):
@@ -224,7 +235,6 @@ def filter_properties(activities):
     activities = activities.loc[mask]
     return activities
 
-
 @click.command()
 @click.option('--protein_complex', is_flag=True)
 @click.option('--activity_type', default='all')
@@ -237,10 +247,12 @@ def main(protein_complex, activity_type, uniprot_or_chembl,
         chembl = uniprot_or_chembl
     else:
         chembl = get_chembl(uniprot_or_chembl, chembldb, uniprot_chembl)
+
     if chembl is None:
         exit()
+
     activities = get_activities(chembl, chembldb, uniprot_chembl, protein_complex)
-    print(chembl, len(activities))
+    print(activities.head())
     activities = filter_activities(activities, activity_type)
     activities = get_properties(activities)
     activities = filter_properties(activities)

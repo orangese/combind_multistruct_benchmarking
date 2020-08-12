@@ -176,8 +176,11 @@ class LigandManager:
             return self.pdb[ligand]
         return None
 
+    def get_docked_ligands(self, num=1000):
+        return self.docked(self.get_pdb())[:num]
+
     def get_xdocked_ligands(self, num=1000):
-        ligands = self.docked(self.get_pdb())[:num+1]
+        ligands = self.get_docked_ligands(num+1)
         self_docked = self.st+'_lig'
         if self_docked in ligands:
            ligands.remove(self_docked)
