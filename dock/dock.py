@@ -1,7 +1,6 @@
 import os
 import sys
 from utils import grouper
-from schrodinger.structure import StructureReader
 
 GLIDE_ES4 = '''GRIDFILE   ../../grids/{}/{}.zip
 LIGANDFILE   ../../../ligands/{}/{}.mae

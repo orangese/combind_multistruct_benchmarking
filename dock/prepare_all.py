@@ -12,6 +12,8 @@ from dock.ligands import prep_ligands
 from dock.grids import make_grids
 from dock.dock import dock
 
+from dock.shape_dock import shape_dock
+
 from ifp.ifp_controller import compute_ifp
 from shape.shape_controller import ShapeController
 from containers import Protein
@@ -37,6 +39,9 @@ def main(params, paths, task, proteins, struct, processes, more_ligands):
 
         elif task == 'dock':
             dock(protein.lm, mode=params['docking_version'])
+
+        elif task == 'shape-dock':
+            shape_dock(protein.lm)
 
         elif task == 'ifp':
             compute_ifp(protein.lm)

@@ -3,25 +3,28 @@ import numpy as np
 import click
 import sys
 
-
 family = pd.api.types.CategoricalDtype(['GPCR', 'Ion Channel', 'Nuclear Receptor', 'Transporter',
-                                        'Peptidase', 'Other'],
+                                        'Reductase', 'Peptidase', 'Other'],
                                         ordered = True)
 
 families = {
-    'GPCR': ['5HT2B', 'A2AR', 'B1AR', 'B2AR', 'SMO', 'MGLUR5'],
-    'Ion Channel': ['P19491', 'P22756', 'Q05586-Q12879'],
-    'Transporter': ['SLC6A4', 'GLUT1', 'DAT'],
-    'Nuclear Receptor': ['NR3C2', 'NR3C1', 'AR', 'VDR', 'ERA'],
-    'Peptidase': ['F2', 'F10', 'F11', 'PLAU', 'P00760', 'BACE1'],
-    'Other': ['CDK2', 'PYGM', 'PTPN1', 'BRD4', 'HSP90AA1', 'PDE10A', 'SIGMAR1', 'ELANE', 'DHFR']
+    'GPCR': ['P41595','P29274','P07700','P07550','P21554','P48039','P08172',
+             'Q9UBS5','Q14416','Q14832','P41594','Q99835'],
+    'Ion Channel': ['P19491', 'P22756', 'Q05586-Q12879', 'P42264'],
+    'Transporter': ['Q7K4Y6','P31645','P11166'],
+    'Nuclear Receptor': ['P10275','Q96RI1','P03372','P04150','P08235','P11473'],
+    'Peptidase': ['P56817','P00760','P00742','P00734','P00749'],
+    'Reductase': ['P15121','P28845','P00374','P16083'],
+    'Other': ['P58154','Q99720','P36897','P34913','P09960','P24941','P28482',
+              'P08246','P00489','P18031','O60885','P07900','Q9Y233']
 }
 
 drugs = {'GPCR': 0.33,
          'Ion Channel': 0.18,
          'Nuclear Receptor': 0.16,
-         'Other': 0.20+0.03,
+         'Other': 0.13+0.03,
          'Peptidase': 0.03,
+         'Reductase': 0.07,
          'Transporter': 0.07}
 
 

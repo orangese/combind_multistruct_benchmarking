@@ -14,7 +14,7 @@ stats_version/
 
 for i in $(ls --color=none /oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems); do python scripts/benchmark_pose_pred.py stats rd1 /oak/stanford/groups/rondror/users/jpaggi/temp/shape $i; done;
 for i in $(ls --color=none /oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems); do python scripts/benchmark_pose_pred.py setup-pdb rd1  $i --features shape; done;
-n02 login ~/combind]$ for i in /oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems/*/scores/rd1/pdb/standard/0.5-shape/*.sh; do if [ ! -f ${i/.sh/.sc} ]; then cd ${i%/*}; sh ${i##*/}; cd /oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems ; fi; done;
+for i in /oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020/*/scores/rd1_all/pdb/standard/*/*.sh; do if [ ! -f ${i/.sh/.sc} ]; then cd ${i%/*}; sbatch -p rondror --wrap="sh ${i##*/}" ; fi; done;
 python scripts/performance.py /oak/stanford/groups/rondror/users/jpaggi/combind/*/scores/rd2/pdb/*/*/*.sc
 """
 
@@ -39,7 +39,7 @@ def main():
 @click.argument('stats_version')
 @click.argument('stats_root')
 @click.argument('protein')
-@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems')
+@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020')
 @click.option('--ligands', default='{ROOT}/structures/pdb.csv')
 def stats(stats_version, stats_root, protein, data, ligands):
     import score.statistics
@@ -66,7 +66,7 @@ def stats(stats_version, stats_root, protein, data, ligands):
 @click.argument('protein')
 @click.option('--alpha', default=1.0)
 @click.option('--features', default='mcss,hbond,sb,contact')
-@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems')
+@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020')
 @click.option('--ligands', default='{ROOT}/structures/pdb.csv')
 def setup_pdb(stats_version, protein, alpha, features, data, ligands):
     cwd = '{data}/{protein}/scores/{stats_version}/pdb/standard/{alpha}-{features}'
@@ -93,7 +93,7 @@ def setup_pdb(stats_version, protein, alpha, features, data, ligands):
 @click.argument('protein')
 @click.option('--alpha', default=1.0)
 @click.option('--features', default='mcss,hbond,sb,contact')
-@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems')
+@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020')
 @click.option('--ligands', default='{ROOT}/structures/pdb.csv')
 def setup_pdb_xtal(stats_version, protein, alpha, features, data, ligands):
     cwd = '{data}/{protein}/scores/{stats_version}/pdb/crystal/{alpha}-{features}'
@@ -105,7 +105,6 @@ def setup_pdb_xtal(stats_version, protein, alpha, features, data, ligands):
            '--pose-fname poses.sc  --num-poses 100 --xtal {st}_lig')
 
     st = glob('{data}/{protein}/docking/grids/*'.format(data=data, protein=protein))
-    print('{data}/{protein}/docking/grids/*'.format(data=data, protein=protein))
     assert len(st) == 1, st
     st = st[0].split('/')[-1]
 
@@ -124,7 +123,7 @@ def setup_pdb_xtal(stats_version, protein, alpha, features, data, ligands):
 @click.argument('protein')
 @click.option('--alpha', default=1.0)
 @click.option('--features', default='mcss,hbond,sb,contact')
-@click.option('--data', default='/oak/stanford/groups/rondror/users/jpaggi/combind')
+@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020')
 @click.option('--ligands', default='{ROOT}/structures/pdb.csv')
 def setup_pdb_xtal_only(stats_version, protein, alpha, features, data, ligands):
     cwd = '{data}/{protein}/scores/{stats_version}/pdb/crystal_only/{alpha}-{features}'
@@ -158,7 +157,7 @@ def setup_pdb_xtal_only(stats_version, protein, alpha, features, data, ligands):
 @click.argument('protein')
 @click.option('--alpha', default=1.0)
 @click.option('--features', default='mcss,hbond,sb,contact')
-@click.option('--data', default='/oak/stanford/groups/rondror/users/jpaggi/combind')
+@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020')
 @click.option('--ligands', default='{ROOT}/structures/pdb.csv')
 def setup_pdb_xtal_all(stats_version, protein, alpha, features, data, ligands):
     cwd = '{data}/{protein}/scores/{stats_version}/pdb/crystal_all/{alpha}-{features}'

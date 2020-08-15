@@ -1,6 +1,7 @@
 import sqlite3
 import os
 import pandas as pd
+import numpy as np
 from schrodinger.structure import SmilesStructure, StructureReader
 from schrodinger.structutils.analyze import generate_smiles
 import click
@@ -8,7 +9,7 @@ import tempfile
 
 MACROCYCLE_THRESH = 8
 AFFINITY_THRESH = 1000
-MOLW_THRESH = 800
+MOLW_THRESH = 500
 
 class CHEMBLDB:
     def __init__(self, chembldb, uniprot_chembl):
@@ -34,11 +35,17 @@ class CHEMBLDB:
         assert len(rows) == 1, rows
         return rows[0][0]
 
-    def tid_to_assays(self, tid, protein_complex):
-        if protein_complex:
-            self.cur.execute("SELECT assay_id FROM assays WHERE tid=? AND (confidence_score=7 OR confidence_score=9)", (tid,))
+    def tid_to_assays(self, tid, protein_complex, homologous):
+        if protein_complex and homologous:
+            confidence = '(confidence_score=6 OR confidence_score=7)'
+        elif protein_complex and not homologous:
+        	confidence = 'confidence_score=7'
+        elif not protein_complex and homologous:
+        	confidence = '(confidence_score=8 OR confidence_score=9)'
         else:
-            self.cur.execute("SELECT assay_id FROM assays WHERE tid=? AND confidence_score=9", (tid,))
+        	confidence = 'confidence_score=9'
+            
+        self.cur.execute("SELECT assay_id FROM assays WHERE tid=? AND "+confidence, (tid,))
         return [row[0] for row in self.cur.fetchall()]
 
     def assay_to_molregnos(self, assay):
@@ -72,14 +79,14 @@ class CHEMBLDB:
         return rows[0][0]
 
     def molregno_and_assay_to_activities(self, molregno, assay):
-        self.cur.execute("SELECT standard_type, standard_value, standard_units, relation FROM activities WHERE molregno=? AND assay_id=?", (molregno, assay))
+        self.cur.execute("SELECT standard_type, standard_value, standard_units, relation, activity_comment FROM activities WHERE molregno=? AND assay_id=?", (molregno, assay))
         return self.cur.fetchall()
 
-    def chembl_to_activities(self, chembl, protein_complex):
+    def chembl_to_activities(self, chembl, protein_complex, homologous):
         # chemblID, SMILES, MOLW, affinity
         activities = []
         tid = self.chembl_to_tid(chembl)
-        for assay in self.tid_to_assays(tid, protein_complex):
+        for assay in self.tid_to_assays(tid, protein_complex, homologous):
             for molregno in self.assay_to_molregnos(assay):
                 molw = self.molregno_to_molw(molregno)
                 smiles = self.molregno_to_smiles(molregno)
@@ -89,7 +96,7 @@ class CHEMBLDB:
         return pd.DataFrame(activities,
                             columns=['ligand_chembl_id', 'mw_freebase', 'canonical_smiles',
                                      'standard_type', 'standard_value',
-                                     'standard_units', 'relation'])
+                                     'standard_units', 'relation', 'comment'])
 
     def uniprot_to_chembl(self, uniprot):
         for chembl_id in self.uniprot_chembl.loc[uniprot]:
@@ -105,10 +112,18 @@ def get_chembl(uniprot, chembldb, uniprot_chembl):
         chembl = chembldb.uniprot_to_chembl(uniprot)
     return chembl
 
-def get_activities(chembl, chembldb, uniprot_chembl, protein_complex):
+def get_activities(chembl, chembldb, uniprot_chembl, protein_complex, homologous):
     with CHEMBLDB(chembldb, uniprot_chembl) as chembldb:
-        activities = chembldb.chembl_to_activities(chembl, protein_complex)
+        activities = chembldb.chembl_to_activities(chembl, protein_complex, homologous)
     activities['target_chembl_id'] = chembl
+
+    activities.loc[activities['comment'].isin([None]), 'comment'] = ''
+    duds = [('Not Active' in s) for s in activities['comment']]
+    duds = np.array(duds)
+    activities.loc[duds, 'standard_units'] = 'nM'
+    activities.loc[duds, 'standard_value'] = 10**6
+    activities.loc[duds, 'relation'] = '='
+    
     return activities
 
 def filter_activities(activities, activity_type):
@@ -119,6 +134,12 @@ def filter_activities(activities, activity_type):
         activities.loc[mask, 'standard_value'] *= relation
         activities.loc[mask, 'standard_units'] = unit
 
+    # Most nonbinders don't have equality relation.
+    mask  = activities['standard_value'] > AFFINITY_THRESH
+    mask *= activities['relation'].isin(['>', '>='])
+    activities.loc[mask, 'standard_value'] = 10**6
+    activities.loc[mask, 'relation'] = '='
+
     # Filter
     mask = activities['standard_value'].notna()
     print('Removing {} rows b/c standard_value is na'.format(len(mask)-sum(mask)))
@@ -128,7 +149,7 @@ def filter_activities(activities, activity_type):
     print('Removing {} rows b/c standard_value is 0'.format(len(mask)-sum(mask)))
     activities = activities.loc[mask]
 
-    mask = activities['canonical_smiles'] != None
+    mask = ~activities['canonical_smiles'].isin([None])
     print('Removing {} rows b/c canonical_smiles is None'.format(len(mask)-sum(mask)))
     activities = activities.loc[mask]
 
@@ -148,7 +169,7 @@ def filter_activities(activities, activity_type):
     activities = activities.loc[mask]
 
     if activity_type == 'all':
-        activity_types = ['EC50', 'IC50', 'Ki', 'Kd']
+        activity_types = ['IC50', 'Ki', 'Kd']
     else:
         activity_types = [activity_type]
     mask = activities['standard_type'].isin(activity_types)
@@ -167,6 +188,13 @@ def filter_activities(activities, activity_type):
 
 ################################################################################
 
+def desalt(st):
+    atoms = []
+    for mol in st.molecule:
+        if len(mol.atom) > len(atoms):
+            atoms = [a.index for a in mol.atom]
+    return st.extract(atoms)
+
 def get_structure(smiles):
     smi = SmilesStructure(smiles)
     try:
@@ -180,12 +208,7 @@ def get_structure(smiles):
             print('Error processing {}'.format(smiles))
             return SmilesStructure('C').get3dStructure(), False
 
-    # Desalt.
-    atoms = []
-    for mol in st.molecule:
-        if len(mol.atom) > len(atoms):
-            atoms = [a.index for a in mol.atom]
-    st = st.extract(atoms)
+    st = desalt(st)
     return st, stereo
 
 def is_macrocycle(st):
@@ -195,7 +218,6 @@ def is_macrocycle(st):
 def _get_properties(smiles):
     properties = {}
     st, properties['stereo'] = get_structure(smiles)
-    properties['SMILES'] = generate_smiles(st)
     properties['macrocycle'] = is_macrocycle(st)
     properties['molw'] = st.total_weight
     return pd.Series(properties)
@@ -204,7 +226,7 @@ def get_properties(activities):
     properties = activities.canonical_smiles.apply(_get_properties)
     return pd.concat([activities, properties], axis=1)
 
-def filter_properties(activities):
+def filter_properties(activities, ambiguous_stereo):
     mask = activities['molw'] <= MOLW_THRESH
     print('Removing {} rows b/c molw > {}'.format(len(mask)-sum(mask),
                                                   MOLW_THRESH))
@@ -214,33 +236,35 @@ def filter_properties(activities):
     print('Removing {} rows b/c macrocycle'.format(len(mask)-sum(mask)))
     activities = activities.loc[mask]
 
-    mask = activities['stereo']
-    print('Removing {} rows b/c ambiguous stereochemistry'.format(len(mask)-sum(mask)))
-    activities = activities.loc[mask]
+    if not ambiguous_stereo:
+    	mask = activities['stereo']
+    	print('Removing {} rows b/c ambiguous stereochemistry'.format(len(mask)-sum(mask)))
+    	activities = activities.loc[mask]
     return activities
-
 
 @click.command()
 @click.option('--protein-complex', is_flag=True)
+@click.option('--homologous', is_flag=True)
+@click.option('--ambiguous-stereo', is_flag=True)
 @click.option('--activity_type', default='all')
 @click.argument('uniprot_or_chembl')
-@click.argument('chembldb', default='/oak/stanford/groups/rondror/users/jpaggi/pldb_data/raw/chembl_25.db')
+@click.argument('chembldb', default='/oak/stanford/groups/rondror/users/jpaggi/pldb_data/raw/chembl_27.db')
 @click.argument('uniprot_chembl', default='/oak/stanford/groups/rondror/users/jpaggi/pldb_data/raw/uniprot-chembl.tsv')
-def main(protein_complex, activity_type, uniprot_or_chembl,
-         chembldb, uniprot_chembl):
+def main(protein_complex, homologous, ambiguous_stereo,
+         activity_type, uniprot_or_chembl, chembldb, uniprot_chembl):
     if uniprot_or_chembl[:6] == 'CHEMBL':
         chembl = uniprot_or_chembl
     else:
         chembl = get_chembl(uniprot_or_chembl, chembldb, uniprot_chembl)
+
     if chembl is None:
         exit()
-    activities = get_activities(chembl, chembldb, uniprot_chembl, protein_complex)
-    print(chembl, len(activities))
+
+    activities = get_activities(chembl, chembldb, uniprot_chembl,
+                                protein_complex, homologous)
     activities = filter_activities(activities, activity_type)
     activities = get_properties(activities)
-    activities = filter_properties(activities)
-    activities['AFFINITY'] = activities['standard_value']
-    activities['ID'] = activities['ligand_chembl_id']
+    activities = filter_properties(activities, ambiguous_stereo)
     activities.to_csv('{}_{}.csv'.format(chembl, activity_type), index=False)
 
 if __name__ == '__main__':
