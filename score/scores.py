@@ -286,3 +286,36 @@ def score(paths, params, features, stats_root, protein, queries,
 
     cluster = sc.compute_results(queries, xtal)
     sc.write_results(cluster, pose_fname)
+
+def screen(paths, params, features, stats_root, protein, queries,
+           pose_fname='poses.sc', score_fname='combind_preds.csv', struct=None,
+           num_poses=100, alpha=1.0):
+    sc = ScoreContainer(paths, params, features, stats_root, protein,
+                        num_poses=num_poses, alpha=alpha, struct=struct)
+
+    if 'all' in queries:
+         queries = sc.predict_data.lm.docked(list(sc.predict_data.lm.pdb.keys()))
+    cluster = sc.read_results(pose_fname)
+
+    sc.load_docking(queries + list(cluster.keys()))
+
+    df = pd.DataFrame([],
+        columns=['GPOSE', 'CPOSE', 'GSCORE', 'CSCORE', 'GSCORE_CPOSE', 'CSCORE_GPOSE'],
+        index=queries)
+    df.index.name = 'ID'
+    for query in queries:
+        _cluster = {k:v for k, v in cluster.items()}
+        ligand = sc.predict_data.docking[query]
+        cpose = sc.ps.score_new_ligand(_cluster, ligand)
+        gpose = 0
+
+        df.loc[query, 'GPOSE'] = gpose
+        df.loc[query, 'CPOSE'] = cpose
+        df.loc[query, 'GSCORE'] = ligand.poses[gpose].gscore
+        df.loc[query, 'GSCORE_CPOSE'] =ligand.poses[cpose].gscore
+
+        _cluster['test'] = cpose
+        df.loc[query, 'CSCORE'] = -sc.ps.partial_log_posterior(_cluster, 'test')
+        _cluster['test'] = gpose
+        df.loc[query, 'CSCORE_GPOSE'] = -sc.ps.partial_log_posterior(_cluster, 'test')
+    df.to_csv(score_fname)

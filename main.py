@@ -68,6 +68,34 @@ def score(paths, stats_root, protein, struct, queries, pose_fname, xtal,
                        max_iterations=max_iterations, restart=restart)
 
 @main.command()
+@click.option('--stats-version', default='rd1')
+@click.option('--stats-root', default='{}/stats_data/rd1'.format(os.environ['COMBINDHOME']))
+@click.option('--struct', default=None)
+@click.option('--pose-fname', default='poses.sc')
+@click.option('--score-fname', default='combind_preds.csv')
+@click.option('--alpha', default=1.0)
+@click.option('--num-poses', default=100)
+@click.option('--features', default='hbond,sb,contact')
+@click.option('--xtal', multiple=True)
+@click.argument('protein')
+@click.argument('queries', nargs=-1)
+@click.pass_obj
+def screen(paths, stats_root, protein, struct, queries, pose_fname, score_fname,
+          xtal, stats_version, alpha, num_poses, features):
+    """
+    Run ComBind virtual screening!
+    """
+    import score.scores
+    queries = list(queries)
+    xtal = list(xtal)
+    params = config.STATS[stats_version]
+    features = {feature: config.FEATURE_DEFS[feature]
+                for feature in features.split(',')}
+    score.scores.screen(paths, params, features, stats_root, protein, queries,
+                        struct=struct, pose_fname=pose_fname, alpha=alpha,
+                        score_fname=score_fname, num_poses=num_poses)
+
+@main.command()
 @click.option('--merged-root')
 @click.option('--stats-version', default='default')
 @click.argument('stats-root')
