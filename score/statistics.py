@@ -157,6 +157,10 @@ class Statistics:
             stats['reference'][interaction] = DensityEstimate(domain=domain, sd=sd, reflect=True)
             stats['native'][interaction].fit(X_native)
             stats['reference'][interaction].fit(X_ref)
+
+            if 'ligand_pairs_equal' in self.settings and self.settings['ligand_pairs_equal']:
+                stats['native'][interaction].n_samples = min(1, stats['native'][interaction].n_samples)
+                stats['reference'][interaction].n_samples = min(1, stats['reference'][interaction].n_samples)
         return stats
 
     def _get_interaction_scores(self, lig_pair, interaction):

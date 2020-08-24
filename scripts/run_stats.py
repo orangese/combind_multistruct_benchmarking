@@ -12,7 +12,7 @@ version    = sys.argv[1]
 data       = sys.argv[2]
 stats_root = sys.argv[3]
 
-CMD = './main.py --data {} statistics --stats_version {} {} {}'
+CMD = './main.py --data {} statistics --stats-version {} {} {}'
 for protein in os.listdir(data):
 	if protein[0] == '.': continue
 	cmd = CMD.format(data, version, stats_root, protein)

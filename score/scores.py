@@ -17,18 +17,21 @@ class ScoreContainer:
     Manages execution of ComBind for a given protein and settings.
     """
     def __init__(self, paths, params, features, stats_root, prot,
-                 struct=None, num_poses=100, alpha=1.0,
-                 max_iterations=1000000, restart=500):
+                 struct=None, num_poses=100, alpha=1.0, gc50=-7.0,
+                 max_iterations=1000000, restart=500, linear=False):
 
         # Initialize PredictStructs object.
         self.features = features
         self.num_poses = num_poses
         self.alpha = alpha
+        self.gc50 = gc50
         self.native_thresh = params['native_thresh']
         self.max_iterations = max_iterations
         self.restart = restart
+        self.linear = linear
         self.stats = self.read_stats(stats_root)
-        self.ps = PredictStructs(self.stats, self.features, self.num_poses, self.alpha)
+        self.ps = PredictStructs(self.stats, self.features, self.num_poses,
+                                 self.alpha, self.gc50)
 
         # Initialize docking data.
         self.predict_data = Protein(prot, params, paths)
@@ -36,6 +39,19 @@ class ScoreContainer:
             self.predict_data.lm.st = struct
 
     def read_stats(self, stats_root):
+        if self.linear:
+            return self.read_stats_linear(stats_root)
+        return self.read_stats_nonparametric(stats_root)
+
+    def read_stats_linear(self, stats_root):
+        stats = {}
+        with open(stats_root+'/weights.txt') as fp:
+            for line in fp:
+                feature, coeff, intercept = line.strip().split()
+                stats[feature] = (float(coeff), float(intercept))
+        return stats
+
+    def read_stats_nonparametric(self, stats_root):
         stats = {'native':{}, 'reference':{}}
         for dist in stats:
             for interaction in self.features:
@@ -81,6 +97,7 @@ class ScoreContainer:
             f.write('lig,combind_rank,combind_rmsd,glide_rank,glide_rmsd,best_rank,best_rmsd\n')
             glide_cluster, best_cluster = {}, {}
             for lig, combind_pose in sorted(cluster.items()):
+                glide_cluster[lig] = 0
                 poses = self.predict_data.docking[lig].poses
                 best_rmsd = float('inf')
                 for i, pose in enumerate(poses[:self.num_poses]):
@@ -236,7 +253,7 @@ class ScoreContainer:
         num = interaction[1].split('(')[0].split(':')[1]
         if name in three_to_one:
             name = three_to_one[name]
-        
+
         feature = [feature for feature, codes in self.feature.items()
                    if interaction[0] in codes]
 
@@ -251,9 +268,9 @@ class ScoreContainer:
 
 def score(paths, params, features, stats_root, protein, queries,
           xtal=[], pose_fname='poses.sc', struct=None, num_poses=100, alpha=1.0,
-          max_iterations=1000000, restart=500):
+          max_iterations=1000000, restart=500, gc50=10.0):
     sc = ScoreContainer(paths, params, features, stats_root, protein,
-                        num_poses=num_poses, alpha=alpha, struct=struct,
+                        num_poses=num_poses, alpha=alpha, gc50=gc50, struct=struct,
                         max_iterations=max_iterations, restart=restart)
 
     if 'all' in queries:

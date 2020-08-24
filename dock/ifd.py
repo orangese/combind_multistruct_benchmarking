@@ -1,20 +1,21 @@
 """
 # Schrodinger interpreters
 for i in *; do python ~/combind/dock/ifd.py setup-stage1 $i; done;
-for i in *; do python ~/combind/dock/ifd.py setup-stage2 /oak/stanford/groups/rondror/users/jpaggi/combind/$i/docking/ifd2; done;
-for i in *; do python ~/combind/dock/ifd.py setup-stage3 /oak/stanford/groups/rondror/users/jpaggi/combind/$i/docking/ifd2; done;
+for i in *; do python ~/combind/dock/ifd.py setup-stage2 /oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020/$i/docking/ifd; done;
+for i in *; do python ~/combind/dock/ifd.py setup-stage3 /oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020/$i/docking/ifd; done;
 
-# python 3.8 interpreter (conda activate mol)
-python ~/combind/dock/ifd.py run '*/docking/ifd2/*/*-stage1.inp' '*/docking/ifd2/*/*-stage1.log'
-python ~/combind/dock/ifd.py run '*/docking/ifd2/*/*-stage2.inp' '*/docking/ifd2/*/*-stage2.log' --time 12:00:00 --queue rondror --n-jobs 100
-python ~/combind/dock/ifd.py run '*/docking/ifd2/*/*-stage3.inp' '*/docking/ifd2/*/*-stage3.log' --n-jobs 500
+ml chemistry schrodinger
+conda activate mol
+python3.7 ~/combind/dock/ifd.py run '*/docking/ifd/*/*-stage1.inp' '*/docking/ifd/*/*-stage1.log'
+python3.7 ~/combind/dock/ifd.py run '*/docking/ifd/*/*-stage2.inp' '*/docking/ifd/*/*-stage2.log' --time 12:00:00 --queue rondror
+python3.7 ~/combind/dock/ifd.py run '*/docking/ifd/*/*-stage3.inp' '*/docking/ifd/*/*-stage3.log'
 
 # Runs in serial...
-for i in *; do python ~/combind/dock/ifd.py kick-stage2 $i/docking/ifd2; done;
+for i in *; do python ~/combind/dock/ifd.py kick-stage2 $i/docking/ifd; done;
 
 # Schrodinger interpreters
-for i in */docking/ifd2/*; do cd $i; if [[ -f ${i##*/}-stage3-out.maegz && ! -f ${i##*/}_pv.maegz ]]; then echo $i; python ~/combind/dock/ifd.py extract *_out.mae ${i##*/}-stage3-out.maegz ${i##*/}_pv.maegz; fi; cd /oak/stanford/groups/rondror/users/jpaggi/combind; done;
-for i in */docking/ifd2/*; do cd $i; if [[ -f ${i##*/}_pv.maegz && ! -f rmsd.csv ]]; then echo $i; python ~/combind/dock/ifd.py rmsd ${i##*/}_pv.maegz; fi; cd /oak/stanford/groups/rondror/users/jpaggi/combind; done;
+for i in */docking/ifd/*; do cd $i; if [[ -f ${i##*/}-stage3-out.maegz && ! -f ${i##*/}_pv.maegz ]]; then echo $i; python ~/combind/dock/ifd.py extract *_out.mae ${i##*/}-stage3-out.maegz ${i##*/}_pv.maegz; fi; cd /oak/stanford/groups/rondror/users/jpaggi/combind; done;
+for i in */docking/ifd/*; do cd $i; if [[ -f ${i##*/}_pv.maegz && ! -f rmsd.csv ]]; then echo $i; python ~/combind/dock/ifd.py rmsd ${i##*/}_pv.maegz; fi; cd /oak/stanford/groups/rondror/users/jpaggi/combind; done;
 """
 
 import os
@@ -75,7 +76,7 @@ def main():
 @click.argument('completed_pattern')
 @click.option('--time', default='2:00:00')
 @click.option('--queue', default='owners')
-@click.option('--n-jobs', default=200)
+@click.option('--n-jobs', default=100)
 def run(input_pattern, completed_pattern, time, queue, n_jobs):
     
     print('Launching {} at {}'.format(input_pattern, datetime.now()))
@@ -145,16 +146,17 @@ def check_stage1(cwd):
 @main.command()
 @click.argument('cwd')
 def clear_stage1(cwd):
-    if _check_stage1(cwd):
+    if not _check_stage1(cwd):
         print(cwd)
+        #os.system('rm -rf {}'.format(cwd))
 
 def _setup_stage1(ligand, grid, root):
     from schrodinger.structure import StructureReader
     name = '{}-to-{}'.format(ligand, grid)
-    cwd = '{}/docking/ifd2/{}'.format(root, name)
+    cwd = '{}/docking/ifd/{}'.format(root, name)
 
     cmd = ('{}/ifd -NGLIDECPU 1 -NPRIMECPU 1 {}-stage1.inp -HOST localhost'
-           ' -SUBHOST localhost -WAIT -STRICT -RESTART'
+           ' -SUBHOST localhost -WAIT -STRICT -OVERWRITE'
            ).format(os.environ['SCHRODINGER'], name)
 
     if os.path.exists(cwd):
@@ -275,7 +277,7 @@ def setup_stage2(root):
             fp.write(template_stage2.format(inputs=inputs, ligand=ligand))
 
         cmd = ('{}/ifd -NGLIDECPU 1 -NPRIMECPU 1 {}-stage2.inp -HOST localhost'
-               ' -SUBHOST localhost -WAIT -STRICT -RESTART'
+               ' -SUBHOST localhost -WAIT -STRICT -OVERWRITE'
                ).format(os.environ['SCHRODINGER'], name)
 
         with open('{}/{}-stage2.sh'.format(cwd, name), 'w') as fp:
@@ -291,6 +293,7 @@ def check_stage2(cwd):
 def clear_stage2(cwd):
     if _check_stage2(cwd):
         print(cwd)
+        _clear_stage2(cwd)
 
 @main.command()
 @click.argument('root')
@@ -346,7 +349,8 @@ def _get_stage2_workdir(cwd):
 
 def _check_stage2(cwd):
     workdir = _get_stage2_workdir(cwd)
-    if not workdir: return True
+    if not workdir:
+        return True
 
     stage1_workdir = _get_stage1_workdir(cwd)
     assert stage1_workdir
@@ -358,7 +362,7 @@ def _check_stage2(cwd):
     for stage1 in stage1s:
         pv  = '{}/{}-1_pv-1.maegz'.format(workdir, stage1)
         log = '{}/{}-1.log'.format(workdir, stage1)
-        
+
         if os.path.exists(pv):
             continue
 
@@ -377,9 +381,13 @@ def _check_stage2(cwd):
     return failed
 
 def _clear_stage2(cwd):
-    to_delete = ' '.join(glob('{}/*stage2*'.format(cwd)))
-    print(to_delete)
-    os.system('rm -rf {}'.format(to_delete))
+    to_delete = glob('{}/*stage2*'.format(cwd))
+    to_delete += glob('{}/sh*.diag'.format(cwd))
+    to_delete += glob('{}/slurm*.out'.format(cwd))
+    if to_delete:
+        to_delete = ' '.join(to_delete)
+        print(to_delete)
+        os.system('rm -rf {}'.format(to_delete))
 
 
 ################################################################################

@@ -41,7 +41,7 @@ class Ligand:
 
     def load_native_poses(self, load_fp, thresh):
         self.load_poses(load_fp)
-        self.poses = [pose for pose in self.poses if pose.rmsd <= thresh]
+        self.poses = [pose for pose in self.poses[:100] if pose.rmsd <= thresh]
 
     def load_poses(self, load_fp):
         gscores, rmsds = self.parse_glide_output()
@@ -51,7 +51,8 @@ class Ligand:
             fps = self.parse_ifp_file()
 
         if len(rmsds) < len(gscores):
-            assert False, 'Not all RMSDs calculated for {}'.format(self.ligand)
+            print('Not all RMSDs calculated for {}'.format(self.ligand))
+            rmsds += [float('inf')]*(len(gscores)-len(rmsds))
 
         self.poses = [Pose(i, rmsds[i], gscores[i], fps.get(i, {}))
                       for i in range(len(gscores))]

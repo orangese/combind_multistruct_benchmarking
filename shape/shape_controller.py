@@ -6,7 +6,7 @@ from utils import grouper
 from shape.shape import shape
 
 class ShapeController:
-    GROUP_SIZE = 5
+    GROUP_SIZE = 20
     QUEUE = 'owners'
     TEMPLATE = ('#!/bin/bash\n'
                 '#SBATCH -p {}\n'

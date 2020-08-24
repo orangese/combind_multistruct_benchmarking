@@ -41,6 +41,7 @@ def prepare(paths, task, stats_version, proteins, struct, processes, more_ligand
 @click.option('--struct', default=None)
 @click.option('--pose-fname', default='poses.sc')
 @click.option('--alpha', default=1.0)
+@click.option('--gc50', default=10.0)
 @click.option('--num-poses', default=100)
 @click.option('--features', default='mcss,hbond,sb,contact')
 @click.option('--max-iterations', default=int(1e6))
@@ -50,7 +51,7 @@ def prepare(paths, task, stats_version, proteins, struct, processes, more_ligand
 @click.argument('queries', nargs=-1)
 @click.pass_obj
 def score(paths, stats_root, protein, struct, queries, pose_fname, xtal,
-          stats_version, alpha, num_poses, features, max_iterations, restart):
+          stats_version, alpha, gc50, num_poses, features, max_iterations, restart):
     """
     Run ComBind!
     """
@@ -63,13 +64,13 @@ def score(paths, stats_root, protein, struct, queries, pose_fname, xtal,
 
     score.scores.score(paths, params, features, stats_root, protein, queries,
                        xtal=xtal, struct=struct, pose_fname=pose_fname,
-                       alpha=alpha, num_poses=num_poses,
+                       alpha=alpha, gc50=gc50, num_poses=num_poses,
                        max_iterations=max_iterations, restart=restart)
 
 @main.command()
-@click.option('--merged_root')
-@click.option('--stats_version', default='default')
-@click.argument('stats_root')
+@click.option('--merged-root')
+@click.option('--stats-version', default='default')
+@click.argument('stats-root')
 @click.argument('proteins', nargs=-1)
 @click.pass_obj
 def statistics(paths, stats_version, stats_root, proteins, merged_root):

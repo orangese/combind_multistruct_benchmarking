@@ -26,6 +26,16 @@ PRECISION   SP
 NENHANCED_SAMPLING   4
 '''
 
+GLIDE_XP_ALL = '''GRIDFILE   ../../grids/{}/{}.zip
+LIGANDFILE   ../../../ligands/{}/{}.mae
+DOCKING_METHOD   confgen
+CANONICALIZE   True
+POSES_PER_LIG   100
+POSTDOCK_NPOSE   100
+WRITEREPT   True
+PRECISION   XP
+'''
+
 CORE = '''GRIDFILE   ../../grids/{}/{}.zip
 LIGANDFILE   ../../../structures/ligands/{}.mae
 REF_LIGAND_FILE ../../../structures/ligands/{}.mae
@@ -52,13 +62,16 @@ modes = {'confgen_es4': {
          'confgen_es4_all': {
                        'name':     'confgen_es4_all',
                        'template': GLIDE_ES4_ALL},
+        'XP_all': {
+                       'name':     'XP_all',
+                       'template': GLIDE_XP_ALL},
          'core': {'name': 'core',
                    'template': CORE},
          'paper': {'name': 'paper'}
         }
 
-queue = 'rondror'
-group_size = 20
+queue = 'owners'
+group_size = 10
 
 dock_cmd = 'glide -WAIT {}-to-{}.in\n' 
 rmsd_cmd = 'run rmsd.py -use_neutral_scaffold -pv second -c rmsd.csv ../../../structures/ligands/{}.mae {}-to-{}_pv.maegz\n'

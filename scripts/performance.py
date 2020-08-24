@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import click
 import sys
+import pickle
 
 family = pd.api.types.CategoricalDtype(['GPCR', 'Ion Channel', 'Nuclear Receptor', 'Transporter',
                                         'Reductase', 'Peptidase', 'Other'],
@@ -27,7 +28,6 @@ drugs = {'GPCR': 0.33,
          'Reductase': 0.07,
          'Transporter': 0.07}
 
-
 def drug_average(family):
     assert 'protein' not in family.index.names
     assert 'ligand' not in family.index.names
@@ -39,8 +39,10 @@ def drug_average(family):
 @click.option('--details', is_flag=True)
 @click.option('--xtal', is_flag=True)
 @click.option('--protein', default=-7)
+@click.option('--mcss-thresh', default=1.0)
+@click.option('--best', is_flag=True)
 @click.argument('fnames', nargs=-1)
-def main(fnames, details, xtal, protein):
+def main(fnames, details, xtal, protein, mcss_thresh, best):
     data = []
     for path in fnames:
         prot = path.split('/')[protein]
@@ -55,6 +57,11 @@ def main(fnames, details, xtal, protein):
         data += [_data]
     data = pd.concat(data)
 
+    with open('stats_data/mcss_sizes.pkl', 'rb') as fp:
+        mcss = pd.DataFrame(pickle.load(fp).items(), columns=['lig', 'mcss']).set_index('lig')
+        data = data.join(mcss, on='lig')
+    data = data.loc[data.mcss <= mcss_thresh]
+
     reverse = {v:k for k, vs in families.items() for v in vs}
     data['family'] = data['protein'].apply(lambda x: reverse[x]).astype(family)
     data = data.set_index(['family', 'protein', 'lig']).sort_index()
@@ -62,12 +69,19 @@ def main(fnames, details, xtal, protein):
     data = data[['combind_rmsd', 'glide_rmsd', 'best_rmsd']].astype(float)
     data['total'] = 1
 
+    if best:
+        data = data.loc[data.best_rmsd <= 2.05]
+
     print((data <= 2.05).sum(axis=0))
     print()
 
-    print((data <= 2.05).groupby(level=0).mean())
+    print((data <= 2.05).mean(axis=0))
     print()
+
     print(drug_average((data <= 2.05).groupby(level=0).mean()))
+    print()
+
+    print((data <= 2.05).groupby(level=0).mean())
 
     if details:
         combind = data['combind_rmsd'] <= 2.05
@@ -85,6 +99,5 @@ def main(fnames, details, xtal, protein):
         print('Best and not ComBind')
         print(data[~combind&best])
         print()
-
 
 main()

@@ -56,7 +56,7 @@ for _, system in systems.iterrows():
 	df[a >= 10**4].to_csv(csv.replace('.csv', '_mM.csv'), index=False)
 
 
-cmd = 'python scripts/pick_helpers.py {root}/structures/pdb.csv {root}/chembl/CHEMBL*_nM.csv {root}/chembl --criteria affinity'
+cmd = 'python scripts/pick_helpers.py {root}/structures/pdb.csv {root}/chembl/CHEMBL*_nM.csv {root}/chembl --criteria affinity_diverse'
 systems = pd.read_csv(chembl, sep='\t')
 for _, system in systems.iterrows():
 	protein = system['UNIPROT']
@@ -65,5 +65,3 @@ for _, system in systems.iterrows():
 	_cmd = cmd.format(root=_root)
 	print(_cmd)
 	subprocess.run(_cmd, shell=True)
-
-
