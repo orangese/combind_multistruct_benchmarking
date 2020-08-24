@@ -12,7 +12,7 @@ from dock.ligands import prep_ligands
 from dock.grids import make_grids
 from dock.dock import dock
 
-from dock.shape_dock import shape_dock
+from shape.shape_dock import shape_dock
 
 from ifp.ifp_controller import compute_ifp
 from shape.shape_controller import ShapeController
