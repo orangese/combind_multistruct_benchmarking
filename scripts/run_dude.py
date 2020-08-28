@@ -174,24 +174,6 @@ def combind(input_csv, root, data, protein, xtal):
             run('$COMBINDHOME/main.py --data {} --ligands {} screen {} all --pose-fname combind_poses.sc --score-fname combind_preds.csv'.format(data, input_csv, protein, xtal),
                 shell=True, cwd=cwd)
 
-@main.command()
-@click.argument('input_csv', type=click.Path(exists=True))
-@click.argument('root')
-@click.argument('data')
-@click.argument('protein')
-def combind_xtal(input_csv, root, data, protein):
-    input_csv = os.path.abspath(input_csv)
-    root = os.path.abspath(root)
-    data = os.path.abspath(data)
-    for cwd in glob(root + '/[0-9]'):
-        if not os.path.exists('{}/combind_poses.sc'.format(cwd)):
-            run('$COMBINDHOME/main.py --data {} --ligands {}/binder.csv score {} all --pose-fname combind_poses.sc'.format(data, cwd, protein),
-                shell=True, cwd=cwd)
-
-        if not os.path.exists('{}/combind_preds.csv'.format(cwd)):
-            run('$COMBINDHOME/main.py --data {} --ligands {} screen {} all --pose-fname combind_poses.sc --score-fname combind_preds.csv'.format(data, input_csv, protein),
-                shell=True, cwd=cwd)
-
 def get_fp(mol):
     return AllChem.GetMorganFingerprint(mol, 2)
 
@@ -228,17 +210,57 @@ def similarity(input_csv, root, data, protein):
 
         df['XTAL_sim'] = 0
         df['active_sim'] = 0
+        df['active_sim_mean'] = 0
         df['decoy_sim'] = 0
         for i, ligand in df.iterrows():
             try:
                 mol = Chem.MolFromSmiles(ligand['SMILES'])
                 fp = get_fp(mol)
                 df.loc[i, 'XTAL_sim'] = DataStructs.TanimotoSimilarity(fp, ref_fp)
-                df.loc[i, 'active_sim'] = max(DataStructs.TanimotoSimilarity(fp, active_fp)
-                                              for active_fp in active_fps)
+                active_sims = [DataStructs.TanimotoSimilarity(fp, active_fp)
+                               for active_fp in active_fps]
+                df.loc[i, 'active_sim'] = max(active_sims)
+                df.loc[i, 'active_sim_mean'] = np.mean(active_sims)
                 df.loc[i, 'decoy_sim'] = max(DataStructs.TanimotoSimilarity(fp, decoy_fp)
                                              for decoy_fp in decoy_fps)
             except:
                 pass
         df.to_csv(sim_fname, index=False)
+
+def extract(root, ligands, out):
+    paths = ['{}/ligands/{}_lig/{}_lig.mae'.format(root, ligand, ligand)
+             for ligand in ligands]
+
+    cmd = 'python $COMBINDHOME/shape/shape_screen.py extract --best {} {}'.format(out, ' '.join(paths))
+    os.system(cmd)
+
+@main.command()
+@click.argument('input_csv', type=click.Path(exists=True))
+@click.argument('root')
+@click.argument('data')
+@click.argument('protein')
+def shape(input_csv, root, data, protein):
+    for cwd in glob(root + '/[0-9]'):
+        template = os.path.abspath('{}/{}/structures/ligands/XTAL_lig.mae'.format(data, protein))
+        test_mae = os.path.abspath('{}/test.maegz'.format(cwd))
+        active_csv = os.path.abspath('{}/binder.csv'.format(cwd))
+        active_mae = os.path.abspath('{}/binder.maegz'.format(cwd))
+        active_align_mae = os.path.abspath('{}/binder-to-XTAL_lig_align.maegz'.format(cwd))
+        test_align_csv = os.path.abspath('{}/test-to-binder-to-XTAL_lig_align_align.csv'.format(cwd))
+
+        if os.path.exists(test_align_csv):
+            continue
+
+        test = pd.read_csv(input_csv)['ID']
+        extract('{}/{}'.format(data, protein), test, test_mae)
+
+        active = pd.read_csv(active_csv)['ID']
+        extract('{}/{}'.format(data, protein), active, active_mae)
+
+        cmd = 'python $COMBINDHOME/shape/shape_screen.py screen {} {}'.format(template, active_mae)
+        run(cmd, cwd=cwd, shell=True)
+
+        cmd = 'python $COMBINDHOME/shape/shape_screen.py screen {} {}'.format(active_align_mae, test_mae)
+        run(cmd, cwd=cwd, shell=True)
+
 main()

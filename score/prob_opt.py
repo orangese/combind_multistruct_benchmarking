@@ -42,7 +42,7 @@ class PredictStructs:
         self.pair = None
         self.corr = None
 
-    def set_ligands(self, ligands, mcss, shape, xtal=set()):
+    def set_ligands(self, ligands, mcss, shape, xtal=set(), matrix=True):
         ligands = list(ligands.items())
         self.ligand_names = [x[0] for x in ligands]
         self.ligands = [x[1] for x in ligands]
@@ -51,9 +51,10 @@ class PredictStructs:
         self.shape = shape
         self.xtal = xtal
 
-        self.single = self._get_single()
-        self.pair = self._get_pair()
-        self.corr = self._get_corr()
+        if matrix:
+            self.single = self._get_single()
+            self.pair = self._get_pair()
+            self.corr = self._get_corr()
 
     def _get_single(self):
         single = np.zeros((len(self.ligands), self.max_poses))-20
@@ -79,27 +80,29 @@ class PredictStructs:
                              self.mcss, self.shape, self.max_poses)
                 lp.init_pose_pairs()
                 for r1, r2 in lp.pose_pairs:
-                    for feature in self.features:
-                        x = lp.get_feature(feature, r1, r2)
-
-                        if x is None:
-                            continue
-
-                        if 'native' in self.stats:
-                            p_x_native  = self.stats['native'][feature](x)
-                            p_x         = self.stats['reference'][feature](x)
-                            lr = np.log(p_x_native) - np.log(p_x)
-                        else:
-                            lr = self.stats['feature'][0]*x + self.stats['feature'][1]
-
-                        pair[i, j, r1, r2] += lr
-                        pair[j, i, r2, r1] += lr
+                    lr = self._get_lr_pair(lp, r1, r2)
+                    pair[i, j, r1, r2] = lr
+                    pair[j, i, r2, r1] = lr
         return pair
 
     def _get_corr(self):
         corr = np.ones((len(self.ligands), len(self.ligands)))
         np.fill_diagonal(corr, 1)
         return corr
+
+    def _get_lr_pair(self, lp, r1, r2):
+        lr = 0
+        for feature in self.features:
+            x = lp.get_feature(feature, r1, r2)
+            if x is None:
+                continue
+            if 'native' in self.stats:
+                p_x_native  = self.stats['native'][feature](x)
+                p_x         = self.stats['reference'][feature](x)
+                lr += np.log(p_x_native) - np.log(p_x)
+            else:
+                lr += self.stats['feature'][0]*x + self.stats['feature'][1]
+        return lr
 
     ###########################################################################
     def max_posterior(self, max_iterations, restart):
@@ -144,6 +147,29 @@ class PredictStructs:
             if not update:
                 break
         return poses
+
+    ###########################################################################
+
+    def score_new_ligand(self, poses, ligand):
+        best_pose, best_logp = -1, -float('inf')
+        for pose in range(len(ligand.poses)):
+            logp = self.partial_log_posterior(poses, ligand, pose)
+            if logp >= best_logp:
+                best_pose, best_logp = pose, logp
+        return best_pose
+
+    def partial_log_posterior(self, poses, query_ligand, query_pose):
+        iposes = list(self.poses_to_iposes(poses).items())
+
+        lr = -self.alpha*query_ligand.poses[query_pose].gscore
+
+        for ligand, pose in iposes:
+            lp = LigPair(self.ligands[ligand], query_ligand, self.features,
+                         self.mcss, self.shape, self.max_poses)
+            lr += self._get_lr_pair(lp, pose, query_pose) / len(poses)
+        return lr
+
+    ###########################################################################
 
     def best_pose(self, iposes, iquery):
         if self.gc50 == float('inf'):

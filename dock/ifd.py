@@ -14,8 +14,8 @@ python3.7 ~/combind/dock/ifd.py run '*/docking/ifd/*/*-stage3.inp' '*/docking/if
 for i in *; do python ~/combind/dock/ifd.py kick-stage2 $i/docking/ifd; done;
 
 # Schrodinger interpreters
-for i in */docking/ifd/*; do cd $i; if [[ -f ${i##*/}-stage3-out.maegz && ! -f ${i##*/}_pv.maegz ]]; then echo $i; python ~/combind/dock/ifd.py extract *_out.mae ${i##*/}-stage3-out.maegz ${i##*/}_pv.maegz; fi; cd /oak/stanford/groups/rondror/users/jpaggi/combind; done;
-for i in */docking/ifd/*; do cd $i; if [[ -f ${i##*/}_pv.maegz && ! -f rmsd.csv ]]; then echo $i; python ~/combind/dock/ifd.py rmsd ${i##*/}_pv.maegz; fi; cd /oak/stanford/groups/rondror/users/jpaggi/combind; done;
+for i in */docking/ifd/*; do cd $i; if [[ -f ${i##*/}-stage3-out.maegz && ! -f ${i##*/}_pv.maegz ]]; then echo $i; python ~/combind/dock/ifd.py extract *_out.mae ${i##*/}-stage3-out.maegz ${i##*/}_pv.maegz; fi; cd /oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020; done;
+for i in */docking/ifd/*; do cd $i; if [[ -f ${i##*/}_pv.maegz && ! -f rmsd.csv ]]; then echo $i; python ~/combind/dock/ifd.py rmsd ${i##*/}_pv.maegz; fi; cd /oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020; done;
 """
 
 import os
@@ -102,7 +102,7 @@ def run(input_pattern, completed_pattern, time, queue, n_jobs):
     for name, cwd in sorted(remaining_jobs.items())[:to_submit]:
         cmd = 'sbatch -p {0} -t {1} --wrap="sh {2}.sh" -J {2}'.format(queue, time, name)
         print(cwd, cmd)
-        subprocess.run(cmd, cwd=cwd, shell=True)
+        #subprocess.run(cmd, cwd=cwd, shell=True)
 
 ################################################################################
 
@@ -293,7 +293,7 @@ def check_stage2(cwd):
 def clear_stage2(cwd):
     if _check_stage2(cwd):
         print(cwd)
-        _clear_stage2(cwd)
+        #_clear_stage2(cwd)
 
 @main.command()
 @click.argument('root')

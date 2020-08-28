@@ -51,8 +51,8 @@ def load_protein(protein):
 			df += [load_ligand_pair(prot, protein, ligand1, ligand2)]
 	return pd.concat(df)
 
-stats_version = 'rd1'
-data = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind_paper_systems'
+stats_version = 'rd1_all'
+data = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020'
 ligands = '{ROOT}/structures/pdb.csv'
 
 settings = config.STATS[stats_version]
