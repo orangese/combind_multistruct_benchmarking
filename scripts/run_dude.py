@@ -119,7 +119,6 @@ def setup(input_csv, root, n_train, n_folds, affinity_cut, xtal):
             print(cwd, 'exists. not overwriting.')
             continue
 
-        decoy_csv  = '{}/{}/decoy.csv'.format(root, i)
         binder_csv = '{}/{}/binder.csv'.format(root, i)
         train_csv  = '{}/{}/train.csv'.format(root, i)
 
@@ -130,13 +129,8 @@ def setup(input_csv, root, n_train, n_folds, affinity_cut, xtal):
             binders = pd.concat([binders, pd.read_csv(xtal).loc[:1]])
             binders['AFFINITY'] = 1.0
 
-        decoys = df.loc[df['AFFINITY'] >= affinity_cut]
-        decoys = decoys.sample(n_train)
-
         os.mkdir(cwd)
-        decoys.to_csv(decoy_csv, index=False)
         binders.to_csv(binder_csv, index=False)
-        pd.concat([decoys, binders]).to_csv(train_csv, index=False)
 
 @main.command()
 @click.option('--affinity-cut', default=1000)

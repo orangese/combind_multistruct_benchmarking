@@ -129,3 +129,126 @@ Note that this interpretter is needed only for the fingerprinting code.
 conda create -n combind_rdit rdkit numpy click pandas
 ln -s path/to/conda/envs/combind_rdkit/bin/python rdpython
 ```
+
+
+
+
+## Predicting poses for known binders
+
+- (binders.smi) set of binders to use in combind scoring function
+- (grid.zip) docking grid
+- (XTAL_lig.mae) crystal conformation of select ligands
+- (stats/*.de) statistics to use in combind scoring
+- parameters for pose prediction
+
+### Library preparation and docking
+
+```
+mkdir bpp
+mkdir bpp/ligands
+python ../screen.py ligprep raw/binders.smi bpp/ligands --multi
+
+mkdir bpp/docking
+python ../screen.py dock raw/grid.zip bpp/docking bpp/ligands/*/*.maegz
+
+python ../screen.py gscores screen/docking/library-to-grid/library-to-grid_pv.maegz
+```
+
+### Feature generation
+
+### Scoring
+
+### Extract poses
+
+```
+python ../screen.py extract raw/binders.sc binders/docking/{ligand}-to-grid/{ligand}-to-grid_pv.maegz
+```
+
+## ComBind virtual screening
+
+- (library.smi) library of compounds to screen
+- (binders_pv.maegz) poses of known binders to use in combind scoring
+- (grid.zip) docking grid
+- (stats/*.de) statistics to use in combind scoring
+- parameters to use in screen
+
+### Library preparation and docking
+
+```
+mkdir screen
+
+mkdir screen/ligands
+python ../screen.py ligprep raw/library.smi screen/ligands
+
+mkdir screen/docking
+python ../screen.py dock raw/grid.zip screen/docking screen/ligands/library.maegz
+```
+
+### Feature generation
+
+```
+mkdir screen/ifp
+python ../screen.py ifp screen/docking/library-to-grid/library-to-grid_pv.maegz screen/ifp rd1
+python ../screen.py ifp raw/binders_pv.maegz screen/ifp rd1
+python ../screen.py ifp-pair screen/ifp/library-to-grid_pv-rd1.csv screen/ifp/binders_pv-rd1.csv screen/ifp
+
+mkdir screen/mcss
+python ../screen.py mcss screen/docking/library-to-grid/library-to-grid_pv.maegz raw/binders_pv.maegz screen/mcss ../../mcss/custom_types/mcss16.typ
+
+mkdir screen/shape
+python ../screen.py shape screen/docking/library-to-grid/library-to-grid_pv.maegz raw/binders_pv.maegz screen/shape pharm_max
+```
+
+### Scoring
+```
+python ../screen.py screen screen/combind_scores.npy ../../stats_data/rd1 screen/docking/library-to-grid/library-to-grid_gscores.npy 'screen/ifp/{}-library-to-grid_pv-rd1-binders_pv-rd1.npy'
+
+python ../screen.py apply screen/docking/library-to-grid/library-to-grid_pv.maegz screen/combind_scores.npy
+
+$SCHRODINGER/utilities/glide_sort -use_prop_d r_i_combind_score -best -o screen/combind_pv.maegz screen/docking/library-to-grid/library-to-grid_combind_pv.maegz
+$SCHRODINGER/utilities/glide_sort -best -o screen/glide_pv.maegz screen/docking/library-to-grid/library-to-grid_pv.maegz
+```
+
+## DUD-E
+
+```
+cp -r /oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/adrb1/structures .
+cp -r /oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/adrb1/subset.csv .
+cp -r /oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/adrb1/docking/grids structures/
+
+mkdir ligands
+sbatch -n 6 -p rondror --wrap="python ~/combind/screen/combind.py ligprep subset.smi ligands --n-processors 6"
+mkdir docking
+sbatch -n 6 -p rondror --wrap="python ~/combind/screen/combind.py dock structures/grids/XTAL/XTAL.zip docking ligands/subset.maegz --n-processors 6"
+
+mkdir scores
+mkdir scores/subset5_rd1_all
+setup dude cmd
+
+# For each scoring run
+cat binder.csv | tr , ' ' | cut -f 1,2 -d ' ' > binder.smi
+rm binder.csv
+```
+
+```
+mkdir bpp
+mkdir bpp/ligands
+mkdir bpp/docking
+
+combind ligprep binder.smi bpp/ligands --multi
+combind dock ../../../structures/grids/XTAL/XTAL.zip bpp/docking bpp/ligands/*/*.maegz --enhanced
+combind filter-native bpp/docking/XTAL-to-XTAL/XTAL-to-XTAL_pv.maegz ../../../structures/ligands/XTAL_lig.mae
+combind featurize bpp  bpp/docking/XTAL-to-XTAL/XTAL-to-XTAL_native_pv.maegz bpp/docking/[0-9]*/*pv.maegz --bpp
+combind pose-prediction bpp binder.csv --xtal XTAL-to-XTAL_native --gc50 -8.0
+combind extract-top-poses binder.csv bpp/docking
+```
+
+```
+mkdir screen
+
+combind featurize screen ../../../docking/subset-to-XTAL/subset-to-XTAL_pv.maegz binder_pv.maegz
+combind screen screen.npy screen/gscore/subset-to-XTAL.npy screen/ifp-pair/{}-subset-to-XTAL-and-binder.npy
+combind apply-scores ../../../docking/subset-to-XTAL/subset-to-XTAL_pv.maegz screen.npy screen_pv.maegz
+$SCHRODINGER/utilities/glide_sort -use_prop_d r_i_combind_score -best -o screen_combind_pv.maegz screen_pv.maegz
+$SCHRODINGER/utilities/glide_sort -best -o screen_combind_pv.maegz screen_pv.maegz
+```

@@ -1,0 +1,211 @@
+#!/bin/env python
+
+import pandas as pd
+import numpy as np
+import click
+import os
+from schrodinger.structure import StructureReader, StructureWriter
+
+###############################################################################
+
+# Defaults
+stats_root = os.environ['COMBINDHOME']+'/stats_data/rd1_all'
+mcss_version = 'mcss16'
+shape_version = 'pharm_max'
+ifp_version = 'rd1'
+
+@click.group()
+def main():
+    pass
+
+@main.command()
+@click.argument('smiles')
+@click.argument('root')
+@click.option('--multi', is_flag=True)
+@click.option('--n-processors', default=1)
+def ligprep(smiles, root, multi, n_processors):
+    from dock.ligprep import ligprep
+    if multi:
+        ligands = pd.read_csv(smiles, sep=' ')
+        for _, ligand in ligands.iterrows():
+            _root = '{}/{}'.format(root, ligand['ID'])
+            _smiles = '{}/{}/{}.smi'.format(root, ligand['ID'], ligand['ID'])
+            os.system('mkdir {}'.format(_root))
+            with open(_smiles, 'w') as fp:
+                fp.write('{} {}\n'.format(ligand['SMILES'], ligand['ID']))
+            ligprep(_smiles, n_processors)
+    else:
+        _smiles = '{}/{}'.format(root, os.path.basename(smiles))
+        if _smiles != smiles:
+            os.system('tail -n +2 {} > {}'.format(smiles, _smiles))
+        ligprep(_smiles, n_processors)
+
+def basename(path):
+    x = os.path.basename(path)
+    x = os.path.splitext(x)[0]
+    return x
+
+@main.command()
+@click.argument('grid')
+@click.argument('root')
+@click.argument('ligands', nargs=-1)
+@click.option('--enhanced', is_flag=True)
+@click.option('--n-processors', default=1)
+def dock(grid, root, ligands, enhanced, n_processors):
+    from dock.dock import dock
+    ligands = [os.path.abspath(lig) for lig in ligands if 'nonames' not in lig]
+    grid = os.path.abspath(grid)
+    root = os.path.abspath(root)
+
+    for ligand in ligands:
+        name = '{}-to-{}'.format(basename(ligand), basename(grid))
+        _root = '{}/{}'.format(root, name)
+        dock(grid, ligand, _root, name, enhanced, n_processors)
+
+@main.command()
+@click.argument('pv')
+@click.argument('native')
+@click.option('--thresh', default=2.0)
+def filter_native(pv, native, thresh):
+    from dock.dock import filter_native
+    out = pv.replace('_pv.maegz', '_native_pv.maegz')
+    filter_native(native, pv, out, thresh)
+
+################################################################################
+
+@main.command()
+@click.argument('root')
+@click.argument('poseviewers', nargs=-1)
+@click.option('--ifp-version', default=ifp_version)
+@click.option('--mcss-version', default=mcss_version)
+@click.option('--shape-version', default=shape_version)
+@click.option('--bpp', is_flag=True)
+def featurize(root, poseviewers, ifp_version, mcss_version, shape_version, bpp):
+    from features.features import Features
+    if bpp:
+        poseviewers = sorted(poseviewers)
+        max_poses = 100
+    else:
+        max_poses = 10000
+        assert len(poseviewers) == 2
+    features = Features(root, ifp_version=ifp_version, shape_version=shape_version,
+                        mcss_version=mcss_version, max_poses=max_poses)
+    features.compute_features(poseviewers)
+
+################################################################################
+
+@main.command()
+@click.argument('root')
+@click.argument('out')
+@click.argument('ligands', nargs=-1)
+@click.option('--alpha', default=1.0)
+@click.option('--gc50', default=float('inf'))
+@click.option('--max_poses', default=100)
+@click.option('--stats-root', default=stats_root)
+@click.option('--ifp-version', default=ifp_version)
+@click.option('--mcss-version', default=mcss_version)
+@click.option('--shape-version', default=shape_version)
+@click.option('--xtal', multiple=True)
+@click.option('--features', default='hbond,saltbridge,contact')
+@click.option('--restart', default=500)
+@click.option('--max-iterations', default=1000)
+def pose_prediction(root, out, ligands, alpha, gc50, max_poses,
+                    stats_root, ifp_version, mcss_version, shape_version,
+                    xtal, features, restart, max_iterations):
+    from score.pose_prediction import PosePrediction
+    from score.statistics import read_stats
+    from features.features import Features
+
+    features = features.split(',')
+
+    protein = Features(root, ifp_version=ifp_version, shape_version=shape_version,
+                       mcss_version=mcss_version, max_poses=max_poses)
+    protein.load_features(features)
+
+    if not ligands:
+        ligands = list(protein.raw['gscore'].keys())
+    ligands = sorted(ligands)
+
+    stats = read_stats(stats_root, features)
+    
+    ps = PosePrediction(ligands, protein.raw, stats, xtal, features,
+                        max_poses, alpha, gc50)
+    best_poses = ps.max_posterior(max_iterations, restart)
+
+    with open(out, 'w') as fp:
+        fp.write('ID,POSE\n')
+        for ligand, pose in best_poses.items():
+            ligand = ligand.replace('_pv', '')
+            fp.write('{},{}\n'.format(ligand, pose))
+
+@main.command()
+@click.argument('score-fname')
+@click.argument('gscore-fname')
+@click.argument('ifp-fname')
+@click.option('--mcss-fname', default=None)
+@click.option('--shape-fname', default=None)
+@click.option('--stats-root', default=stats_root)
+@click.option('--alpha', default=1.0)
+@click.option('--features', default='hbond,saltbridge,contact')
+def screen(score_fname, stats_root, gscore_fname, ifp_fname, mcss_fname,
+           shape_fname, alpha, features):
+    from score.screen import screen, load_features_screen
+    from score.statistics import read_stats
+
+    features = features.split(',')
+    stats = read_stats(stats_root, features)
+    single, raw = load_features_screen(
+        features, gscore_fname, ifp_fname, mcss_fname, shape_fname)
+
+    combind_energy = screen(single, raw, stats, alpha)
+    np.save(score_fname, combind_energy)
+
+################################################################################
+
+def pv_path(root, name):
+    if '_native' in name:
+        name = name.replace('_native', '')
+        return '{}/{}/{}_native_pv.maegz'.format(root, name, name)
+    return '{}/{}/{}_pv.maegz'.format(root, name, name)
+
+def get_pose(pv, pose):
+    with StructureReader(pv) as sts:
+        for _ in range(pose+1):
+            next(sts)
+        st = next(sts)
+    return st
+
+@main.command()
+@click.argument('scores')
+@click.argument('pv-root')
+def extract_top_poses(scores, pv_root):
+    out = scores.replace('.csv', '_pv.maegz')
+
+    df = pd.read_csv(scores)
+    with StructureWriter(out) as writer:
+        prot = get_pose(pv_path(pv_root, df.loc[0, 'ID']), -1)
+        writer.append(prot)
+        for _, ligand in df.iterrows():
+            pv = pv_path(pv_root, ligand['ID'])
+            st = get_pose(pv, ligand['POSE'])
+            writer.append(st)
+
+@main.command()
+@click.argument('pv')
+@click.argument('scores')
+@click.argument('out', default=None)
+def apply_scores(pv, scores, out):
+    if out is None:
+        out = pv.replace('_pv.maegz', '_combind_pv.maegz')
+
+    scores = np.load(scores)
+
+    with StructureReader(pv) as reader, StructureWriter(out) as writer:
+        st = next(reader)
+        st.property['r_i_combind_score'] = 1000.0
+        writer.append(st)
+        for st, score in zip(reader, scores):
+            st.property['r_i_combind_score'] = score
+            writer.append(st)
+
+main()
