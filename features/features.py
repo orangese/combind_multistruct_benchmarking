@@ -213,13 +213,9 @@ class Features:
         np.save(out, gscores)
 
     def compute_ifp(self, pv, out):
+        from features.ifp import ifp
         settings = IFP[self.ifp_version]
-        settings = ' '.join('--{} {}'.format(k, v)
-                            for k, v in settings.items() if k != 'version')
-        cmd = '{home}/rdpython {home}/features/ifp.py {pv} {out} {max_poses} {settings}'
-        cmd = cmd.format(home=os.environ['COMBINDHOME'], pv=pv, out=out,
-                         max_poses=self.max_poses, settings=settings)
-        subprocess.run(cmd, shell=True)
+        ifp(settings, pv, out, self.max_poses)
 
     def compute_ifp_pair(self, ifp1, ifp2, out):
         features = ['hbond', 'saltbridge', 'contact']
