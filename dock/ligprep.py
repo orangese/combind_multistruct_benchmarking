@@ -2,6 +2,12 @@ from schrodinger.structure import StructureReader, StructureWriter
 import os
 import subprocess
 
+
+def ligfilter(input_file, output_file, n=5):
+    cmd = '$SCHRODINGER/utilities/glide_sort -use_prop -nbest {} -best_by_title -o {} {}'
+    cmd = cmd.format(n, input_file, output_file)
+    subprocess.run(cmd)
+
 def ligprocess(input_file, output_file):
     with StructureReader(input_file) as reader, \
         StructureWriter(output_file) as writer:

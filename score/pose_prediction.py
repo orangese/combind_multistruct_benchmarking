@@ -1,9 +1,9 @@
 import numpy as np
 import os
 
-def pad(x, shape1, shape2=0):
+def pad(x, shape1, shape2=0, C=1000):
     if len(x.shape) == 1:
-        y = np.zeros(shape1)
+        y = np.zeros(shape1)+C
         y[:x.shape[0]] = x[:shape1]
     elif len(x.shape) == 2:
         y = np.zeros((shape1, shape2))
@@ -57,7 +57,7 @@ class PosePrediction:
         for ligand in self.ligands:
             gscore = self.raw['gscore'][ligand]
             if ligand in self.xtal:
-                gscore[:] = -20.0
+                gscore[:] = -1000.0
             single += [gscore]
 
         single = [pad(x, self.max_poses) for x in single]

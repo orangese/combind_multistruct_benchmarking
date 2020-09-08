@@ -19,6 +19,18 @@ def main():
     pass
 
 @main.command()
+@click.argument('struct')
+def structprep(struct):
+    from dock.struct_align import struct_align
+    from dock.struct_sort import struct_sort
+    from dock.struct_process import struct_process
+    from dock.grid import make_grid
+    struct_process()
+    struct_align()
+    struct_sort()
+    make_grid(struct)
+
+@main.command()
 @click.argument('smiles')
 @click.argument('root')
 @click.option('--multi', is_flag=True)
@@ -30,15 +42,19 @@ def ligprep(smiles, root, multi, n_processors):
         for _, ligand in ligands.iterrows():
             _root = '{}/{}'.format(root, ligand['ID'])
             _smiles = '{}/{}/{}.smi'.format(root, ligand['ID'], ligand['ID'])
-            os.system('mkdir {}'.format(_root))
-            with open(_smiles, 'w') as fp:
-                fp.write('{} {}\n'.format(ligand['SMILES'], ligand['ID']))
-            ligprep(_smiles, n_processors)
+            _mae = smiles.replace('.smi', '.maegz')
+            if not os.path.exists(_mae):
+                os.system('mkdir {}'.format(_root))
+                with open(_smiles, 'w') as fp:
+                    fp.write('{} {}\n'.format(ligand['SMILES'], ligand['ID']))
+                ligprep(_smiles, 1)
     else:
         _smiles = '{}/{}'.format(root, os.path.basename(smiles))
-        if _smiles != smiles:
-            os.system('tail -n +2 {} > {}'.format(smiles, _smiles))
-        ligprep(_smiles, n_processors)
+        _mae = smiles.replace('.smi', '.maegz')
+        if not os.path.exists(_mae):
+            if _smiles != smiles:
+                os.system('tail -n +2 {} > {}'.format(smiles, _smiles))
+            ligprep(_smiles, n_processors)
 
 def basename(path):
     x = os.path.basename(path)
@@ -71,6 +87,35 @@ def filter_native(pv, native, thresh):
     out = pv.replace('_pv.maegz', '_native_pv.maegz')
     filter_native(native, pv, out, thresh)
 
+@main.command()
+@click.argument('smiles')
+@click.argument('grid')
+@click.argument('root')
+@click.option('--multi', is_flag=True)
+@click.option('--enhanced', is_flag=True)
+def check_dock(smiles, grid, root, multi, enhanced):
+    from dock.dock import docking_failed
+    print(root)
+    ligands = pd.read_csv(smiles, sep=' ')
+
+    # Check ligprep
+    for _, ligand in ligands.iterrows():
+        _root = '{}/ligands/{}'.format(root, ligand['ID'])
+        _mae = '{}/{}.maegz'.format(_root, ligand['ID'])
+
+        if not os.path.exists(_mae):
+            print('{} not prepped '.format(ligand['ID']))
+
+    # Check docking
+    for _, ligand in ligands.iterrows():
+        _name = '{}-to-{}'.format(ligand['ID'], basename(grid))
+        _root = '{}/docking/{}'.format(root, _name)
+        _pv = '{}/{}_pv.maegz'.format(_root, _name)
+        _log = '{}/{}.log'.format(_root, _name)
+
+        if not os.path.exists(_pv) and not docking_failed(_log):
+            print('{} not docked'.format(ligand['ID']))
+
 ################################################################################
 
 @main.command()
@@ -80,17 +125,19 @@ def filter_native(pv, native, thresh):
 @click.option('--mcss-version', default=mcss_version)
 @click.option('--shape-version', default=shape_version)
 @click.option('--bpp', is_flag=True)
-def featurize(root, poseviewers, ifp_version, mcss_version, shape_version, bpp):
+@click.option('--no-mcss', is_flag=True)
+def featurize(root, poseviewers, ifp_version, mcss_version, shape_version,
+              bpp, no_mcss):
     from features.features import Features
     if bpp:
         poseviewers = sorted(poseviewers)
         max_poses = 100
     else:
-        max_poses = 10000
+        max_poses = 1000000
         assert len(poseviewers) == 2
     features = Features(root, ifp_version=ifp_version, shape_version=shape_version,
                         mcss_version=mcss_version, max_poses=max_poses)
-    features.compute_features(poseviewers)
+    features.compute_features(poseviewers, mcss=not no_mcss)
 
 ################################################################################
 
@@ -98,6 +145,8 @@ def featurize(root, poseviewers, ifp_version, mcss_version, shape_version, bpp):
 @click.argument('root')
 @click.argument('out')
 @click.argument('ligands', nargs=-1)
+@click.option('--xtal', multiple=True)
+@click.option('--features', default='shape,mcss,hbond,saltbridge,contact')
 @click.option('--alpha', default=1.0)
 @click.option('--gc50', default=float('inf'))
 @click.option('--max_poses', default=100)
@@ -105,8 +154,6 @@ def featurize(root, poseviewers, ifp_version, mcss_version, shape_version, bpp):
 @click.option('--ifp-version', default=ifp_version)
 @click.option('--mcss-version', default=mcss_version)
 @click.option('--shape-version', default=shape_version)
-@click.option('--xtal', multiple=True)
-@click.option('--features', default='hbond,saltbridge,contact')
 @click.option('--restart', default=500)
 @click.option('--max-iterations', default=1000)
 def pose_prediction(root, out, ligands, alpha, gc50, max_poses,
@@ -146,7 +193,7 @@ def pose_prediction(root, out, ligands, alpha, gc50, max_poses,
 @click.option('--shape-fname', default=None)
 @click.option('--stats-root', default=stats_root)
 @click.option('--alpha', default=1.0)
-@click.option('--features', default='hbond,saltbridge,contact')
+@click.option('--features', default='shape,hbond,saltbridge,contact')
 def screen(score_fname, stats_root, gscore_fname, ifp_fname, mcss_fname,
            shape_fname, alpha, features):
     from score.screen import screen, load_features_screen
@@ -182,12 +229,15 @@ def extract_top_poses(scores, pv_root):
     out = scores.replace('.csv', '_pv.maegz')
 
     df = pd.read_csv(scores)
+    prot = get_pose(pv_path(pv_root, df.loc[0, 'ID']), -1)
+    sts = []
+    for _, ligand in df.iterrows():
+        pv = pv_path(pv_root, ligand['ID'])
+        sts += [get_pose(pv, ligand['POSE'])]
+
     with StructureWriter(out) as writer:
-        prot = get_pose(pv_path(pv_root, df.loc[0, 'ID']), -1)
         writer.append(prot)
-        for _, ligand in df.iterrows():
-            pv = pv_path(pv_root, ligand['ID'])
-            st = get_pose(pv, ligand['POSE'])
+        for st in sts:
             writer.append(st)
 
 @main.command()
@@ -207,5 +257,29 @@ def apply_scores(pv, scores, out):
         for st, score in zip(reader, scores):
             st.property['r_i_combind_score'] = score
             writer.append(st)
+
+@main.command()
+@click.argument('pv')
+@click.argument('out', default=None)
+@click.option('--glide', is_flag=True)
+def scores_to_csv(pv, out, glide):
+    if out is None:
+        out = pv.replace('_pv.maegz', '_combind_pv.maegz')
+
+    if glide:
+        value = 'r_i_docking_score'
+    else:
+        value = 'r_i_combind_score'
+
+    scores = []
+    titles = []
+    with StructureReader(pv) as reader:
+        next(reader)
+        for st in reader:
+            titles += [st.title]
+            scores += [st.property[value]]
+
+    df = pd.DataFrame(np.vstack([titles, scores]).T, columns = ['ID', 'score'])
+    df.to_csv(out, index=False)
 
 main()

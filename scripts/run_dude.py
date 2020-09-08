@@ -1,39 +1,52 @@
 """
 # Convert raw dud-e download into combind format.
-cd /oak/stanford/groups/rondror/users/jpaggi/VS/DUDE
-python $COMBINDHOME/scripts/run_dude.py convert dude/dud38 combind
-python $COMBINDHOME/scripts/run_dude.py convert dude/diverse combind
-python $COMBINDHOME/scripts/run_dude.py convert dude/gpcr combind
+python $COMBINDHOME/scripts/run_dude.py convert dude combind
 
-# Dock ligands and compute interaction fingerprints
-./main.py --ligands '{ROOT}/subset.csv' --data /oak/stanford/groups/rondror/users/jpaggi/VS/DUDE/combind prepare prep-structs
-./main.py --ligands '{ROOT}/subset.csv' --data /oak/stanford/groups/rondror/users/jpaggi/VS/DUDE/combind prepare prep-ligands
-./main.py --ligands '{ROOT}/subset.csv' --data /oak/stanford/groups/rondror/users/jpaggi/VS/DUDE/combind prepare dock
-./main.py --ligands '{ROOT}/subset.csv' --data /oak/stanford/groups/rondror/users/jpaggi/VS/DUDE/combind prepare ifp
+# Prepare structure
+combind structprep XTAL
+
+# Dock screening libary
+mkdir subset
+mkdir subset/ligands
+mkdir subset/docking
+combind ligprep subset.smi subset/ligands
+combind dock structures/grids/XTAL/XTAL.zip subset/docking subset/ligands/subset.maegz
+
+for i in *; do cd $i; sbatch -p owners -t 24:00:00 --wrap="combind dock structures/grids/XTAL/XTAL.zip subset/docking subset/ligands/subset.maegz"; cd ..; done;
+
 
 # Setup cross-validation sets.
 mkdir $i/scores
-mkdir $i/scores/subset10_rd1
-python $COMBINDHOME/scripts/run_dude.py setup $i/subset.csv $i/scores/subset10_rd1
+mkdir $i/scores/rd1_all_5
+python $COMBINDHOME/scripts/run_dude.py setup      $i/subset.smi $i/structures/pdb.smi $i/scores/rd1_all_5 --n-train 5
+python $COMBINDHOME/scripts/run_dude.py similarity $i/subset.smi $i/scores/rd1_all_5 $i
+python $COMBINDHOME/scripts/run_dude.py shape      $i/subset.smi $i/scores/rd1_all_5 $i
 
-# Compute MCSS for each set of "helper ligands".
-./main.py --ligands '{ROOT}/scores/subset10_rd1/0/binder.csv' --data /oak/stanford/groups/rondror/users/jpaggi/VS/DUDE/combind prepare mcss
+# Predict poses for selected binders
+mkdir bpp
+mkdir bpp/ligands
+mkdir bpp/docking
+combind ligprep binder.smi bpp/ligands --multi
+combind dock ../../../structures/grids/XTAL/XTAL.zip bpp/docking bpp/ligands/*/*.maegz --enhanced
+combind filter-native bpp/docking/XTAL-to-XTAL/XTAL-to-XTAL_pv.maegz ../../../structures/ligands/XTAL_lig.mae
+combind featurize bpp  bpp/docking/XTAL-to-XTAL/XTAL-to-XTAL_native_pv.maegz bpp/docking/CHEMBL*/*pv.maegz --bpp
+combind pose-prediction bpp bpp/binder.csv --xtal XTAL-to-XTAL_native --gc50 -8.0 \
+    --alpha 1.0 --features shape,mcss,hbond,saltbridge,contact
+combind extract-top-poses bpp/binder.csv bpp/docking
 
-# Make predictions with ComBind
-python $COMBINDHOME/scripts/run_dude.py combind $i/subset.csv $i/scores/subset10_rd1 . $i
+for i in */scores/*/0; do cd $i; sbatch -p rondror --wrap=""; cd -; done;
 
-# Make predictions with AUTOQSAR
-python $COMBINDHOME/scripts/run_dude.py autoqsar $i/subset.csv $i/scores/subset10_rd1
+# ComBind screening
+mkdir screen
+combind featurize screen ../../../subset/docking/subset-to-XTAL/subset-to-XTAL_pv.maegz bpp/binder_pv.maegz
+combind screen screen/screen.npy screen/gscore/subset-to-XTAL_pv.npy screen/ifp-pair/{}-subset-to-XTAL_pv-and-binder_pv.npy
+combind apply-scores ../../../docking/subset-to-XTAL/subset-to-XTAL_pv.maegz screen/screen.npy scren/screen_pv.maegz
 
-# Annotate with similarity to the XTAL ligand and helper ligands.
-python $COMBINDHOME/scripts/run_dude.py similarity $i/subset.csv $i/scores/subset10_rd1 . $i
+$SCHRODINGER/utilities/glide_sort -best_by_title -use_prop_d r_i_combind_score  -o screen/screen_combind_pv.maegz screen/screen_pv.maegz
+$SCHRODINGER/utilities/glide_sort -best_by_title -o screen/screen_glide_pv.maegz screen/screen_pv.maegz
 
-# Useful for submitting jobs for each protein
-sbatch -p rondror -t 03:00:00 -J $i -o ~/temp/$i.log --wrap="$CMD"
-for i in $(ls --color=none); do $CMD; done;
-
-# Dummy autoqsar:
-for i in *; for j in {0..6}; do cut -f 2 -d , $i/subset.csv | tail -n +2 | awk 'BEGIN { print "ID,s_autoqsar_Pred_Class,r_autoqsar_Pred_Prob" } { print $1","1000","1 }' > $i/scores/subset1_rd1/$j/autoqsar_preds.csv; done;
+combind scores-to-csv screen/screen_combind_pv.maegz combind.csv
+combind scores-to-csv screen/screen_glide_pv.maegz glide.csv --glide
 """
 
 import os
@@ -52,7 +65,6 @@ from rdkit.Chem import AllChem
 from rdkit import DataStructs
 
 from schrodinger.structure import StructureReader
-from schrodinger.structutils.analyze import generate_smiles
 
 @click.group()
 def main():
@@ -61,7 +73,10 @@ def main():
 @main.command()
 @click.argument('dude_dir', type=click.Path(exists=True))
 @click.argument('combind_dir', type=click.Path(exists=True))
-def convert(dude_dir, combind_dir):
+@click.argument('xtal_csv', type=click.Path(exists=True))
+def convert(dude_dir, combind_dir, xtal_csv):
+    xtal_df = pd.read_csv(xtal_csv)
+    xtal_df = xtal_df.set_index('Entry')
     for dude_path in glob(dude_dir + '/*'):
         protein = dude_path.split('/')[-1]
         combind_path = combind_dir + '/' + protein
@@ -75,98 +90,64 @@ def convert(dude_dir, combind_dir):
         decoys = pd.read_csv(dude_path + '/' + 'decoys_final.ism',
                               sep=' ', names=['SMILES', 'ID', 'CHEMBL'])
 
-        actives['AFFINITY'] = 1
-        decoys['AFFINITY'] = 1e6
+        actives.loc[actives.CHEMBL.isna(), 'CHEMBL'] = \
+            ['CHEMBLX'+str(x) for x in actives.loc[actives.CHEMBL.isna(), 'ID']]
+        actives['ID'] = actives['CHEMBL']
 
+
+        actives = actives.loc[:, ['SMILES', 'ID']]
+        decoys = decoys.loc[:, ['SMILES', 'ID']]
+        
         all_ligands = pd.concat([actives, decoys])
 
         np.random.seed(42)
         subset_ligands = pd.concat([actives, decoys.sample(1000)])
 
-        with StructureReader(dude_path + '/crystal_ligand.mol2') as st:
-            ligand = list(st)[0]
-
         with StructureReader(dude_path + '/receptor.pdb') as st:
             receptor = list(st)[0]
+
+        with StructureReader(dude_path + '/crystal_ligand.mol2') as st:
+            ligand = list(st)[0]
 
         os.mkdir(combind_path)
         os.mkdir(combind_path + '/structures')
         os.mkdir(combind_path + '/structures/raw')
 
-        all_ligands.to_csv(combind_path + '/all.csv', index=False)
-        subset_ligands.to_csv(combind_path + '/subset.csv', index=False)
+        all_ligands.to_csv(combind_path + '/all.smi', index=False, sep=' ')
+        subset_ligands.to_csv(combind_path + '/subset.smi', index=False, sep=' ')
 
         ligand.write(combind_path + '/structures/raw/XTAL_lig.mae')
         receptor.write(combind_path + '/structures/raw/XTAL_prot.mae')
 
-        with open(combind_path + '/structures/pdb.csv', 'w') as fp:
-            fp.write('ID,SMILES\n')
-            fp.write('XTAL,{}\n'.format(generate_smiles(ligand)))
+        with open(combind_path + '/structures/pdb.smi', 'w') as fp:
+            fp.write('ID SMILES\n')
+            fp.write('XTAL {}\n'.format(xtal_df.loc[protein.upper(), 'SMILES']))
 
 @main.command()
 @click.option('--n-train', default=10)
 @click.option('--n-folds', default=7)
-@click.option('--xtal', default='')
-@click.option('--affinity-cut', default=1000)
 @click.argument('input_csv')
+@click.argument('xtal')
 @click.argument('root')
-def setup(input_csv, root, n_train, n_folds, affinity_cut, xtal):
+def setup(input_csv, xtal, root, n_train, n_folds):
     np.random.seed(42)
-    df = pd.read_csv(input_csv)
+    df = pd.read_csv(input_csv, sep=' ')
+    xtal = pd.read_csv(xtal, sep=' ').loc[:1]
+    
     for i in range(n_folds):
         cwd = '{}/{}'.format(root, i)
+        binder_smi = '{}/{}/binder.smi'.format(root, i)
+        
         if os.path.exists(cwd):
             print(cwd, 'exists. not overwriting.')
             continue
 
-        binder_csv = '{}/{}/binder.csv'.format(root, i)
-        train_csv  = '{}/{}/train.csv'.format(root, i)
-
-        binders = df.loc[df['AFFINITY'] < affinity_cut]
+        binders = df.loc[df['ID'].str.contains('CHEMBL')]
         binders = binders.sample(n_train)
-
-        if xtal:
-            binders = pd.concat([binders, pd.read_csv(xtal).loc[:1]])
-            binders['AFFINITY'] = 1.0
+        binders = pd.concat([binders, xtal])
 
         os.mkdir(cwd)
-        binders.to_csv(binder_csv, index=False)
-
-@main.command()
-@click.option('--affinity-cut', default=1000)
-@click.argument('input_csv', type=click.Path(exists=True))
-@click.argument('root')
-def autoqsar(input_csv, root, affinity_cut):
-    input_csv = os.path.abspath(input_csv)
-    root = os.path.abspath(root)
-    print(input_csv)
-    for cwd in glob(root + '/[0-9]'):
-        if os.path.exists('{}/autoqsar_preds.csv'.format(cwd)):
-            continue
-        run('$SCHRODINGER/utilities/autoqsar autoqsar.qzip -WAIT -build -i train.csv -y AFFINITY -cat -cuts {}'.format(affinity_cut),
-            shell=True, cwd=cwd)
-        run('$SCHRODINGER/utilities/autoqsar autoqsar.qzip -WAIT -test  -i {} -pred autoqsar_preds.csv'.format(input_csv),
-            shell=True, cwd=cwd)
-
-@main.command()
-@click.argument('input_csv', type=click.Path(exists=True))
-@click.argument('root')
-@click.argument('data')
-@click.argument('protein')
-@click.option('--xtal', is_flag=True)
-def combind(input_csv, root, data, protein, xtal):
-    xtal = '--xtal XTAL_lig' if xtal else ''
-    input_csv = os.path.abspath(input_csv)
-    root = os.path.abspath(root)
-    data = os.path.abspath(data)
-    for cwd in glob(root + '/[0-9]'):
-        if not os.path.exists('{}/combind_poses.sc'.format(cwd)):
-            run('$COMBINDHOME/main.py --data {} --ligands {}/binder.csv score {} all --pose-fname combind_poses.sc {}'.format(data, cwd, protein, xtal),
-                shell=True, cwd=cwd)
-
-        if not os.path.exists('{}/combind_preds.csv'.format(cwd)):
-            run('$COMBINDHOME/main.py --data {} --ligands {} screen {} all --pose-fname combind_poses.sc --score-fname combind_preds.csv'.format(data, input_csv, protein, xtal),
-                shell=True, cwd=cwd)
+        binders.to_csv(binder_smi, index=False, sep=' ')
 
 def get_fp(mol):
     return AllChem.GetMorganFingerprint(mol, 2)
@@ -174,38 +155,30 @@ def get_fp(mol):
 @main.command()
 @click.argument('input_csv', type=click.Path(exists=True))
 @click.argument('root')
-@click.argument('data')
-@click.argument('protein')
-def similarity(input_csv, root, data, protein):
-    ref = pd.read_csv('{}/{}/structures/pdb.csv'.format(data, protein))
+@click.argument('data_root')
+def similarity(input_csv, root, data_root):
+    ref = pd.read_csv('{}/structures/pdb.smi'.format(data_root), sep=' ')
     assert len(ref) == 1
     ref_smiles = ref.loc[0, 'SMILES']
     ref_mol = Chem.MolFromSmiles(ref_smiles)
     ref_fp = get_fp(ref_mol)
 
-    df = pd.read_csv(input_csv)
+    df = pd.read_csv(input_csv, sep=' ')
     for cwd in glob(root + '/[0-9]'):
         sim_fname = '{}/similarity.csv'.format(cwd)
         if os.path.exists(sim_fname):
             print(sim_fname, 'exists. not overwriting.')
             continue
 
-        active = pd.read_csv('{}/binder.csv'.format(cwd))
+        active = pd.read_csv('{}/binder.smi'.format(cwd), sep=' ')
         active_fps = []
         for i, ligand in active.iterrows():
             mol = Chem.MolFromSmiles(ligand['SMILES'])
             active_fps += [get_fp(mol)]
 
-        decoy = pd.read_csv('{}/decoy.csv'.format(cwd))
-        decoy_fps = []
-        for i, ligand in decoy.iterrows():
-            mol = Chem.MolFromSmiles(ligand['SMILES'])
-            decoy_fps += [get_fp(mol)]
-
         df['XTAL_sim'] = 0
-        df['active_sim'] = 0
+        df['active_sim_max'] = 0
         df['active_sim_mean'] = 0
-        df['decoy_sim'] = 0
         for i, ligand in df.iterrows():
             try:
                 mol = Chem.MolFromSmiles(ligand['SMILES'])
@@ -213,48 +186,61 @@ def similarity(input_csv, root, data, protein):
                 df.loc[i, 'XTAL_sim'] = DataStructs.TanimotoSimilarity(fp, ref_fp)
                 active_sims = [DataStructs.TanimotoSimilarity(fp, active_fp)
                                for active_fp in active_fps]
-                df.loc[i, 'active_sim'] = max(active_sims)
+                df.loc[i, 'active_sim_max'] = max(active_sims)
                 df.loc[i, 'active_sim_mean'] = np.mean(active_sims)
-                df.loc[i, 'decoy_sim'] = max(DataStructs.TanimotoSimilarity(fp, decoy_fp)
-                                             for decoy_fp in decoy_fps)
             except:
                 pass
         df.to_csv(sim_fname, index=False)
 
 def extract(root, ligands, out):
-    paths = ['{}/ligands/{}_lig/{}_lig.mae'.format(root, ligand, ligand)
+    paths = ['{}/ligands/{}/{}.maegz'.format(root, ligand, ligand)
              for ligand in ligands]
 
-    cmd = 'python $COMBINDHOME/shape/shape_screen.py extract --best {} {}'.format(out, ' '.join(paths))
+    cmd = 'python $COMBINDHOME/scripts/shape_screen.py extract --best {} {}'.format(out, ' '.join(paths))
     os.system(cmd)
 
 @main.command()
 @click.argument('input_csv', type=click.Path(exists=True))
 @click.argument('root')
-@click.argument('data')
-@click.argument('protein')
-def shape(input_csv, root, data, protein):
-    for cwd in glob(root + '/[0-9]'):
-        template = os.path.abspath('{}/{}/structures/ligands/XTAL_lig.mae'.format(data, protein))
-        test_mae = os.path.abspath('{}/test.maegz'.format(cwd))
-        active_csv = os.path.abspath('{}/binder.csv'.format(cwd))
-        active_mae = os.path.abspath('{}/binder.maegz'.format(cwd))
-        active_align_mae = os.path.abspath('{}/binder-to-XTAL_lig_align.maegz'.format(cwd))
-        test_align_csv = os.path.abspath('{}/test-to-binder-to-XTAL_lig_align_align.csv'.format(cwd))
+@click.argument('data_root')
+def shape(input_csv, root, data_root):
+    for cwd in glob(root + '/0'):
+        template = os.path.abspath('{}/structures/ligands/XTAL_lig.mae'.format(data_root))
+        test_mae = os.path.abspath('{}/subset/ligands/subset.maegz'.format(data_root))
 
-        if os.path.exists(test_align_csv):
+        active_smi = os.path.abspath('{}/binder.smi'.format(cwd))
+        active_mae = os.path.abspath('{}/shape/binder.maegz'.format(cwd))
+        active_align_mae = os.path.abspath('{}/shape/binder-to-XTAL_lig_align.maegz'.format(cwd))
+        test_align_csv = os.path.abspath('{}/shape/subset-to-binder-to-XTAL_lig_align_align.csv'.format(cwd))
+        shape_csv = '{}/shape.csv'.format(cwd)
+
+        if os.path.exists(shape_csv):
             continue
 
-        test = pd.read_csv(input_csv)['ID']
-        extract('{}/{}'.format(data, protein), test, test_mae)
+        if os.path.exists('{}/shape'.format(cwd)):
+            print('Shape not complete but temp directory exists. '
+                  'Remove directory and try again.')
+            print('{}/shape'.format(cwd))
+            exit()
+            
+        os.mkdir('{}/shape'.format(cwd))
 
-        active = pd.read_csv(active_csv)['ID']
-        extract('{}/{}'.format(data, protein), active, active_mae)
+        active = pd.read_csv(active_smi, sep=' ')['ID']
+        extract('{}/bpp'.format(cwd), active, active_mae)
 
-        cmd = 'python $COMBINDHOME/shape/shape_screen.py screen {} {}'.format(template, active_mae)
-        run(cmd, cwd=cwd, shell=True)
+        cmd = 'python $COMBINDHOME/scripts/shape_screen.py screen {} {}'.format(template, active_mae)
+        run(cmd, cwd=cwd+'/shape', shell=True)
 
-        cmd = 'python $COMBINDHOME/shape/shape_screen.py screen {} {}'.format(active_align_mae, test_mae)
-        run(cmd, cwd=cwd, shell=True)
+        cmd = 'python $COMBINDHOME/scripts/shape_screen.py screen {} {}'.format(active_align_mae, test_mae)
+        run(cmd, cwd=cwd+'/shape', shell=True)
+
+        df = pd.read_csv(test_align_csv)
+        df = df.set_index('ID')
+        mean = df.groupby('ID')['score'].mean()
+        df = df.groupby('ID')[['score']].max()
+        df['SHAPE_max'] = df.score
+        df['SHAPE_mean'] = mean
+        df = df[['SHAPE_mean', 'SHAPE_max']]
+        df.to_csv(shape_csv)
 
 main()

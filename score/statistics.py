@@ -1,7 +1,5 @@
 import numpy as np
-from containers import Protein
 from score.density_estimate import DensityEstimate
-from score.pairs import LigPair
 from glob import glob
 import os
 

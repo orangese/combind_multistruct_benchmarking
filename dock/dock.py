@@ -20,26 +20,29 @@ POSTDOCK_NPOSE   30
 PRECISION   SP
 '''
 
+def docking_failed(glide_log):
+    if not os.path.exists(glide_log):
+        return False
+    with open(glide_log) as fp:
+        logtxt = fp.read()
+    phrases = ['** NO ACCEPTABLE LIGAND POSES WERE FOUND **',
+               'NO VALID POSES AFTER MINIMIZATION: SKIPPING.',
+               'No Ligand Poses were written to external file',
+               'GLIDE WARNING: Skipping refinement, etc. because rough-score step failed.']
+    return any(phrase in logtxt for phrase in phrases)
+
 def dock(grid, ligands, root, name, enhanced, n_processes):
     infile = GLIDE_ES4 if enhanced else GLIDE
     glide_in = '{}/{}.in'.format(root, name)
     glide_pv = '{}/{}_pv.maegz'.format(root, name)
     glide_log = '{}/{}.log'.format(root, name)
-    glide_cmd = 'glide -WAIT {} -HOST localhost:{}'.format(os.path.basename(glide_in), n_processes)
+    glide_cmd = 'glide -WAIT -LOCAL -RESTART {}'.format(os.path.basename(glide_in))
 
     if os.path.exists(glide_pv):
         return
 
-    if os.path.exists(glide_log):
-        with open(glide_log) as fp:
-            logtxt = fp.read()
-        phrases = ['** NO ACCEPTABLE LIGAND POSES WERE FOUND **',
-                   'NO VALID POSES AFTER MINIMIZATION: SKIPPING.',
-                   'No Ligand Poses were written to external file',
-                   'GLIDE WARNING: Skipping refinement, etc. because rough-score step failed.']
-
-        if any(phrase in logtxt for phrase in phrases):
-            return
+    if enhanced and docking_failed(glide_log):
+        return
 
     if not os.path.exists(root):
         os.system('mkdir {}'.format(root))
@@ -54,10 +57,21 @@ def filter_native(native, pv, out, thresh):
         assert len(native) == 1, len(native)
         native = native[0]
 
-    
-    with StructureReader(pv) as reader, StructureWriter(out) as writer:
-        writer.append(next(reader))
+    near_native = []
+    with StructureReader(pv) as reader:
+        receptor = next(reader)
         for st in reader:
             conf_rmsd = ConformerRmsd(native, st)
             if conf_rmsd.calculate() < thresh:
-                writer.append(st)
+                near_native += [st]
+
+    print('Found {} near-native poses'.format(len(near_native)))
+    if not near_native:
+        print('Resorting to native pose.')
+        native.property['r_i_docking_score'] = -10.0
+        near_native = [native]
+
+    with StructureWriter(out) as writer:
+        writer.append(receptor)
+        for st in near_native:
+            writer.append(st)
