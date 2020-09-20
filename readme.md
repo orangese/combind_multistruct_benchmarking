@@ -119,20 +119,6 @@ the future, you'll need to do this everytime before running ComBind.
 This is included in the setup_sherlock script; you can source the
 script by running `source setup_sherlock`.
 
-Unfortunately, there is a bug in the maestro file parser in the version of
-rdkit provided by schrodinger, so we want need to use a more up-to-date version.
-Rdkit can't be pip installed, so instead, we'll create a conda environment to
-use with RDKIT and add a link to it so we can access it in a standardized way.
-Note that this interpretter is needed only for the fingerprinting code.
-
-```
-conda create -n combind_rdit rdkit numpy click pandas
-ln -s path/to/conda/envs/combind_rdkit/bin/python rdpython
-```
-
-
-
-
 ## Predicting poses for known binders
 
 - (binders.smi) set of binders to use in combind scoring function
@@ -207,48 +193,4 @@ python ../screen.py apply screen/docking/library-to-grid/library-to-grid_pv.maeg
 
 $SCHRODINGER/utilities/glide_sort -use_prop_d r_i_combind_score -best -o screen/combind_pv.maegz screen/docking/library-to-grid/library-to-grid_combind_pv.maegz
 $SCHRODINGER/utilities/glide_sort -best -o screen/glide_pv.maegz screen/docking/library-to-grid/library-to-grid_pv.maegz
-```
-
-## DUD-E
-
-```
-cp -r /oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/adrb1/structures .
-cp -r /oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/adrb1/subset.csv .
-cp -r /oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/adrb1/docking/grids structures/
-
-mkdir ligands
-sbatch -n 6 -p rondror --wrap="python ~/combind/screen/combind.py ligprep subset.smi ligands --n-processors 6"
-mkdir docking
-sbatch -n 6 -p rondror --wrap="python ~/combind/screen/combind.py dock structures/grids/XTAL/XTAL.zip docking ligands/subset.maegz --n-processors 6"
-
-mkdir scores
-mkdir scores/subset5_rd1_all
-setup dude cmd
-
-# For each scoring run
-cat binder.csv | tr , ' ' | cut -f 1,2 -d ' ' > binder.smi
-rm binder.csv
-```
-
-```
-mkdir bpp
-mkdir bpp/ligands
-mkdir bpp/docking
-
-combind ligprep binder.smi bpp/ligands --multi
-combind dock ../../../structures/grids/XTAL/XTAL.zip bpp/docking bpp/ligands/*/*.maegz --enhanced
-combind filter-native bpp/docking/XTAL-to-XTAL/XTAL-to-XTAL_pv.maegz ../../../structures/ligands/XTAL_lig.mae
-combind featurize bpp  bpp/docking/XTAL-to-XTAL/XTAL-to-XTAL_native_pv.maegz bpp/docking/[0-9]*/*pv.maegz --bpp
-combind pose-prediction bpp binder.csv --xtal XTAL-to-XTAL_native --gc50 -8.0
-combind extract-top-poses binder.csv bpp/docking
-```
-
-```
-mkdir screen
-
-combind featurize screen ../../../docking/subset-to-XTAL/subset-to-XTAL_pv.maegz binder_pv.maegz
-combind screen screen.npy screen/gscore/subset-to-XTAL.npy screen/ifp-pair/{}-subset-to-XTAL-and-binder.npy
-combind apply-scores ../../../docking/subset-to-XTAL/subset-to-XTAL_pv.maegz screen.npy screen_pv.maegz
-$SCHRODINGER/utilities/glide_sort -use_prop_d r_i_combind_score -best -o screen_combind_pv.maegz screen_pv.maegz
-$SCHRODINGER/utilities/glide_sort -best -o screen_combind_pv.maegz screen_pv.maegz
 ```

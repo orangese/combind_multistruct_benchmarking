@@ -2,12 +2,6 @@ from schrodinger.structure import StructureReader, StructureWriter
 import os
 import subprocess
 
-
-def ligfilter(input_file, output_file, n=5):
-    cmd = '$SCHRODINGER/utilities/glide_sort -use_prop -nbest {} -best_by_title -o {} {}'
-    cmd = cmd.format(n, input_file, output_file)
-    subprocess.run(cmd)
-
 def ligprocess(input_file, output_file):
     with StructureReader(input_file) as reader, \
         StructureWriter(output_file) as writer:
@@ -32,12 +26,11 @@ def ligprocess(input_file, output_file):
                     names.add(atom.pdbname)
             writer.append(st)
 
-def ligprep(smiles, n_processes):
+def ligprep(smiles):
     mae_noname_file = smiles.replace('.smi', '_nonames.maegz')
     mae_file = smiles.replace('.smi', '.maegz')
-    cmd = 'ligprep -WAIT -epik -ismi {} -omae {} -HOST localhost:{}'.format(os.path.basename(smiles),
-                                                         os.path.basename(mae_noname_file),
-                                                         n_processes)
+    cmd = 'ligprep -WAIT -epik -ismi {} -omae {}'.format(
+        os.path.basename(smiles), os.path.basename(mae_noname_file))
 
     subprocess.run(cmd, shell=True, cwd=os.path.dirname(smiles))
     if not os.path.exists(mae_noname_file):

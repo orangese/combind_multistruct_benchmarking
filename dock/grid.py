@@ -42,9 +42,9 @@ def make_grid(pdb,
 
     print('making grid', pdb)
 
-    for path in glob(wd + '/*'):
+    for path in glob(cwd + '/*'):
         os.remove(path)
-    os.makedirs(wd, exist_ok=True)
+    os.makedirs(cwd, exist_ok=True)
 
     x, y, z = centroid(ligfile)
 

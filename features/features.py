@@ -1,58 +1,8 @@
 import os
-import subprocess
-import pandas as pd
 import numpy as np
 from glob import glob
 from schrodinger.structure import StructureReader
-
-def ifp_tanimoto(ifp1, ifp2, features):
-    ifp1 = read_ifp(ifp1)
-    ifp2 = read_ifp(ifp2)
-    n1 = max(ifp1.index.get_level_values(level=1))+1
-    n2 = max(ifp2.index.get_level_values(level=1))+1
-
-    tanimotos = {}
-    for feature in features:
-        tanimotos[feature] = np.zeros((n1, n2))+0.5
-        if feature not in ifp1.index.get_level_values(0):
-            continue
-        for i, _ifp1 in ifp1.loc[feature].groupby(['pose']):
-            _ifp1 = _ifp1.droplevel(0)
-            if feature not in ifp2.index.get_level_values(0):
-                continue
-            for j, _ifp2 in ifp2.loc[feature].groupby(['pose']):
-                _ifp2 = _ifp2.droplevel(0)
-
-                joined = _ifp1.join(_ifp2, how='outer', lsuffix='1', rsuffix='2')
-                joined = joined.fillna(0)
-
-                overlap = sum((joined['score1']*joined['score2'])**0.5)
-                total = sum(joined['score1']+joined['score2'])
-
-                tanimotos[feature][i, j] = (1 + overlap) / (2 + total - overlap)
-    return tanimotos
-
-def read_ifp(csv):
-    df = pd.read_csv(csv)
-    df.loc[df.label=='hbond_acceptor', 'protein_res'] = \
-        [res+'acceptor' for res in df.loc[df.label=='hbond_acceptor', 'protein_res']]
-    df.loc[df.label=='hbond_donor', 'protein_res'] = \
-        [res+'donor' for res in df.loc[df.label=='hbond_donor', 'protein_res']]
-    df.loc[df.label=='hbond_acceptor', 'label'] = 'hbond'
-    df.loc[df.label=='hbond_donor', 'label'] = 'hbond'
-
-    df = df.set_index(['label', 'pose',  'protein_res'])
-    df = df.sort_index()
-    return df
-
-def basename(path):
-    x = os.path.basename(path)
-    x = os.path.splitext(x)[0]
-    return x
-
-def mkdir(path):
-  if not os.path.exists(path):
-    os.mkdir(path)
+from utils import *
 
 IFP = {'rd1':    {'version'           : 'rd1',
                    'level'             : 'residue',
@@ -75,13 +25,6 @@ IFP = {'rd1':    {'version'           : 'rd1',
                    'contact_scale_opt' : 1.25,
                    'contact_scale_cut' : 1.75}
       }
-
-def get_feature(ifp, pose, feature):
-    try:
-        return ifp.loc[(feature, pose)]
-    except:
-        return ifp.iloc[:0]
-
 
 class Features:
     def __init__(self, root, ifp_version='rd1', shape_version='pharm_max',
@@ -151,12 +94,14 @@ class Features:
             paths = glob(paths)
 
             self.raw[feature] = {}
-            for path in paths:
+            for i, path in enumerate(paths):
+                if not i % 100:
+                    print('loading', feature, i, 'of', len(paths))
                 _path = basename(path)[len(feature)+1:]
                 name1, name2 = _path.split('-and-')
                 self.raw[feature][(name1, name2)] = np.load(path)
 
-    def compute_features(self, pvs, ifp=True, shape=True, mcss=True):
+    def compute_features(self, pvs, processes=1, ifp=True, shape=True, mcss=True):
         mkdir(self.path('root'))
 
         print('Extracting glide scores.')
@@ -169,38 +114,48 @@ class Features:
         if ifp:
             print('Computing interaction fingerprints.')
             mkdir(self.path('ifp', base=True))
+            unfinished = []
             for pv in pvs:
                 out = self.path('ifp', pv=pv)
                 if not os.path.exists(out):
-                    self.compute_ifp(pv, out)
+                    unfinished += [(pv, out)]
+            mp(self.compute_ifp, unfinished, processes)
 
             print('Computing interaction similarities.')
             mkdir(self.path('ifp-pair', base=True))
+            unfinished = []
             for i, pv1 in enumerate(pvs):
                 for pv2 in pvs[i+1:]:
                     ifp1 = self.path('ifp', pv=pv1)
                     ifp2 = self.path('ifp', pv=pv2)
-                    out = self.path('ifp-pair', pv1=pv1, pv2=pv2)
-                    if not os.path.exists(out.format('saltbridge')):
-                        self.compute_ifp_pair(ifp1, ifp2, out)
+                    for feature in ['hbond', 'saltbridge', 'contact']:
+                        out = self.path('ifp-pair', pv1=pv1, pv2=pv2)
+                        out = out.format(feature)
+                        if not os.path.exists(out):
+                            unfinished += [(ifp1, ifp2, feature, out)]
+            mp(self.compute_ifp_pair, unfinished, processes)
 
         if shape:
             print('Computing shape similarities.')
             mkdir(self.path('shape', base=True))
+            unfinished = []
             for i, pv1 in enumerate(pvs):
                 for pv2 in pvs[i+1:]:
                     out = self.path('shape', pv1=pv1, pv2=pv2)
                     if not os.path.exists(out):
-                        self.compute_shape(pv1, pv2, out)
+                        unfinished += [(pv1, pv2, out)]
+            mp(self.compute_shape, unfinished, processes)
 
         if mcss:
             print('Computing mcss similarities.')
             mkdir(self.path('mcss', base=True))
+            unfinished = []
             for i, pv1 in enumerate(pvs):
                 for pv2 in pvs[i+1:]:
                     out = self.path('mcss', pv1=pv1, pv2=pv2)
                     if not os.path.exists(out):
-                        self.compute_mcss(pv1, pv2, out)
+                        unfinished += [(pv1, pv2, out)]
+            mp(self.compute_mcss, unfinished, processes)
 
     def compute_gscore(self, pv, out):
         gscores = []
@@ -217,15 +172,14 @@ class Features:
         settings = IFP[self.ifp_version]
         ifp(settings, pv, out, self.max_poses)
 
-    def compute_ifp_pair(self, ifp1, ifp2, out):
-        features = ['hbond', 'saltbridge', 'contact']
-        tanimotos = ifp_tanimoto(ifp1, ifp2, features)
-        for feature in features:
-            np.save(out.format(feature), tanimotos[feature])
+    def compute_ifp_pair(self, ifp1, ifp2, feature, out):
+        from features.ifp_similarity import ifp_tanimoto
+        tanimotos = ifp_tanimoto(ifp1, ifp2, feature)
+        np.save(out, tanimotos)
 
     def compute_shape(self, pv1, pv2, out):
         from features.shape import shape
-        sims = shape(pv1, pv2, version=self.shape_version, max_poses=self.max_poses)
+        sims = shape(pv2, pv1, version=self.shape_version, max_poses=self.max_poses).T
         np.save(out, sims)
 
     def compute_mcss(self, pv1, pv2, out):

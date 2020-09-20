@@ -20,6 +20,8 @@ def mcss(pv1, pv2, mcss_types_file, max_poses):
             rmsds += [np.zeros(len(sts2)) + float('inf')]
 
             for i, st2 in enumerate(sts2):
+                if i == max_poses:
+                    break
                 mcss = compute_mcss(st1, st2, mcss_types_file)
                 mcss_st = SmilesStructure(mcss['st1'][0].split(',')[0].upper()).get2dStructure()
                 
@@ -56,17 +58,27 @@ def compute_mcss(st1, st2, mcss_types_file, memo={}):
             stwr.append(st2)
             stwr.close()
 
-            subprocess.run(cmd.format(os.path.basename(mae), os.path.basename(csv),
-                                      os.path.abspath(mcss_types_file)),
-                           cwd=wd, shell=True)
+            r = subprocess.run(cmd.format(os.path.basename(mae), os.path.basename(csv),
+                                          os.path.abspath(mcss_types_file)),
+                               cwd=wd, shell=True, stderr=subprocess.PIPE)
 
-            memo[(smi1, smi2)] = {'st1': [], 'st2': []}
-            with open(csv) as fp:
-                fp.readline()
-                for line in fp:
-                    lig = line.strip().split(',')[1]
-                    smarts = line.strip().split(',')[-1]
-                    memo[(smi1, smi2)][lig] += [smarts]
+
+            # mcss can fail with memory usage error, generally when macrocycles
+            # are present. just skip such cases.
+            failed = 'memory usage' in str(r.stderr)
+
+            if not failed:
+                assert os.path.exists(csv)
+                memo[(smi1, smi2)] = {'st1': [], 'st2': []}
+                with open(csv) as fp:
+                    fp.readline()
+                    for line in fp:
+                        lig = line.strip().split(',')[1]
+                        smarts = line.strip().split(',')[-1]
+                        memo[(smi1, smi2)][lig] += [smarts]
+            else:
+                print('mcss failed', smi1, smi2)
+                memo[(smi1, smi2)] = {'st1': ['C'], 'st2': ['C']}
     return memo[(smi1, smi2)]
 
 def calculate_rmsd(pose1, pose2, atom_idx1, atom_idx2):

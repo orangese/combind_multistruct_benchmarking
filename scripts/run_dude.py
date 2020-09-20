@@ -14,39 +14,42 @@ combind dock structures/grids/XTAL/XTAL.zip subset/docking subset/ligands/subset
 
 for i in *; do cd $i; sbatch -p owners -t 24:00:00 --wrap="combind dock structures/grids/XTAL/XTAL.zip subset/docking subset/ligands/subset.maegz"; cd ..; done;
 
-
 # Setup cross-validation sets.
 mkdir $i/scores
 mkdir $i/scores/rd1_all_5
 python $COMBINDHOME/scripts/run_dude.py setup      $i/subset.smi $i/structures/pdb.smi $i/scores/rd1_all_5 --n-train 5
-python $COMBINDHOME/scripts/run_dude.py similarity $i/subset.smi $i/scores/rd1_all_5 $i
-python $COMBINDHOME/scripts/run_dude.py shape      $i/subset.smi $i/scores/rd1_all_5 $i
+python $COMBINDHOME/scripts/run_dude.py similarity $i/subset.smi $i/scores/rd1_all_10 $i
+
+for i in *; do sbatch -p rondror --wrap="python $COMBINDHOME/scripts/run_dude.py shape $i/subset.smi $i/scores/rd1_all_10 $i" -J shape; done;
 
 # Predict poses for selected binders
-mkdir bpp
-mkdir bpp/ligands
-mkdir bpp/docking
-combind ligprep binder.smi bpp/ligands --multi
-combind dock ../../../structures/grids/XTAL/XTAL.zip bpp/docking bpp/ligands/*/*.maegz --enhanced
-combind filter-native bpp/docking/XTAL-to-XTAL/XTAL-to-XTAL_pv.maegz ../../../structures/ligands/XTAL_lig.mae
-combind featurize bpp  bpp/docking/XTAL-to-XTAL/XTAL-to-XTAL_native_pv.maegz bpp/docking/CHEMBL*/*pv.maegz --bpp
-combind pose-prediction bpp bpp/binder.csv --xtal XTAL-to-XTAL_native --gc50 -8.0 \
-    --alpha 1.0 --features shape,mcss,hbond,saltbridge,contact
-combind extract-top-poses bpp/binder.csv bpp/docking
 
-for i in */scores/*/0; do cd $i; sbatch -p rondror --wrap=""; cd -; done;
+## Ligprep and docking
+for i in */scores/rd1_all_0/*; do cd $i; mkdir bpp; cd -; done;
+
+for i in */scores/rd1_all_1/*; do cd $i; sbatch -p rondror --wrap="combind ligprep binder.smi bpp/ligands" -J ligprep; cd -; done;
+for i in */scores/rd1_all_1/*; do cd $i; if [ ! -e bpp/binder.csv ]; then echo $i; sbatch  -p rondror -t 06:00:00 --wrap="combind dock ../../../structures/grids/XTAL/XTAL.zip bpp/docking bpp/ligands/*/*.maegz" -J dock;  fi; cd -; done;
+for i in *; do combind check-dock $i/scores/rd1_all_1/$j/binder.smi $i/structures/grids/XTAL/XTAL.zip $i/scores/rd1_all_1/$j/bpp; done;
+
+for i in */scores/rd1_all_1/*; do cd $i; if [ ! -e bpp/docking/XTAL-to-XTAL/XTAL-to-XTAL_native_pv.maegz ]; then combind filter-native bpp/docking/XTAL-to-XTAL/XTAL-to-XTAL_pv.maegz ../../../structures/ligands/XTAL_lig.mae; fi; cd -; done;
+
+## Featurization and scoring
+for i in */scores/rd1_all_1/$j; do cd $i; combind featurize bpp bpp/docking/XTAL-to-XTAL/XTAL-to-XTAL_native_pv.maegz; cd -; done;
+
+for i in */scores/rd1_all_1/*; do cd $i; if [ ! -e bpp/binder.csv ]; then sbatch  -p rondror -t 08:00:00 --wrap="combind featurize bpp bpp/docking/XTAL-to-XTAL/XTAL-to-XTAL_native_pv.maegz bpp/docking/CHEMBL*/*pv.maegz" -J features; fi; cd -; done;
+for i in */scores/rd1_all_1/*; do cd $i; if [ ! -e bpp/binder.csv ]; then echo $i; combind pose-prediction bpp bpp/binder.csv --xtal XTAL-to-XTAL_native_pv --gc50 -8.0 --alpha 1.0 --features shape,mcss,hbond,saltbridge,contact; fi; cd -; done;
+for i in */scores/rd1_all_1/*; do cd $i; if [ ! -e bpp/binder_pv.maegz ]; then echo $i; combind extract-top-poses bpp/binder.csv bpp/docking; fi; cd -; done;
 
 # ComBind screening
-mkdir screen
-combind featurize screen ../../../subset/docking/subset-to-XTAL/subset-to-XTAL_pv.maegz bpp/binder_pv.maegz
-combind screen screen/screen.npy screen/gscore/subset-to-XTAL_pv.npy screen/ifp-pair/{}-subset-to-XTAL_pv-and-binder_pv.npy
-combind apply-scores ../../../docking/subset-to-XTAL/subset-to-XTAL_pv.maegz screen/screen.npy scren/screen_pv.maegz
+for i in */scores/rd1_all_0/*; do cd $i; mkdir screen; cd -; done;
+for i in */scores/rd1_all_10/*; do cd $i; echo $i; if [ ! -e combind.csv ]; then sbatch -p rondror -t 12:00:00 --mem=32GB --wrap="combind featurize screen ../../../subset/docking/subset-to-XTAL/subset-to-XTAL_pv.maegz bpp/binder_pv.maegz --no-mcss --screen" -J screen; fi; cd -; done;
 
-$SCHRODINGER/utilities/glide_sort -best_by_title -use_prop_d r_i_combind_score  -o screen/screen_combind_pv.maegz screen/screen_pv.maegz
-$SCHRODINGER/utilities/glide_sort -best_by_title -o screen/screen_glide_pv.maegz screen/screen_pv.maegz
+for i in */scores/rd1_all_10/*; do cd $i; echo $i; python ~/combind/scripts/run_dude.py combind-screen; cd -; done;
 
-combind scores-to-csv screen/screen_combind_pv.maegz combind.csv
-combind scores-to-csv screen/screen_glide_pv.maegz glide.csv --glide
+for i in */scores/rd1_all_0/*; do cd $i; if [ ! -e combind.csv ]; then echo $i; sbatch -p rondror --wrap="python ~/combind/scripts/run_dude.py combind-screen" -J apply; fi; cd -; done;
+
+util.cbay; util.cbac *.CHEMBL*; util.cbam binder*.*;
+as cartoon; show lines; show sticks, het; hide everything, element H and not (element O+N+S extend 1)
 """
 
 import os
@@ -149,6 +152,32 @@ def setup(input_csv, xtal, root, n_train, n_folds):
         os.mkdir(cwd)
         binders.to_csv(binder_smi, index=False, sep=' ')
 
+@main.command()
+def combind_screen():
+    if not os.path.exists('screen/screen.npy'):
+        print('score')
+        run('combind screen screen/screen.npy screen/gscore/subset-to-XTAL_pv.npy --ifp-fname screen/ifp-pair/{}-subset-to-XTAL_pv-and-binder_pv.npy --shape-fname screen/shape/shape-subset-to-XTAL_pv-and-binder_pv.npy', shell=True)
+
+    if os.path.exists('screen/screen.npy') and not os.path.exists('screen/screen_pv.maegz'):
+        print('apply')
+        run('combind apply-scores ../../../subset/docking/subset-to-XTAL/subset-to-XTAL_pv.maegz screen/screen.npy screen/screen_pv.maegz', shell=True)
+
+    if os.path.exists('screen/screen_pv.maegz') and not os.path.exists('screen/screen_combind_pv.maegz'):
+        print('extract-combind')
+        run('$SCHRODINGER/utilities/glide_sort -best_by_title -use_prop_d r_i_combind_score  -o screen/screen_combind_pv.maegz screen/screen_pv.maegz', shell=True)
+
+    if os.path.exists('screen/screen_pv.maegz') and not os.path.exists('screen/screen_glide_pv.maegz'):
+        print('extract-glide')
+        run('$SCHRODINGER/utilities/glide_sort -best_by_title -o screen/screen_glide_pv.maegz screen/screen_pv.maegz', shell=True)
+
+    if os.path.exists('screen/screen_combind_pv.maegz') and not os.path.exists('combind.csv'):
+        print('csv-combind')
+        run('combind scores-to-csv screen/screen_combind_pv.maegz combind.csv', shell=True)
+
+    if os.path.exists('screen/screen_glide_pv.maegz') and not os.path.exists('glide.csv'):
+        print('csv-glide')
+        run('combind scores-to-csv screen/screen_glide_pv.maegz glide.csv', shell=True)
+
 def get_fp(mol):
     return AllChem.GetMorganFingerprint(mol, 2)
 
@@ -204,7 +233,7 @@ def extract(root, ligands, out):
 @click.argument('root')
 @click.argument('data_root')
 def shape(input_csv, root, data_root):
-    for cwd in glob(root + '/0'):
+    for cwd in glob(root + '/[0-9]'):
         template = os.path.abspath('{}/structures/ligands/XTAL_lig.mae'.format(data_root))
         test_mae = os.path.abspath('{}/subset/ligands/subset.maegz'.format(data_root))
 
@@ -221,8 +250,8 @@ def shape(input_csv, root, data_root):
             print('Shape not complete but temp directory exists. '
                   'Remove directory and try again.')
             print('{}/shape'.format(cwd))
-            exit()
-            
+            continue
+
         os.mkdir('{}/shape'.format(cwd))
 
         active = pd.read_csv(active_smi, sep=' ')['ID']

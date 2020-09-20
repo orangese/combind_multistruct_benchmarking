@@ -46,8 +46,6 @@ class PosePrediction:
         self.pair = self._get_pair()
         self.corr = self._get_corr()
 
-        print(self.single.shape, self.pair.shape)
-
     def _get_max_poses(self, max_poses):
         actual = max(len(x) for x in self.raw['gscore'].values())
         return min(max_poses, actual)
@@ -57,7 +55,7 @@ class PosePrediction:
         for ligand in self.ligands:
             gscore = self.raw['gscore'][ligand]
             if ligand in self.xtal:
-                gscore[:] = -1000.0
+                gscore[:] = -20.0
             single += [gscore]
 
         single = [pad(x, self.max_poses) for x in single]
@@ -94,6 +92,8 @@ class PosePrediction:
         max_iterations (int): Maximum number of iterations to attempt before exiting.
         restart (int): Number of times to run the optimization
         """
+        if len(self.ligands) == 1:
+            return {self.ligands[0]: 0}
         best_score, best_poses = -float('inf'), None
         for i in range(restart):
             if i == 0:
@@ -110,7 +110,8 @@ class PosePrediction:
 
             print(poses)
             print('run {}, score {}'.format(i, score))
-
+        q = self.get_prob(self.poses_to_iposes(poses))
+        C = self.correlations(self.corr, q)
         return best_poses
 
     def optimize_poses(self, poses, max_iterations):
@@ -149,6 +150,15 @@ class PosePrediction:
         p = np.exp(p)
         p /= p.sum(axis=1, keepdims=True)
         return np.argmax(p[:, 0])
+
+    def get_poses_prob(self, poses):
+        iposes = self.poses_to_iposes(poses)
+        probs = self.get_prob(iposes)[:, 0]
+
+        ligands = [(self.ligands.index(lig), lig) for lig in poses]
+        ligands = sorted(ligands)
+        ligands = [lig[1] for lig in ligands]
+        return {lig: prob for lig, prob in zip(ligands, probs)}
 
     def get_prob(self, iposes):
         single = np.array([self.single[l, p] for l, p in iposes.items()])

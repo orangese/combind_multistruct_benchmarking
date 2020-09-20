@@ -249,6 +249,9 @@ def fingerprint_poseviewer(protein, ligands, poses, settings):
     fps = []
     for i, ligand in enumerate(ligands):
         if i == poses: break
+        if ligand is None:
+            print('ligand unreadable')
+            continue
         ligand = _mol_to_np(ligand)
         fps += [_fingerprint(_protein, ligand, protein_coords, settings)]
         fps[-1]['pose'] = i
