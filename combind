@@ -67,16 +67,16 @@ def structprep(struct):
 
     assert os.path.exists('structures'), 'No structures directory.'
 
-    struct_process()
-    struct_align()
-    struct_sort()
-
     if not struct:
-        struct = glob('structures/proteins/*_prot.mae*')
+        struct = glob('structures/raw/*_prot.mae*')
         if not struct:
-            print('No prepared structures available to use as docking grid.')
+            struct = glob('structures/proteins/*_prot.mae*')
         struct = sorted(struct)[0]
         struct = struct.split('/')[-1].split('_prot')[0]
+
+    struct_process()
+    struct_align(struct)
+    struct_sort()
     make_grid(struct)
 
 @main.command()
@@ -216,8 +216,9 @@ def featurize(root, poseviewers, ifp_version, mcss_version, shape_version,
               screen, no_mcss, no_shape, processes, max_poses):
     """
     Compute pose similarity features.
-    
+
     Features are written with the following directory convention:
+
     \b
     root/
         gscore/
@@ -293,6 +294,7 @@ def pose_prediction(root, out, ligands, alpha, gc50, max_poses,
 @main.command()
 @click.argument('score-fname')
 @click.argument('gscore-fname')
+@click.option('--pose-prob-fname', default=None)
 @click.option('--ifp-fname', default=None)
 @click.option('--mcss-fname', default=None)
 @click.option('--shape-fname', default=None)
@@ -300,19 +302,25 @@ def pose_prediction(root, out, ligands, alpha, gc50, max_poses,
 @click.option('--alpha', default=1.0)
 @click.option('--features', default='shape,hbond,saltbridge,contact')
 def screen(score_fname, stats_root, gscore_fname, ifp_fname, mcss_fname,
-           shape_fname, alpha, features):
+           shape_fname, alpha, features, pose_prob_fname):
     """
     Run ComBind screening.
     """
     from score.screen import screen, load_features_screen
     from score.statistics import read_stats
 
+    if pose_prob_fname is not None:
+        weights = pd.read_csv(pose_prob_fname)
+        weights = weights['PROB'].to_numpy()
+    else:
+        weights = None
+
     features = features.split(',')
     stats = read_stats(stats_root, features)
     single, raw = load_features_screen(
         features, gscore_fname, ifp_fname, mcss_fname, shape_fname)
 
-    combind_energy = screen(single, raw, stats, alpha)
+    combind_energy = screen(single, raw, stats, alpha, weights=weights)
     np.save(score_fname, combind_energy)
 
 ################################################################################

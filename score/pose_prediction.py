@@ -133,7 +133,30 @@ class PosePrediction:
                 break
         return poses
 
+    def anneal_poses(self, poses, max_iterations):
+        """
+        poses ({ligand_name: current pose number, })
+        max_iterations (int)
+        """
+        for T in np.logspace(2, -2, 11):
+            print(T)
+            for i in range(1000):
+                print(i, 'of', len(self.ligands)*self.max_poses)
+                for query in np.random.permutation(list(poses.keys())):
+                    iposes = self.poses_to_iposes(
+                            {lig: pose for lig, pose in poses.items() if lig != query})
+                    iquery = self.ligands.index(query)
+                    probs = self.get_probs(iposes, iquery)[:, 0]
+                    probs = np.exp(np.log(probs)/T)
+                    probs /= probs.sum()
+                    poses[query] = np.random.choice(range(len(probs)), p=probs)
+        return self.optimize_poses(poses, max_iterations)
+
     def best_pose(self, iposes, iquery):
+        p = self.get_probs(iposes, iquery)
+        return np.argmax(p[:, 0])
+
+    def get_probs(self, iposes, iquery):
         if self.gc50 == float('inf'):
             q = np.zeros((len(iposes), 2))
             q[:, 0] = 1.0
@@ -149,7 +172,7 @@ class PosePrediction:
         p[:, 0] += np.sum(C*np.log(q[:, :1]*np.exp(_pair) + q[:, 1:]), axis=0)
         p = np.exp(p)
         p /= p.sum(axis=1, keepdims=True)
-        return np.argmax(p[:, 0])
+        return p
 
     def get_poses_prob(self, poses):
         iposes = self.poses_to_iposes(poses)

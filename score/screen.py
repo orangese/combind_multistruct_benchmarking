@@ -14,7 +14,7 @@ def load_features_screen(features, gscore_fname, ifp_fname,
             raw[feature] = np.load(ifp_fname.format(feature))
     return single, raw
 
-def screen(single, raw, stats, alpha):
+def screen(single, raw, stats, alpha, weights=None):
     energies = {}
     for feature in raw:
         _raw = raw[feature]
@@ -26,6 +26,13 @@ def screen(single, raw, stats, alpha):
     for feature, energy in energies.items():
         pair_energy += energy
 
-    pair_energy = pair_energy.mean(axis=1)
+    n = pair_energy.shape[1]
+
+    if weights is None:
+        weights = np.ones(n)
+
+    alpha /= 0.5 * n / (1 + (n-1)*0.5)
+
+    pair_energy = (pair_energy*weights.reshape(1, -1)).mean(axis=1)
     combind_energy = pair_energy - alpha*single
     return combind_energy

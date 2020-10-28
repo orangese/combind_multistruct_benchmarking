@@ -85,7 +85,7 @@ def calculate_rmsd(pose1, pose2, atom_idx1, atom_idx2):
     """
     Calculates the RMSD between the atoms atom_idx1 in pose1
     and the atoms atom_idx2 in pose2.
-    
+
     pose1, pose2: schrodinger.structure
     atom_idx1, atom_idx2: [int, ...]
     merge_halogens: If true then change the atomic number of all halogens
@@ -98,6 +98,7 @@ def calculate_rmsd(pose1, pose2, atom_idx1, atom_idx2):
     try:
         calc = ConformerRmsd(substructure1, substructure2)
         calc.use_heavy_atom_graph = True
+        calc.renumber_structures = True
         rmsd = calc.calculate()
     except:
         # This is necessary because there is a bug in the
@@ -106,7 +107,8 @@ def calculate_rmsd(pose1, pose2, atom_idx1, atom_idx2):
         # is used. That being said, the above is more reliable
         # than the below, so should be tried first.
         calc = ConformerRmsd(substructure1, substructure2)
-        calc.use_heavy_atom_graph = False
+        calc.use_heavy_atom_graph = True
+        calc.renumber_structures = False
         rmsd = calc.calculate()
     return rmsd
 
