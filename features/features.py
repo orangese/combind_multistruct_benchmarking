@@ -46,7 +46,8 @@ class Features:
 
         if base:
             return '{}/{}'.format(self.root, name)
-
+        elif name == 'rmsd':
+            return '{}/docking/{}/{}_rmsd.npy'.format(self.root, basename(kwargs['pv']), basename(kwargs['pv']))
         elif name == 'gscore':
             return '{}/gscore/{}.npy'.format(self.root, basename(kwargs['pv']))
         elif name == 'ifp':
@@ -62,22 +63,15 @@ class Features:
             return '{}/mcss/mcss-{}-and-{}.npy'.format(self.root,
                 basename(kwargs['pv1']), basename(kwargs['pv2']))
 
-    def filter_native(self, pv, native, thresh=2.0):
-        with StructureReader(native) as sts:
-            native = list(sts)
-            assert len(native) == 1
-            native = native[0]
-
-        out = pv.replace('_pv.maegz', '_native_pv.maegz')
-        with StructureReader(pv) as reader, StructureWriter(out) as writer:
-            writer.append(next(reader))
-            for st in reader:
-                conf_rmsd = ConformerRmsd(native, st)
-                if conf_rmsd.calculate() < thresh:
-                    writer.append(st)
-
     def load_features(self, features):
         self.raw = {}
+
+        self.raw['rmsd'] = {}
+        paths = self.path('rmsd', pv='*')
+        paths = glob(paths)
+        for path in paths:
+            name = basename(path)[:-5]
+            self.raw['rmsd'][name] = np.load(path)
 
         self.raw['gscore'] = {}
         paths = self.path('gscore', pv='*')

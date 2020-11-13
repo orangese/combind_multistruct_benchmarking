@@ -51,6 +51,20 @@ def dock(grid, ligands, root, name, enhanced, n_processes):
 
     subprocess.run(glide_cmd, cwd=root, shell=True)
 
+def rmsd(native, pv):
+    with StructureReader(native) as sts:
+        native = list(sts)
+        assert len(native) == 1, len(native)
+        native = native[0]
+
+    rmsds = []
+    with StructureReader(pv) as reader:
+        receptor = next(reader)
+        for st in reader:
+            conf_rmsd = ConformerRmsd(native, st)
+            rmsds += [conf_rmsd.calculate()]
+    return rmsds
+
 def filter_native(native, pv, out, thresh):
     with StructureReader(native) as sts:
         native = list(sts)
