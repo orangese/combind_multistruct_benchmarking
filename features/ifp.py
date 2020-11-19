@@ -38,6 +38,11 @@ def atomname(atom):
 def coords(atom):
     return atom.GetOwningMol().GetConformer(0).GetAtomPosition(atom.GetIdx())
 
+def centroid_coords(atoms):
+    _coords = np.array([coords(atom) for atom in atoms])
+    _coords = _coords.mean(axis=0)
+    return _coords
+
 def distance(atom1, atom2):
     return coords(atom1).Distance(coords(atom2))
 
@@ -83,8 +88,8 @@ def _hbond_hydrogen_angle(acceptor, donor):
     return best_hydrogen, best_angle
 
 def _hbond_compute(donor_mol, acceptor_mol, settings, protein_is_donor):
-    donors = [atom for atom in donor_mol if _is_donor(atom)]
-    acceptors = [atom for atom in acceptor_mol if _is_acceptor(atom)]
+    donors = [atom for atom in donor_mol.GetAtoms() if _is_donor(atom)]
+    acceptors = [atom for atom in acceptor_mol.GetAtoms() if _is_acceptor(atom)]
 
     hbonds = []
     for donor in donors:
@@ -121,7 +126,7 @@ def hbond_compute(protein, ligand, settings):
 
 def _symmetric_charged_protein_atoms(protein):
     protein_groups = {}
-    for protein_atom in protein:
+    for protein_atom in protein.GetAtoms():
         if atomname(protein_atom) in ['OD1', 'OD2', 'OE1', 'OE2', 'NH1', 'NH2']:
             if resname(protein_atom) not in protein_groups:
                 protein_groups[resname(protein_atom)] = []
@@ -133,11 +138,11 @@ def _symmetric_charged_ligand_atoms(ligand):
     smartss = [('[CX3](=O)[O-]', 2, [1, 2]),
                ('[CX3](=[NH2X3+])[NH2X3]', 1, [1, 2])]
 
-    idx_to_atom = {atom.GetIdx(): atom for atom in ligand}
+    idx_to_atom = {atom.GetIdx(): atom for atom in ligand.GetAtoms()}
 
     for smarts, k, v in smartss:
         mol = MolFromSmarts(smarts)
-        matches = ligand[0].GetOwningMol().GetSubstructMatches(mol)
+        matches = ligand.GetSubstructMatches(mol)
         for match in matches:
             ligand_groups[match[k]] = [idx_to_atom[match[_v]] for _v in v]
     return ligand_groups
@@ -152,9 +157,9 @@ def saltbridge_compute(protein, ligand, settings):
     ligand_groups = _symmetric_charged_ligand_atoms(ligand)
 
     saltbridges = []
-    for protein_atom in protein:
+    for protein_atom in protein.GetAtoms():
         if protein_atom.GetFormalCharge() == 0: continue
-        for ligand_atom in ligand:
+        for ligand_atom in ligand.GetAtoms():
             if ligand_atom.GetFormalCharge() == 0: continue
             lig_charge = ligand_atom.GetFormalCharge()
             protein_charge = protein_atom.GetFormalCharge()
@@ -194,9 +199,9 @@ def saltbridge_compute(protein, ligand, settings):
 
 def contact_compute(protein, ligand, settings):
     contacts = []
-    for protein_atom in protein:
+    for protein_atom in protein.GetAtoms():
         if protein_atom.GetAtomicNum() not in settings['nonpolar']: continue
-        for ligand_atom in ligand:
+        for ligand_atom in ligand.GetAtoms():
             if ligand_atom.GetAtomicNum() not in settings['nonpolar']: continue
 
             vdw = settings['nonpolar'][ligand_atom.GetAtomicNum()]
@@ -214,37 +219,94 @@ def contact_compute(protein, ligand, settings):
 
 ################################################################################
 
-def _mol_to_np(mol):
-    return np.array([atom for atom in mol.GetAtoms() if atom.GetAtomicNum() != 1])
+def get_rings(mol):
+    ri = mol.GetRingInfo()
+    return ri.AtomRings()
 
-def _atoms_to_coords(atoms):
-    return np.array([coords(atom) for atom in atoms])
+def get_aromatic_rings(mol):
+    rings = get_rings(mol)
+    aromatic_rings = []
+    for ring in rings:
+        if mol.GetAtomWithIdx(ring[0]).GetIsAromatic():
+            aromatic_rings += [ring]
+    return aromatic_rings
 
-def _relevent_atoms(protein, ligand, protein_coords, overall_cut):
-    ligand_coords  = np.array([coords(atom) for atom in ligand])
-    
-    protein_coords = np.expand_dims(protein_coords, 1)
-    ligand_coords = np.expand_dims(ligand_coords, 0)
-    
-    displacements = ligand_coords - protein_coords
-    distances = np.linalg.norm(displacements, axis=2)
-    distances = distances.min(axis=1)
-    return protein[distances < overall_cut]
+def get_centroid(mol, ring):
+    atoms = [mol.GetAtomWithIdx(r) for r in ring]
+    return centroid_coords(atoms)
 
-def _fingerprint(protein, ligand, protein_coords, settings):
-    # Here protein and ligand should be a numpy array of rdkit atoms
-    # and protein_coords should be a numpy array of protein atomic
-    # coordinates.
-    protein = _relevent_atoms(protein, ligand, protein_coords, settings['overall_cut'])
+def get_normal(mol, ring):
+    centroid = get_centroid(mol, ring)
+    coords1 = coords(mol.GetAtomWithIdx(ring[0])) - centroid
+    coords2 = coords(mol.GetAtomWithIdx(ring[1])) - centroid
 
+    normal = np.cross(coords1, coords2)
+    normal /= np.linalg.norm(normal)
+    return normal
+
+def get_angle(v1, v2):
+    v1 /= np.linalg.norm(v1)
+    v2 /= np.linalg.norm(v2)
+    angle =  np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0))
+    angle *= 180 / np.pi
+    if angle > 90:
+        angle = 180 - angle
+    assert 0 <= angle <= 90, angle
+    return angle
+
+def pipi_entry(protein, ligand, protein_ring, ligand_ring, dist):
+    protein_res = resname(protein.GetAtomWithIdx(protein_ring[0]))
+    protein_names = ','.join([atomname(protein.GetAtomWithIdx(r))
+                              for r in protein_ring])
+    ligand_names = ','.join([atomname(ligand.GetAtomWithIdx(r))
+                             for r in ligand_ring])
+    return {'label': 'pipi',
+            'protein_res': protein_res,
+            'protein_atom': protein_names,
+            'ligand_atom': ligand_names,
+            'dist': dist}
+
+def pipi_compute(protein, ligand, settings):
+    protein_rings = get_aromatic_rings(protein)
+    ligand_rings = get_aromatic_rings(ligand)
+
+    pipis = []
+    for protein_ring in protein_rings:
+        for ligand_ring in ligand_rings:
+            protein_centroid = get_centroid(protein, protein_ring)
+            ligand_centroid = get_centroid(ligand, ligand_ring)
+            protein_normal = get_normal(protein, protein_ring)
+            ligand_normal = get_normal(ligand, ligand_ring)
+
+            displacement = protein_centroid-ligand_centroid
+
+            dist = np.linalg.norm(displacement)
+
+            n1_n2 = get_angle(protein_normal, ligand_normal)
+            n1_centroid = get_angle(protein_normal, displacement)
+            n2_centroid = get_angle(ligand_normal, displacement)
+
+            # T - stack
+            if (dist < 5.0 and 60 < n1_n2
+                and (n1_centroid < 45 or n2_centroid < 45)):
+                pipis += [pipi_entry(protein, ligand, protein_ring, ligand_ring, dist)]
+
+            # Pi stack
+            if (dist < 7.0 and n1_n2 < 30
+                and n1_centroid < 45 and n2_centroid < 45):
+                pipis += [pipi_entry(protein, ligand, protein_ring, ligand_ring, dist)]
+    return pipis
+
+################################################################################
+
+def _fingerprint(protein, ligand, settings):
     fp  = hbond_compute(protein, ligand, settings)
     fp += saltbridge_compute(protein, ligand, settings)
     fp += contact_compute(protein, ligand, settings)
+    fp += pipi_compute(protein, ligand, settings)
     return pd.DataFrame.from_dict(fp)
 
 def fingerprint_poseviewer(protein, ligands, poses, settings):
-    _protein = _mol_to_np(protein)
-    protein_coords = _atoms_to_coords(_protein)
 
     fps = []
     for i, ligand in enumerate(ligands):
@@ -252,8 +314,8 @@ def fingerprint_poseviewer(protein, ligands, poses, settings):
         if ligand is None:
             print('ligand unreadable')
             continue
-        ligand = _mol_to_np(ligand)
-        fps += [_fingerprint(_protein, ligand, protein_coords, settings)]
+
+        fps += [_fingerprint(protein, ligand, settings)]
         fps[-1]['pose'] = i
     fps = pd.concat(fps, ignore_index=True, sort=False)
 
@@ -288,7 +350,9 @@ def compute_scores(raw, settings):
     scores = []
     for label, group in raw.groupby('label'):
         group = group.copy()
-        if label == 'contact':
+        if label == 'pipi':
+            group['score'] = 1.0
+        elif label == 'contact':
             group['score'] = _piecewise(group['dist'] / group['vdw'],
                                         settings['contact_scale_opt'],
                                         settings['contact_scale_cut'])
@@ -323,8 +387,6 @@ def compute_scores(raw, settings):
 
 def ifp(settings, input_file, output_file, poses, convert=False):
     settings['nonpolar'] = {6:1.7, 9:1.47, 17:1.75, 35:1.85, 53:1.98}
-    settings['overall_cut'] = max(settings['hbond_dist_cut'], settings['sb_dist_cut'],
-                                  settings['contact_scale_cut']*2*max(settings['nonpolar'].values()))
 
     if convert:
         temp = tempfile.NamedTemporaryFile(suffix='.maegz')

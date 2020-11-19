@@ -3,14 +3,10 @@ import ifp
 import gzip
 from rdkit.Chem.rdmolfiles import MaeMolSupplier
 
-with gzip.open('pv.maegz') as fp:
+with gzip.open('test/pv.maegz') as fp:
     mols =  MaeMolSupplier(fp, removeHs=False)
     protein = next(mols)
     ligands = list(mols)
-
-_ligands = [ifp._mol_to_np(ligand) for ligand in ligands]
-_protein = ifp._mol_to_np(protein)
-protein_coords = ifp._atoms_to_coords(_protein)
 
 settings = {'version'           : 'rd1',
             'level'             : 'residue',
@@ -21,34 +17,46 @@ settings = {'version'           : 'rd1',
             'sb_dist_opt'       : 4.0,
             'sb_dist_cut'       : 5.0,
             'contact_scale_opt' : 1.25,
-            'contact_scale_cut' : 1.75}
+            'contact_scale_cut' : 1.75,
+            'pipi_dist_opt'     : 7.0,
+            'pipi_dist_cut'     : 8.0}
 
 settings['nonpolar'] = {6:1.7, 9:1.47, 17:1.75, 35:1.85, 53:1.98}
-settings['overall_cut'] = max(settings['hbond_dist_cut'], settings['sb_dist_cut'],
-                              settings['contact_scale_cut']*2*max(settings['nonpolar'].values()))
-
 def test_version():
     import rdkit
     assert rdkit.__version__ == '2020.03.1'
 
 def test_hydrogenbond():
-    protein = ifp._relevent_atoms(_protein, _ligands[0], protein_coords, settings['overall_cut'])
-    i = ifp.hbond_compute(protein, _ligands[0], settings)
+    i = ifp.hbond_compute(protein, ligands[0], settings)
     assert len(i) == 3
 
 def test_saltbridge_none():
-    i = ifp.saltbridge_compute(protein.GetAtoms(), ligands[0].GetAtoms(), settings)
+    i = ifp.saltbridge_compute(protein, ligands[0], settings)
     assert len(i) == 0
 
 def test_saltbridge_one():
-    i = ifp.saltbridge_compute(protein.GetAtoms(), ligands[3].GetAtoms(), settings)
+    i = ifp.saltbridge_compute(protein, ligands[3], settings)
     assert len(i) == 1
 
 def test_contact():
-    ifp.contact_compute(protein.GetAtoms(), ligands[0].GetAtoms(), settings)
+    ifp.contact_compute(protein, ligands[0], settings)
 
+def test_pipi_tstack():
+    i = ifp.pipi_compute(protein, ligands[0], settings)
+    assert len(i) == 1
+    i = ifp.pipi_compute(protein, ligands[3], settings)
+    assert len(i) == 1
 
-# with gzip.open('pv.maegz') as fp:
+def test_pipi_pstack():
+    i = ifp.pipi_compute(protein, ligands[173], settings)
+    print(i)
+    assert len(i) == 2
+
+    i = ifp.pipi_compute(protein, ligands[180], settings)
+    print(i)
+    assert len(i) == 2
+
+# with gzip.open('test/pv.maegz') as fp:
 #     mols =  MaeMolSupplier(fp, removeHs=False)
 #     protein = next(mols)
 #     ifp.fingerprint_poseviewer(protein, mols, 100, settings)
