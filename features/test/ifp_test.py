@@ -3,10 +3,6 @@ import ifp
 import gzip
 from rdkit.Chem.rdmolfiles import MaeMolSupplier
 
-with gzip.open('test/pv.maegz') as fp:
-    mols =  MaeMolSupplier(fp, removeHs=False)
-    protein = next(mols)
-    ligands = list(mols)
 
 settings = {'version'           : 'rd1',
             'level'             : 'residue',
@@ -18,8 +14,21 @@ settings = {'version'           : 'rd1',
             'sb_dist_cut'       : 5.0,
             'contact_scale_opt' : 1.25,
             'contact_scale_cut' : 1.75,
+            'pipi_dist_cut'     : 7.0,
             'pipi_dist_opt'     : 7.0,
-            'pipi_dist_cut'     : 8.0}
+            'pipi_norm_norm_angle_cut'     : 30.0,
+            'pipi_norm_centroid_angle_cut' : 45.0,
+            'pipi_t_dist_cut': 5.0,
+            'pipi_t_dist_opt': 5.0,
+            'pipi_t_norm_norm_angle_cut': 60.0,
+            'pipi_t_norm_centroid_angle_cut': 45.5}
+
+settings['nonpolar'] = {6:1.7, 9:1.47, 17:1.75, 35:1.85, 53:1.98}
+
+with gzip.open('test/pv.maegz') as fp:
+    mols =  MaeMolSupplier(fp, removeHs=False)
+    protein = ifp.Molecule(next(mols), True, settings)
+    ligands = [ifp.Molecule(mol, False, settings) for mol in mols]
 
 settings['nonpolar'] = {6:1.7, 9:1.47, 17:1.75, 35:1.85, 53:1.98}
 def test_version():
@@ -56,7 +65,5 @@ def test_pipi_pstack():
     print(i)
     assert len(i) == 2
 
-# with gzip.open('test/pv.maegz') as fp:
-#     mols =  MaeMolSupplier(fp, removeHs=False)
-#     protein = next(mols)
-#     ifp.fingerprint_poseviewer(protein, mols, 100, settings)
+
+#ifp.fingerprint_poseviewer('test/pv.maegz', 100, settings)

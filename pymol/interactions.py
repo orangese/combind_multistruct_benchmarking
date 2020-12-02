@@ -2,8 +2,6 @@ from pymol import cmd
 import sys
 import pandas as pd
 
-features_root = '/Users/jpaggi/sherlock/oak/users/jpaggi/rdkit_combind_features'
-
 def style():
 	cmd.show('cartoon')
 	cmd.show('lines')
@@ -33,6 +31,7 @@ def show_interactions(ifp_file, interaction, lig, pose, delete=True, disable=Tru
 
 	if delete:
 		cmd.delete('dist*')
+		cmd.delete('ps*')
 	if disable:
 		cmd.disable('*')
 	style()
@@ -40,7 +39,7 @@ def show_interactions(ifp_file, interaction, lig, pose, delete=True, disable=Tru
 	enable(lig, pose)
 
 	if interaction == 'all':
-		for interaction in ['sb', 'hbond', 'contact']:
+		for interaction in ['sb', 'hbond', 'contact', 'pipi']:
 			 show_interactions(ifp_file, interaction, lig, pose,
 			                   delete=False, disable=False)
 
@@ -60,6 +59,11 @@ def show_interactions(ifp_file, interaction, lig, pose, delete=True, disable=Tru
 		idx = df['label'] == 'contact'
 		thresh = 1.25
 		color='smudge'
+	elif interaction == 'pipi':
+		idx = df['label'] == 'pipi'
+		idx |= df['label'] == 'pi-t'
+		thresh = 7.0
+		color='green'
 	
 	idx &= df['pose'] == pose
 
@@ -71,12 +75,22 @@ def show_interactions(ifp_file, interaction, lig, pose, delete=True, disable=Tru
 		prot = '{}*.*prot and chain {} and resid {} and name {}'.format(lig,
 		                                                               chain,
 		                                                               resid,
-		                                                               row['protein_atom'])
-		ligand = '{} and name {}'.format(pose_name(lig, pose), row['ligand_atom'])
-		print(prot, ligand)
-		cmd.dist('dist'+interaction+str(i), prot, ligand)
+		                                                               row['protein_atom'].replace(',', '+'))
+		ligand = '{} and name {}'.format(pose_name(lig, pose), row['ligand_atom'].replace(',', '+'))
+		
+		cmd.pseudoatom('ps{}{}prot'.format(interaction, i), prot)
+		cmd.pseudoatom('ps{}{}lig'.format(interaction, i), ligand)
+
+		cmd.dist('dist'+interaction+str(i),
+		         'ps{}{}prot'.format(interaction, i),
+		         'ps{}{}lig'.format(interaction, i))
 		cmd.color(color, 'dist'+interaction+str(i))
 
 	cmd.set('dash_width', 6)
+	cmd.set('dash_width', 3, 'distcontact*')
+	
+	cmd.enable('{}*.*prot'.format(lig))
+	cmd.enable(pose_name(lig, pose))
+	cmd.enable(lig)
 
 cmd.extend('show_interactions', show_interactions)
