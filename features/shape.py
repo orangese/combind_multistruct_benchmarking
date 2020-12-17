@@ -10,9 +10,20 @@ CMD = '$SCHRODINGER/shape_screen -shape {poses1} -screen {poses2} -inplace {typi
 def key(st):
     if 'i_i_glide_posenum' not in st.property:
         return st.title
-    return (st.property['i_m_source_file_index'],
+
+    if 'i_m_source_file_index' in st.property:
+        source_file_index = st.property['i_m_source_file_index']
+    else:
+        source_file_index = 0
+
+    if 's_lp_Variant' in st.property:
+        lp_Variant = st.property['s_lp_Variant']
+    else:
+        lp_Variant = ''
+    
+    return (source_file_index,
             st.property['i_i_glide_posenum'],
-            st.property['s_lp_Variant'])
+            lp_Variant)
 
 
 def write_and_count(pv_in, pv_out, max_poses):

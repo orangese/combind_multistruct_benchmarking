@@ -2,6 +2,8 @@
 Compute interaction fingerprints for poseviewer files.
 """
 
+import tempfile
+import os
 import click
 import numpy as np
 import pandas as pd
@@ -30,6 +32,8 @@ def convert_mae(original_mae, converted_mae, poses=float('inf')):
 ################################################################################
 def resname(atom):
     info = atom.GetPDBResidueInfo()
+    if info is None:
+        return ''
     return ':'.join(map(lambda x: str(x).strip(),
                         [info.GetChainId(), str(info.GetResidueNumber()),
                          info.GetResidueName(), info.GetInsertionCode()]))
@@ -85,7 +89,11 @@ class Molecule:
             atom_name += [atomname(atom)]
             res_name += [resname(atom)]
             vdw += [self.settings['nonpolar'][atom.GetAtomicNum()]]
-        return np.vstack(coord), np.array(vdw), res_name, atom_name
+        
+        if coord:
+            coord = np.vstack(coord)
+            vdw = np.array(vdw)
+        return coord, vdw, res_name, atom_name
 
     def init_pipi(self):
         rings = self.get_aromatic_rings()
@@ -95,7 +103,11 @@ class Molecule:
             normals += [self.get_normal(ring)]
             res_name += [resname(self.mol.GetAtomWithIdx(ring[0]))]
             atom_name += [','.join([atomname(self.mol.GetAtomWithIdx(r)) for r in ring])]
-        return np.vstack(centroids), np.vstack(normals), res_name, atom_name
+        
+        if centroids:
+            centroids = np.vstack(centroids)
+            normals = np.vstack(normals)
+        return centroids, normals, res_name, atom_name
 
     def get_aromatic_rings(self):
         return [ring for ring in self.mol.GetRingInfo().AtomRings()
@@ -128,7 +140,7 @@ class Molecule:
     def _is_acceptor(self, atom):
         if atom.GetAtomicNum() == 8:
             return True
-        if atom.GetAtomicNum() == 7 and atom.GetExplicitValence() == 3:
+        if atom.GetAtomicNum() == 7 and atom.GetExplicitValence() < 4:
             return True
         return False
 
@@ -192,27 +204,28 @@ def _hbond_compute(donor_mol, acceptor_mol, settings, protein_is_donor):
     hbonds = []
     for donor in donor_mol.hbond_donors:
         for acceptor in acceptor_mol.hbond_acceptors:
-            dist = distance(acceptor, donor)
-            if dist > settings['hbond_dist_cut']: continue
-            hydrogen, angle = _hbond_hydrogen_angle(acceptor, donor)
-            if angle < settings['hbond_angle_cut']: continue
+            for hydrogen in _get_bonded_hydrogens(donor):
+                dist = distance(acceptor, hydrogen)
+                if dist > settings['hbond_dist_cut']: continue
+                angle = angle_atom(donor, hydrogen, acceptor)
+                if angle < settings['hbond_angle_cut']: continue
 
-            if protein_is_donor:
-                label = 'hbond_donor'
-                protein_atom = donor
-                ligand_atom = acceptor
-            else:
-                label = 'hbond_acceptor'
-                protein_atom = acceptor
-                ligand_atom = donor
+                if protein_is_donor:
+                    label = 'hbond_donor'
+                    protein_atom = donor
+                    ligand_atom = acceptor
+                else:
+                    label = 'hbond_acceptor'
+                    protein_atom = acceptor
+                    ligand_atom = donor
 
-            hbonds += [{'label': label,
-                        'protein_res': resname(protein_atom),
-                        'protein_atom': atomname(protein_atom),
-                        'ligand_atom': atomname(ligand_atom),
-                        'dist': dist,
-                        'angle': angle,
-                        'hydrogen': atomname(hydrogen)}]
+                hbonds += [{'label': label,
+                            'protein_res': resname(protein_atom),
+                            'protein_atom': atomname(protein_atom),
+                            'ligand_atom': atomname(ligand_atom),
+                            'dist': dist,
+                            'angle': angle,
+                            'hydrogen': atomname(hydrogen)}]
     return hbonds
 
 def hbond_compute(protein, ligand, settings):
@@ -236,16 +249,18 @@ def saltbridge_compute(protein, ligand, settings):
 
             # Expand protein_atom and ligand_atom to all symetric atoms
             # ... think carboxylates and guanidiniums.
-            if ligand_atom.GetIdx() in ligand.charge_groups:
+            if ('saltbridge_resonance' in settings and
+                ligand_atom.GetIdx() in ligand.charge_groups):
                 ligand_atoms = ligand.charge_groups[ligand_atom.GetIdx()]
             else:
                 ligand_atoms = [ligand_atom]
             
-            if resname(protein_atom) in protein.charge_groups:
+            if ('saltbridge_resonance' in settings and
+                resname(protein_atom) in protein.charge_groups):
                 protein_atoms = protein.charge_groups[resname(protein_atom)]
             else:
                 protein_atoms = [protein_atom]
-            
+
             # Get minimum distance between any pair of protein and ligand
             # atoms in the groups.
             dist = float('inf')
@@ -254,14 +269,14 @@ def saltbridge_compute(protein, ligand, settings):
                     _dist = distance(_protein_atom, _ligand_atom)
                     if _dist < dist:
                         dist = _dist
-                        protein_atom = _protein_atom
-                        ligand_atom = _ligand_atom
+                        closest_protein_atom = _protein_atom
+                        closest_ligand_atom = _ligand_atom
 
             if dist < settings['sb_dist_cut']:
                 saltbridges += [{'label': 'saltbridge',
-                                 'protein_res': resname(protein_atom),
-                                 'protein_atom': atomname(protein_atom),
-                                 'ligand_atom': atomname(ligand_atom),
+                                 'protein_res': resname(closest_protein_atom),
+                                 'protein_atom': atomname(closest_protein_atom),
+                                 'ligand_atom': atomname(closest_ligand_atom),
                                  'dist': dist}]
     return saltbridges
 
@@ -273,7 +288,7 @@ def contact_compute(protein, ligand, settings):
     dists = np.linalg.norm(dists, axis=2)
     vdw = protein[1].reshape(1, -1) + ligand[1].reshape(-1, 1)
     contact_idx = np.argwhere(dists < vdw*settings['contact_scale_cut'])
-    
+
     contacts = []
     for i, j in contact_idx:
         contacts += [{'label': 'contact',
@@ -443,8 +458,8 @@ def ifp(settings, input_file, output_file, poses, convert=False):
 @click.argument('poses', default=100)
 @click.option('--convert', is_flag=True)
 @click.option('--level', default='residue')
-@click.option('--hbond_dist_cut', default=4.0)
-@click.option('--hbond_dist_opt', default=3.5)
+@click.option('--hbond_dist_cut', default=3.0)
+@click.option('--hbond_dist_opt', default=2.5)
 @click.option('--hbond_angle_cut', default=90.0)
 @click.option('--hbond_angle_opt', default=60.0)
 @click.option('--sb_dist_cut', default=5.0)

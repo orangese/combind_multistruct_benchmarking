@@ -12,7 +12,7 @@ def style():
 
 def pose_name(group, pose):
 	if pose == 0:
-		pose = '_lig'
+		pose = group.split('-')[0]
 	elif pose < 10:
 		pose = '_0{}'.format(pose)
 	else:
@@ -42,7 +42,6 @@ def show_interactions(ifp_file, interaction, lig, pose, delete=True, disable=Tru
 		for interaction in ['sb', 'hbond', 'contact', 'pipi']:
 			 show_interactions(ifp_file, interaction, lig, pose,
 			                   delete=False, disable=False)
-
 	
 	df = pd.read_csv(ifp_file)
 
@@ -64,7 +63,7 @@ def show_interactions(ifp_file, interaction, lig, pose, delete=True, disable=Tru
 		idx |= df['label'] == 'pi-t'
 		thresh = 7.0
 		color='green'
-	
+
 	idx &= df['pose'] == pose
 
 	for i, row in df[idx].iterrows():
@@ -77,7 +76,9 @@ def show_interactions(ifp_file, interaction, lig, pose, delete=True, disable=Tru
 		                                                               resid,
 		                                                               row['protein_atom'].replace(',', '+'))
 		ligand = '{} and name {}'.format(pose_name(lig, pose), row['ligand_atom'].replace(',', '+'))
-		
+
+		print(prot, ligand)
+
 		cmd.pseudoatom('ps{}{}prot'.format(interaction, i), prot)
 		cmd.pseudoatom('ps{}{}lig'.format(interaction, i), ligand)
 
@@ -88,7 +89,7 @@ def show_interactions(ifp_file, interaction, lig, pose, delete=True, disable=Tru
 
 	cmd.set('dash_width', 6)
 	cmd.set('dash_width', 3, 'distcontact*')
-	
+
 	cmd.enable('{}*.*prot'.format(lig))
 	cmd.enable(pose_name(lig, pose))
 	cmd.enable(lig)

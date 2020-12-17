@@ -2,39 +2,48 @@ import pandas as pd
 import numpy as np
 
 def read_ifp(csv):
-    df = pd.read_csv(csv)
-    df.loc[df.label=='hbond_acceptor', 'protein_res'] = \
-        [res+'acceptor' for res in df.loc[df.label=='hbond_acceptor', 'protein_res']]
-    df.loc[df.label=='hbond_donor', 'protein_res'] = \
-        [res+'donor' for res in df.loc[df.label=='hbond_donor', 'protein_res']]
-    df.loc[df.label=='hbond_acceptor', 'label'] = 'hbond'
-    df.loc[df.label=='hbond_donor', 'label'] = 'hbond'
+    """
+    Reads IFP file and merges hbond acceptors and donors.
 
-    df = df.set_index(['label', 'pose',  'protein_res'])
-    df = df.sort_index()
+    Setting the label to hbond for the hbond_donors and hbond_acceptors while
+    changing the residue names allows for only donor+donor or acceptor+acceptor
+    to be counted as overlapping, but them to be merged into the same similarity
+    measure.
+    """
+    df = pd.read_csv(csv)
+
+    mask = df.label=='hbond_acceptor'
+    df.loc[mask, 'protein_res'] = [res+'acceptor' for res in df.loc[mask, 'protein_res']]
+    df.loc[mask, 'label'] = 'hbond'
+    
+    mask = df.label=='hbond_donor'
+    df.loc[mask, 'protein_res'] = [res+'donor' for res in df.loc[mask, 'protein_res']]
+    df.loc[mask, 'label'] = 'hbond'
     return df
 
 def ifp_tanimoto(ifp1, ifp2, feature):
+    """
+    Computes the tanimoto distance between ifp1 and ifp2 for feature.
+    """
     ifp1 = read_ifp(ifp1)
     ifp2 = read_ifp(ifp2)
-    n1 = max(ifp1.index.get_level_values(level=1))+1
-    n2 = max(ifp2.index.get_level_values(level=1))+1
+    n1 = max(ifp1.pose)+1
+    n2 = max(ifp2.pose)+1
 
-    tanimotos = np.zeros((n1, n2))+0.5
-    if feature not in ifp1.index.get_level_values(0):
-        return tanimotos
-    for i, _ifp1 in ifp1.loc[feature].groupby(['pose']):
-        _ifp1 = _ifp1.droplevel(0)
-        if feature not in ifp2.index.get_level_values(0):
-            continue
-        for j, _ifp2 in ifp2.loc[feature].groupby(['pose']):
-            _ifp2 = _ifp2.droplevel(0)
+    ifp1 = ifp1.loc[ifp1.label == feature]
+    ifp2 = ifp2.loc[ifp2.label == feature]
 
-            joined = _ifp1.join(_ifp2, how='outer', lsuffix='1', rsuffix='2')
-            joined = joined.fillna(0)
+    interactions = sorted(set(ifp1.protein_res).union(set(ifp2.protein_res)))
 
-            overlap = sum((joined['score1']*joined['score2'])**0.5)
-            total = sum(joined['score1']+joined['score2'])
+    X1 = np.zeros((n1, 1, len(interactions)))
+    for i, row in ifp1.iterrows():
+        X1[row.pose, 0, interactions.index(row.protein_res)] = row.score
 
-            tanimotos[i, j] = (1 + overlap) / (2 + total - overlap)
-    return tanimotos
+    X2 = np.zeros((1, n2, len(interactions)))
+    for i, row in ifp2.iterrows():
+        X2[0, row.pose, interactions.index(row.protein_res)] = row.score
+
+    overlap = np.sqrt(X1*X2).sum(axis=2)
+    total = X1.sum(axis=2) + X2.sum(axis=2)
+
+    return (1 + overlap) / (2 + total - overlap)

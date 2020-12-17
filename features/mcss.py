@@ -29,7 +29,8 @@ def mcss(pv1, pv2, mcss_types_file, max_poses):
                 st1_atoms = n_atoms(st1)
                 st2_atoms = n_atoms(st2)
 
-                if 2*mcss_atoms < min(st1_atoms, st2_atoms):
+                if (2*mcss_atoms <= min(st1_atoms, st2_atoms)
+                    or mcss_atoms <= 10):
                     continue
 
                 for smarts1, smarts2 in zip(mcss['st1'], mcss['st2']):

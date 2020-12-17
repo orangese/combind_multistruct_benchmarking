@@ -189,6 +189,7 @@ def rmsd(docking, crystal):
     def docking_to_name(path):
         path = path.split('/')[-1]
         path = path.split('-to-')[0]
+        path = path.split('_lig')[0]
         return path
 
     def crystal_to_name(path):
@@ -299,8 +300,9 @@ def featurize(root, poseviewers, ifp_version, mcss_version, shape_version,
 
     features = Features(root, ifp_version=ifp_version, shape_version=shape_version,
                         mcss_version=mcss_version, max_poses=max_poses)
-    features.compute_features(poseviewers, processes=processes,
-                              mcss=not no_mcss, shape=not no_shape)
+    features.compute_single_features(poseviewers, processes=processes)
+    features.compute_pair_features(poseviewers, processes=processes,
+                                   mcss=not no_mcss, shape=not no_shape)
 
 ################################################################################
 
