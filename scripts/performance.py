@@ -20,13 +20,27 @@ families = {
               'P08246','P00489','P18031','O60885','P07900','Q9Y233']
 }
 
+
+family = pd.api.types.CategoricalDtype(['GPCR', 'Ion Channel', 'Nuclear Receptor', 'Transporter',
+                                        'Peptidase', 'Other'],
+                                        ordered = True)
+
+families = {
+    'GPCR': ['5HT2B', 'A2AR', 'B1AR', 'B2AR', 'SMO', 'MGLUR5'],
+    'Ion Channel': ['P19491', 'P22756', 'Q05586-Q12879'],
+    'Transporter': ['SLC6A4', 'GLUT1', 'DAT'],
+    'Nuclear Receptor': ['NR3C2', 'NR3C1', 'AR', 'VDR', 'ERA'],
+    'Peptidase': ['F2', 'F10', 'F11', 'PLAU', 'P00760', 'BACE1'],
+    'Other': ['CDK2', 'PYGM', 'PTPN1', 'BRD4', 'HSP90AA1', 'PDE10A', 'SIGMAR1', 'ELANE', 'DHFR']
+}
+
 drugs = {'GPCR': 0.33,
          'Ion Channel': 0.18,
          'Nuclear Receptor': 0.16,
-         'Other': 0.13+0.03,
+         'Other': 0.20+0.03,
          'Peptidase': 0.03,
-         'Reductase': 0.07,
          'Transporter': 0.07}
+
 
 def drug_average(family):
     assert 'protein' not in family.index.names
@@ -48,6 +62,8 @@ def main(fnames, details, xtal, protein, mcss_thresh, best):
         prot = path.split('/')[protein]
         _data = pd.read_csv(path)
         _data = _data.iloc[:-1]
+        _data = _data.loc[_data.COMBIND_RMSD!='None']
+        _data['ID'] = [x.split('-to-')[0] for x in _data['ID']]
         if xtal:
             _data = _data[1:]
         if not len(_data):
@@ -57,20 +73,24 @@ def main(fnames, details, xtal, protein, mcss_thresh, best):
         data += [_data]
     data = pd.concat(data)
 
-    with open('stats_data/mcss_sizes.pkl', 'rb') as fp:
-        mcss = pd.DataFrame(pickle.load(fp).items(), columns=['lig', 'mcss']).set_index('lig')
-        data = data.join(mcss, on='lig')
-    data = data.loc[data.mcss <= mcss_thresh]
+    with open('/home/users/jpaggi/bpp_data_mcss.pkl', 'rb') as fp:
+        mcss = pd.DataFrame(pickle.load(fp).items(), columns=['ID', 'mcss']).set_index('ID')
+
+    with open('/home/users/jpaggi/ionchannels_mcss.pkl', 'rb') as fp:
+        mcss = pd.concat([mcss, pd.DataFrame(pickle.load(fp).items(), columns=['ID', 'mcss']).set_index('ID')])
+    
+    data = data.join(mcss, on='ID')
+    data = data.loc[data.mcss < mcss_thresh]
 
     reverse = {v:k for k, vs in families.items() for v in vs}
     data['family'] = data['protein'].apply(lambda x: reverse[x]).astype(family)
-    data = data.set_index(['family', 'protein', 'lig']).sort_index()
+    data = data.set_index(['family', 'protein', 'ID']).sort_index()
 
-    data = data[['combind_rmsd', 'glide_rmsd', 'best_rmsd']].astype(float)
+    data = data[['COMBIND_RMSD', 'GLIDE_RMSD', 'BEST_RMSD']].astype(float)
     data['total'] = 1
 
     if best:
-        data = data.loc[data.best_rmsd <= 2.05]
+        data = data.loc[data.BEST_RMSD < 2.05]
 
     print((data <= 2.05).sum(axis=0))
     print()
@@ -84,9 +104,9 @@ def main(fnames, details, xtal, protein, mcss_thresh, best):
     print((data <= 2.05).groupby(level=0).mean())
 
     if details:
-        combind = data['combind_rmsd'] <= 2.05
-        glide = data['glide_rmsd'] <= 2.05
-        best = data['best_rmsd'] <= 2.05
+        combind = data['COMBIND_RMSD'] <= 2.05
+        glide = data['GLIDE_RMSD'] <= 2.05
+        best = data['BEST_RMSD'] <= 2.05
         
         print('ComBind and not Glide')
         print(data[combind&~glide])

@@ -6,20 +6,13 @@ import numpy as np
 import os
 from rdkit import Chem
 from rdkit.Chem import Descriptors
+from score.density_estimate import DensityEstimate
 
 def load_combind(cwd):
-    df = pd.read_csv(cwd+'/combind_dyn.csv')
+    df = pd.read_csv(cwd+'/combind.csv')
     df = df.set_index('ID')
     df = df.rename(columns={'GLIDE': 'COMBIND_GLIDE'})
     df['COMBIND_GLIDE'] *= -1
-    df[df < 0] = 0
-    return df
-
-def load_combind_prob(cwd):
-    df = pd.read_csv(cwd+'/combind_prob.csv')
-    df = df.set_index('ID')
-    df = df.rename(columns={'GLIDE': 'COMBIND_GLIDE_PROB', 'COMBIND': 'COMBIND_PROB'})
-    df['COMBIND_GLIDE_PROB'] *= -1
     df[df < 0] = 0
     return df
 
@@ -49,7 +42,6 @@ def load(input_csv, cwd, sim_cwd, xtal_cut=float('inf'), active_cut=float('inf')
     df = df.set_index('ID')
 
     combind = load_combind(cwd)
-    #combind_prob = load_combind_prob(cwd)
     glide = load_glide(cwd)
     similarity = load_similarity(cwd)
     shape = load_shape(cwd)
@@ -128,6 +120,9 @@ def plot_cat(df, scores, colors, roc_ax=None, logroc_ax=None):
             logroc_ax.plot(log_fpr, log_tpr, color=color)
     return aucs, logaucs, ef5s
 
+def Z(x):
+    return (x - x.mean()) / np.sqrt(x.var())
+
 def plot_cat_all(xtal_cut, active_cut, helpers=5, helpers_sim=5, minimum=10,
                  weight_shape=10.0, weight_2D=50.0, weight_combind=1.0, plot=True,
                  scores = ['COMBIND', 'GLIDE', 'SHAPE_mean', '2D_mean', 'GLIDE+SHAPE', 'GLIDE+2D',
@@ -135,34 +130,68 @@ def plot_cat_all(xtal_cut, active_cut, helpers=5, helpers_sim=5, minimum=10,
                  colors = {'COMBIND': 'g', 'GLIDE': 'b', 'SHAPE_mean':'m', '2D_mean': 'r',
                            'GLIDE+SHAPE': 'c', 'GLIDE+2D':'orange', 'COMBIND+2D': 'k',
                            'COMBIND+SHAPE': 'gray', 'COMBIND_GLIDE': 'lime', 'GLIDE_COMBIND': 'yellow'}):
+
     data = []
     for protein in os.listdir('/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind'):
+
+
         if plot:
             _, (roc_ax, logroc_ax) = plt.subplots(1, 2, figsize=(12, 5))
         else:
             roc_ax, logroc_ax = None, None
         aucs, logaucs, ef5s = [], [], []
         for i in range(5):
-            cwd = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/{}/scores/rd1_all_{}/{}'.format(protein, helpers, i if helpers else 0)
+            cwd = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/{}/scores/rd1_shape_{}/{}'.format(protein, helpers, i if helpers else 0)
             sim_cwd = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/{}/scores/rd1_all_{}/{}'.format(protein, helpers_sim, i)
             input_csv = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/{}/subset.smi'.format(protein)
 
-            if not os.path.exists(cwd + '/combind_dyn.csv'): continue
+            if not os.path.exists(cwd + '/combind.csv'): continue
             if not os.path.exists(cwd + '/glide.csv'): continue
             if not os.path.exists(cwd + '/shape.csv'): continue
             if not os.path.exists(cwd + '/similarity.csv'): continue
             if not os.path.exists(sim_cwd + '/similarity.csv'): continue
 
+            
+            stats_2D = '/oak/stanford/groups/rondror/users/jpaggi/2D_stats/'
+            stats_SHAPE = '/oak/stanford/groups/rondror/users/jpaggi/SHAPE_stats/'
+            nat_de = DensityEstimate.read('{}/nat_2D_{}_{}.de'.format(stats_2D, protein, helpers))
+            ref_de = DensityEstimate.read('{}/ref_2D_{}_{}.de'.format(stats_2D, protein, helpers))
+            nat_shape_de = DensityEstimate.read('{}/nat_SHAPE_{}_{}.de'.format(stats_SHAPE, protein, helpers))
+            ref_shape_de = DensityEstimate.read('{}/ref_SHAPE_{}_{}.de'.format(stats_SHAPE, protein, helpers))
+
             df = load(input_csv, cwd, sim_cwd, xtal_cut=xtal_cut, active_cut=active_cut)
             
             df['COMBIND'] = (df['COMBIND']-df['COMBIND_GLIDE']) + weight_combind*df['COMBIND_GLIDE']
-            #df['COMBIND_PROB'] = (df['COMBIND_PROB']-df['COMBIND_GLIDE_PROB']) + weight_combind*df['COMBIND_GLIDE_PROB']
             
             df['GLIDE+SHAPE'] = df['GLIDE'] + weight_shape*df['SHAPE_mean']
             df['GLIDE+2D']    = df['GLIDE'] + weight_2D*df['2D_mean']
             
             df['COMBIND+SHAPE'] = df['COMBIND'] + weight_shape*df['SHAPE_mean']
             df['COMBIND+2D']    = df['COMBIND'] + weight_2D*df['2D_mean']
+
+            df['Z:GLIDE+2D']    = Z(df['GLIDE']) + Z(df['2D_mean'])
+            df['Z:COMBIND+2D']  = Z(df['COMBIND']) + Z(df['2D_mean'])
+
+            df['Z:GLIDE+SHAPE']    = Z(df['GLIDE']) + Z(df['SHAPE_mean'])
+            df['Z:COMBIND+SHAPE']  = Z(df['COMBIND']) + Z(df['SHAPE_mean'])
+
+            df['Z:GLIDE+2D+SHAPE']    = Z(df['GLIDE']) + Z(df['SHAPE_mean']) + Z(df['2D_mean'])
+            df['Z:COMBIND+2D+SHAPE']  = Z(df['COMBIND']) + Z(df['SHAPE_mean']) + Z(df['2D_mean'])
+            df['Z:2D+SHAPE']  = Z(df['SHAPE_mean']) + Z(df['2D_mean'])
+
+            df['N:2D_mean'] = np.log(nat_de(df['2D_mean'])) - np.log(ref_de(df['2D_mean']))
+            df['N:SHAPE_mean'] = np.log(nat_shape_de(df['SHAPE_mean'])) - np.log(ref_shape_de(df['SHAPE_mean']))
+
+            df['N:GLIDE+2D']    = df['GLIDE'] + df['N:2D_mean']
+            df['N:COMBIND+2D']  = df['COMBIND'] + df['N:2D_mean']
+
+            df['N:GLIDE+SHAPE']    = df['GLIDE'] + df['N:SHAPE_mean']
+            df['N:COMBIND+SHAPE']  = df['COMBIND'] + df['N:SHAPE_mean']
+
+            df['N:GLIDE+2D+SHAPE']    = df['GLIDE'] + df['N:SHAPE_mean'] + df['N:2D_mean']
+            df['N:COMBIND+2D+SHAPE']  = df['COMBIND'] + df['N:SHAPE_mean'] + df['N:2D_mean']
+
+            df['N:2D+SHAPE']  = df['N:SHAPE_mean'] + df['N:2D_mean']
 
             if sum(df['ACTIVE']) <= minimum:
                 continue
@@ -182,7 +211,7 @@ def plot_cat_all(xtal_cut, active_cut, helpers=5, helpers_sim=5, minimum=10,
         ef5s = np.vstack(ef5s).T
 
         if not np.any(np.isnan(logaucs.mean(axis=1))):
-            data += [[protein] +  list(logaucs.mean(axis=1))]
+            data += [[protein] +  list(ef5s.mean(axis=1))]
 
         if plot:
             for score, auc, logauc in zip(scores, aucs, logaucs):
