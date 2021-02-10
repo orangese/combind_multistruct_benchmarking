@@ -45,18 +45,11 @@ class Features:
         if base:
             return '{}/{}'.format(self.root, name)
         elif name == 'rmsd':
-            return '{}/docking/{}/{}_rmsd.npy'.format(self.root,
-                                                      basename(kwargs['pv']).replace('_pv', ''),
-                                                      basename(kwargs['pv']))
+            return kwargs['pv'].replace('_pv.maegz', '_rmsd.npy')
         elif name == 'gscore':
-            return '{}/docking/{}/{}_gscore.npy'.format(self.root,
-                                                        basename(kwargs['pv']).replace('_pv', ''),
-                                                        basename(kwargs['pv']))
+            return kwargs['pv'].replace('_pv.maegz', '_gscore.npy')
         elif name == 'name':
-            return '{}/docking/{}/{}_name.npy'.format(self.root,
-                                                      basename(kwargs['pv']).replace('_pv', ''),
-                                                      basename(kwargs['pv']))
-
+            return kwargs['pv'].replace('_pv.maegz', '_name.npy')
         elif name == 'ifp':
             return kwargs['pv'].replace('_pv.maegz', '_ifp_{}.csv'.format(self.ifp_version))
         elif name == 'ifp-pair':
@@ -74,17 +67,19 @@ class Features:
         self.raw = {}
 
         self.raw['rmsd'] = {}
-        paths = self.path('rmsd', pv='*')
+        paths = self.path('rmsd', pv=self.root+'/docking/*/*_pv.maegz')
         paths = glob(paths)
         for path in paths:
             name = basename(path)[:-5].replace('_pv', '')
             self.raw['rmsd'][name] = np.load(path)
 
         self.raw['gscore'] = {}
-        paths = self.path('gscore', pv='*')
+        paths = self.path('gscore', pv=self.root+'/docking/*/*_pv.maegz')
         paths = glob(paths)
         for path in paths:
             name = basename(path).replace('_gscore', '')
+            if '_pv' in name:
+                name = name.replace('_pv', '')
             self.raw['gscore'][name] = np.load(path)
 
         for feature in features:
@@ -199,7 +194,7 @@ class Features:
     def compute_ifp(self, pv, out):
         from features.ifp import ifp
         settings = IFP[self.ifp_version]
-        ifp(settings, pv, out, self.max_poses, convert=True)
+        ifp(settings, pv, out, self.max_poses)
 
     def compute_ifp_pair(self, ifp1, ifp2, feature, out):
         from features.ifp_similarity import ifp_tanimoto

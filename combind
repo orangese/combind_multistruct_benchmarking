@@ -11,7 +11,7 @@ from utils import *
 ###############################################################################
 
 # Defaults
-stats_root = os.environ['COMBINDHOME']+'/stats_data/rd1_all'
+stats_root = os.environ['COMBINDHOME']+'/stats_data/default'
 mcss_version = 'mcss16'
 shape_version = 'pharm_max'
 ifp_version = 'rd1'
@@ -372,7 +372,7 @@ def pose_prediction(root, out, ligands, alpha, gc50, max_poses,
 @click.option('--shape-fname', default=None)
 @click.option('--stats-root', default=stats_root)
 @click.option('--alpha', default=1.0)
-@click.option('--features', default='shape,hbond,saltbridge,contact')
+@click.option('--features', default='hbond,saltbridge,contact')
 def screen(score_fname, stats_root, gscore_fname, ifp_fname, mcss_fname,
            shape_fname, alpha, features, pose_prob_fname):
     """
@@ -462,5 +462,57 @@ def scores_to_csv(pv, out):
     df = pd.DataFrame(np.vstack([titles, glide, combind]).T,
                       columns = ['ID', 'GLIDE', 'COMBIND'])
     df.to_csv(out, index=False)
+
+
+@main.command()
+@click.argument('poseviewer')
+@click.argument('score-fname')
+@click.argument('gscore-fname')
+@click.option('--ifp-fname', default=None)
+@click.option('--mcss-fname', default=None)
+@click.option('--shape-fname', default=None)
+@click.option('--stats-root', default=stats_root)
+@click.option('--alpha', default=1.0)
+@click.option('--features', default='hbond,saltbridge,contact')
+def screen_all(poseviewer, score_fname, stats_root, gscore_fname, ifp_fname, mcss_fname,
+               shape_fname, alpha, features):
+    cmd = ('combind screen {} {} '
+           '--ifp-fname {} '
+           '--mcss-fname {} '
+           '--shape-fname {} '
+           '--stats-root {} '
+           '--alpha {} '
+           '--features {}')
+    cmd = cmd.format(score_fname, gscore_fname, ifp_fname, mcss_fname, shape_fname,
+                     stats_root, alpha, features)
+    print(cmd)
+    os.system(cmd)
+
+    basename = score_fname.replace('.npy', '')
+
+    cmd = 'combind apply-scores {} {} {}_pv.maegz'
+    cmd = cmd.format(poseviewer, score_fname, basename)
+    print(cmd)
+    os.system(cmd)
+
+    cmd = '$SCHRODINGER/utilities/glide_sort -best_by_title -use_prop_d r_i_combind_score -o {0}_combind_pv.maegz {0}_pv.maegz'
+    cmd = cmd.format(basename)
+    print(cmd)
+    os.system(cmd)
+
+    cmd = '$SCHRODINGER/utilities/glide_sort -best_by_title -o {0}_glide_pv.maegz {0}_pv.maegz'
+    cmd = cmd.format(basename)
+    print(cmd)
+    os.system(cmd)
+
+    cmd = 'combind scores-to-csv {0}_combind_pv.maegz {0}_combind.csv'
+    cmd = cmd.format(basename)
+    print(cmd)
+    os.system(cmd)
+
+    cmd = 'combind scores-to-csv {0}_glide_pv.maegz {0}_glide.csv'
+    cmd = cmd.format(basename)
+    print(cmd)
+    os.system(cmd)
 
 main()

@@ -75,6 +75,11 @@ class PosePrediction:
                 for feature in self.features:
                     stats = self.stats[feature]
                     raw = self.raw[feature][(ligand1, ligand2)]
+
+                    if raw[0, 0] == float('inf'):
+                        assert np.all(raw == float('inf'))
+                        continue
+
                     energy = np.log(stats['native'](raw)) - np.log(stats['reference'](raw))
                     energy = pad(energy, self.max_poses, self.max_poses)
                     pair[i, j] += energy
