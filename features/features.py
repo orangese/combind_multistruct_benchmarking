@@ -126,6 +126,9 @@ class Features:
         mp(self.compute_ifp, unfinished, processes)
 
     def compute_pair_features(self, pvs, processes=1, ifp=True, shape=True, mcss=True):
+        if len(pvs) == 1:
+            return
+
         mkdir(self.path('root'))
 
         if type(pvs[0]) == str:

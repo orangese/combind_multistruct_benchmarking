@@ -100,18 +100,24 @@ def ligprep(smiles, root, screen, processes):
     """
     from dock.ligprep import ligprep
     mkdir(root)
-    ligands = pd.read_csv(smiles, sep=' ')
 
     if screen:
         _smiles = '{}/{}'.format(root, os.path.basename(smiles))
         _mae = smiles.replace('.smi', '.maegz')
+
+        print(_smiles, _mae)
         
         if not os.path.exists(_mae):
-            with open(_smiles, 'w') as fp:
-                for _, ligand in ligands.iterrows():
-                    fp.write('{} {}\n'.format(ligand['SMILES'], ligand['ID']))
+            if os.path.abspath(_smiles) != os.path.abspath(smiles):
+                print('here')
+                ligands = pd.read_csv(smiles, sep=' ')
+                with open(_smiles, 'w') as fp:
+                    for _, ligand in ligands.iterrows():
+                        fp.write('{} {}\n'.format(ligand['SMILES'], ligand['ID']))
+            print(_smiles)
             ligprep(_smiles)
     else:
+        ligands = pd.read_csv(smiles, sep=' ')
         unfinished = []
         for _, ligand in ligands.iterrows():
             _root = '{}/{}'.format(root, ligand['ID'])
@@ -162,7 +168,7 @@ def dock(grid, root, ligands, screen, processes):
     for ligand in ligands:
         name = '{}-to-{}'.format(basename(ligand), basename(grid))
         _root = '{}/{}'.format(root, name)
-        unfinished += [(grid, ligand, _root, name, not screen, 1)]
+        unfinished += [(grid, ligand, _root, name, not screen)]
     mp(dock, unfinished, processes)
 
 @main.command()

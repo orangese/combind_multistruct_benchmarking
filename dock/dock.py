@@ -31,7 +31,7 @@ def docking_failed(glide_log):
                'GLIDE WARNING: Skipping refinement, etc. because rough-score step failed.']
     return any(phrase in logtxt for phrase in phrases)
 
-def dock(grid, ligands, root, name, enhanced, n_processes):
+def dock(grid, ligands, root, name, enhanced):
     infile = GLIDE_ES4 if enhanced else GLIDE
     glide_in = '{}/{}.in'.format(root, name)
     glide_pv = '{}/{}_pv.maegz'.format(root, name)
