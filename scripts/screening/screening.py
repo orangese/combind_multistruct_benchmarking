@@ -50,7 +50,7 @@ def load(input_csv, cwd, sim_cwd, xtal_cut=float('inf'), active_cut=float('inf')
     similarity_cutoff['sim_2D_max'] = similarity_cutoff['2D_max']
     similarity_cutoff = similarity_cutoff[['sim_2D_max']]
 
-    df = df.join(combind).join(glide).join(similarity).join(shape).join(similarity_cutoff)#.join(combind_prob)
+    df = df.join(combind).join(glide).join(similarity).join(shape).join(similarity_cutoff)
 
     df = df.fillna(0)
     df = df.loc[df['sim_2D_max'] < active_cut]

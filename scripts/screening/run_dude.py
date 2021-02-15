@@ -240,9 +240,8 @@ def get_fp(mol):
 @main.command()
 @click.argument('input_csv', type=click.Path(exists=True))
 @click.argument('root')
-@click.argument('data_root')
-def similarity(input_csv, root, data_root):
-    ref = pd.read_csv('{}/structures/pdb.smi'.format(data_root), sep=' ')
+def similarity(input_csv, root):
+    ref = pd.read_csv('structures/pdb.smi', sep=' ')
     assert len(ref) == 1
     ref_smiles = ref.loc[0, 'SMILES']
     ref_mol = Chem.MolFromSmiles(ref_smiles)
@@ -285,18 +284,17 @@ def extract(root, ligands, out):
     os.system(cmd)
 
 @main.command()
-@click.argument('input_csv', type=click.Path(exists=True))
+@click.argument('test_mae', type=click.Path(exists=True))
 @click.argument('root')
-@click.argument('data_root')
-def shape(input_csv, root, data_root):
+def shape(test_mae, root):
+    template = os.path.abspath('structures/ligands/XTAL_lig.mae')
+    test_mae = os.path.abspath(test_mae)
+    test_name = os.path.basename(test_mae).split('.')[0]
     for cwd in glob(root + '/[0-9]'):
-        template = os.path.abspath('{}/structures/ligands/XTAL_lig.mae'.format(data_root))
-        test_mae = os.path.abspath('{}/subset/ligands/subset.maegz'.format(data_root))
-
         active_smi = os.path.abspath('{}/binder.smi'.format(cwd))
         active_mae = os.path.abspath('{}/shape/binder.maegz'.format(cwd))
         active_align_mae = os.path.abspath('{}/shape/binder-to-XTAL_lig_align.maegz'.format(cwd))
-        test_align_csv = os.path.abspath('{}/shape/subset-to-binder-to-XTAL_lig_align_align.csv'.format(cwd))
+        test_align_csv = os.path.abspath('{}/shape/{}-to-binder-to-XTAL_lig_align_align.csv'.format(cwd, test_name))
         shape_csv = '{}/shape.csv'.format(cwd)
 
         if os.path.exists(shape_csv):
