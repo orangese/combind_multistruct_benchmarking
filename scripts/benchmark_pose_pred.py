@@ -39,38 +39,10 @@ import pandas as pd
 import click
 import subprocess
 from glob import glob
-import config
-import utils
 
 @click.group()
 def main():
     pass
-
-# python scripts/benchmark_pose_pred.py stats rd1 /oak/stanford/groups/rondror/users/jpaggi/temp/rd1 B1AR
-@main.command()
-@click.argument('stats_version')
-@click.argument('stats_root')
-@click.argument('protein')
-@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020')
-@click.option('--ligands', default='{ROOT}/structures/pdb.csv')
-def stats(stats_version, stats_root, protein, data, ligands):
-    import score.statistics
-
-    merged_root = '{data}/{protein}/scores/{stats_version}/stats'
-    merged_root = merged_root.format(data=data, protein=protein,
-                                     stats_version=stats_version)
-
-    paths = {'CODE': os.path.dirname(os.path.realpath(__file__)),
-             'DATA': data,
-             'PDB': ligands}
-    paths.update(config.PATHS)
-    paths = utils.resolve(paths)
-    params = config.STATS[stats_version]
-    
-    proteins = utils.get_proteins(paths, [protein])
-
-    score.statistics.compute(params, paths, config.FEATURE_DEFS, stats_root,
-                             proteins, merged_root)
 
 # python scripts/benchmark_pose_pred.py setup-pdb rd1 B1AR
 @main.command()
@@ -78,17 +50,22 @@ def stats(stats_version, stats_root, protein, data, ligands):
 @click.argument('protein')
 @click.option('--alpha', default=1.0)
 @click.option('--gc50', default=float('inf'))
-@click.option('--features', default='mcss,hbond,sb,contact')
-@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020')
-@click.option('--ligands', default='{ROOT}/structures/pdb.csv')
-def setup_pdb(stats_version, protein, alpha, gc50, features, data, ligands):
+@click.option('--features', default='shape,mcss,hbond,saltbridge,contact')
+@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020_v2')
+def setup_pdb(stats_version, protein, alpha, gc50, features, data):
     cwd = '{data}/{protein}/scores/{stats_version}/pdb/standard/{alpha}-{features}-{gc50}'
-    cmd = ('python /home/users/jpaggi/combind/main.py '
-           '--ligands {ligands} --data {data} score {protein} cross '
-           '--stats-version {stats_version} '
-           '--stats-root {data}/{protein}/scores/{stats_version}/stats '
+    cmd = ('combind pose-prediction '
+           '--stats-root /home/users/jpaggi/combind/stats_data/{stats_version} '
            '--alpha {alpha} --gc50 {gc50} --features {features} '
-           '--pose-fname poses.sc  --num-poses 100')
+           '{data}/{protein} poses.csv {ligands}')
+
+    ligands = glob('{data}/{protein}/docking/*/*_pv.maegz'.format(data=data,
+                                                                    protein=protein))
+    ligands = [ligand.split('/')[-1].split('.')[0] for ligand in ligands]
+    ligands = [ligand for ligand in ligands if 'native' not in ligand]
+    ligands = ' '.join(ligands)
+
+    print(ligands)
 
     cwd = cwd.format(data=data, protein=protein, stats_version=stats_version,
                      alpha=alpha, gc50=str(gc50).replace('-', 'm'), features=features.replace(',', '_'))
@@ -253,7 +230,7 @@ def setup_chembl(mode, stats_version, protein, n_helpers, alpha, features, data,
             fp.write(_cmd + '\n')
 
 @main.command()
-@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020')
+@click.option('--data', default='/oak/stanford/groups/rondror/projects/ligand-docking/combind_bpp/combind2020_v2')
 @click.argument('mode')
 @click.argument('stats_version')
 @click.option('--scoring', default='standard')
@@ -287,7 +264,7 @@ def merge(stats_version, mode, data, ligands):
     paths.update(config.PATHS)
     paths = utils.resolve(paths)
     params = config.STATS[stats_version]
-    
+
     proteins = utils.get_proteins(paths, [])
     for protein in proteins:
         directory = '{}/{}/scores/{}/summary'.format(data,

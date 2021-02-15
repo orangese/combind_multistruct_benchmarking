@@ -8,21 +8,23 @@ a given target protein, ComBind solves for a set of poses, one per ligand, that
 are both highly scored by physics-based docking and display similar interactions
 with the target protein. ComBind quantifies this vague notion of "similar" by
 considering a diverse training set of protein complexes and computing the
-overlap between protein–ligand interactions formed by distinct ligands
+overlap between protein–ligand interactions formed by distinct ligands when
 they are in their correct poses, as compared to when they are in randomly
 selected poses.
 
-## Overview
+## Predicting poses for known binders
+
+- (ligands.smi) a set of ligands known to bind the target of interest
+- (grid.zip) docking grid
+- (XTAL_lig.mae) crystal conformation of select ligands, optional
+- (stats/*.de) statistics to use in combind scoring
+- parameters for pose prediction
 
 Running ComBind can be broken into several components: data curation,
 data preparation (including docking), featurization of docked poses,
-the ComBind scoring itself, inspection of results, and, optionally, fitting
-the statistical model.
+the ComBind scoring itself, and inspection of results.
 
-But first, a brief note: these components are each comprised of several steps,
-many of which require significant computation time. Currently, most of these
-steps need to be run more or less individually. The intermediate results are
-stored in a following a structure defined in config.py.
+See instructuctions for software installation at the bottom of this page.
 
 ### Curation of raw data
 
@@ -42,43 +44,42 @@ prepared files to `structures/proteins` and `structures/ligands`. Moreover,
 you could even just begin with a Glide docking grid which you prepared yourself
 by placing it in `docking/grids`.
 
-Ligands should be specified in a csv file with a header line containing at
+Ligands should be specified in a smiles file with a header line containing at
 least the entries "ID" and "SMILES", specifying the ligand name and the ligand
 chemical structure.
 
 ### Data preparation and docking
 
 ```
-$COMBINDHOME/main.py prepare prep-structs
-$COMBINDHOME/main.py prepare prep-ligands
-$COMBINDHOME/main.py prepare dock
+combind structprep
+combind ligprep ligands.smi ligands
+combind dock structures/grids/PDBID/PDBID.zip docking ligands/*/*.maegz
 ```
 
-Note that you will need to run this first command twice. The first time, it
-will run Schrodinger's prepwizard on all of the structures. The second time,
-it will align the structures and generate docking grids.
-
-### Featurization: interaction fingerprints, maximum common substructures
+### Binding pose featurization
 
 ```
-$COMBINDHOME/main.py prepare ifp
-$COMBINDHOME/main.py prepare mcss
+combind featurize . docking/*/*_pv.maegz
 ```
 
-Note that you will need to run the mcss command twice because it is
-split into two phases.
-
-### ComBind Scoring
-
+### Pose prediction with ComBind
 ```
-$COMBINDHOME/main.py score $COMBINDHOME/statistics/default STRUCT PROTEIN QUERIES
+combind pose-prediction . poses.csv
 ```
 
 ### Visualizing the results
 
 TODO
 
-### Fitting the statistical model (Optional)
+## ComBind virtual screening
+
+- (library.smi) library of compounds to screen
+- (binders_pv.maegz) poses of known binders to use in combind scoring
+- (grid.zip) docking grid
+- (stats/*.de) statistics to use in combind scoring
+- parameters to use in screen
+
+## Fitting the statistical model (Optional)
 
 TODO
 
@@ -108,7 +109,7 @@ source schrodinger.ve/bin/activate
 pip install --upgrade numpy sklearn scipy pandas
 
 cd combind
-ln -s schrodinger_activate ~/schrodinger.ve/bin/activate
+ln -s  ~/schrodinger.ve/bin/activate schrodinger_activate
 ```
 
 This last line is just there to provide a standardized way to access the
@@ -119,13 +120,3 @@ the future, you'll need to do this everytime before running ComBind.
 This is included in the setup_sherlock script; you can source the
 script by running `source setup_sherlock`.
 
-Unfortunately, there is a bug in the maestro file parser in the version of
-rdkit provided by schrodinger, so we want need to use a more up-to-date version.
-Rdkit can't be pip installed, so instead, we'll create a conda environment to
-use with RDKIT and add a link to it so we can access it in a standardized way.
-Note that this interpretter is needed only for the fingerprinting code.
-
-```
-conda create -n combind_rdit rdkit numpy click pandas
-ln -s path/to/conda/envs/combind_rdkit/bin/python rdpython
-```

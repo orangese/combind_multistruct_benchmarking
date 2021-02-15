@@ -1,39 +1,30 @@
-import re
+from multiprocessing import Pool
 import os
+from schrodinger.structure import StructureReader
 
-class StringFunction:
-    """
-    Wraps function such that it's string representation
-    can be read with the eval() function.
-    """
-    def __init__(self, func):
-        self.str = func
-        self.func = eval(func)
-    def __call__(self, *args):
-        return self.func(*args)
-    def __str__(self):
-        return self.str
-    def __repr__(self):
-        return self.str
+def pv_path(root, name):
+    if '_native' in name:
+        name = name.replace('_native', '')
+        return '{}/{}/{}_native_pv.maegz'.format(root, name, name)
+    return '{}/{}/{}_pv.maegz'.format(root, name, name)
 
-def grouper(n, iterable):
-	iterable = list(iterable)
-	return [iterable[i: i+n] for i in range(0, len(iterable), n)]
+def get_pose(pv, pose):
+    with StructureReader(pv) as sts:
+        for _ in range(pose+1):
+            next(sts)
+        st = next(sts)
+    return st
 
-def resolve(paths):
-    keys = {k: v for k, v in paths.items()}
-    for path in paths.values():
-        for wild in re.findall('{(.*?)}', path):
-            if wild.lower() == wild:
-                keys[wild] = '{' + wild + '}'
+def basename(path):
+    x = os.path.basename(path)
+    x = os.path.splitext(x)[0]
+    return x
 
-    resolved = {}
-    for name, path in paths.items():
-        resolved[name] = path.format(**keys)
-    if resolved == paths:
-        return resolved
-    return resolve(resolved)
+def mp(function, unfinished, processes):
+    if unfinished:
+        with Pool(processes=processes) as pool:
+            pool.starmap(function, unfinished)
 
-def get_proteins(paths, exclude):
-	return [p for p in os.listdir(paths['DATA'])
-	        if p[0] != '.' and p not in exclude]
+def mkdir(path):
+    if not os.path.exists(path):
+        os.mkdir(path)

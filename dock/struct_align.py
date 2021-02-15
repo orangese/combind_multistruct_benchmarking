@@ -22,14 +22,15 @@ def align_successful(out_dir, struct):
             print('alignment failure', struct)
             return False
 
-def struct_align():
+def struct_align(template=None):
     if not os.path.exists('structures/processed'):
         return
 
     all_prot = sorted([p for p in os.listdir('structures/processed') if p[0] != '.'])
     if not len(all_prot):
         return
-    template = all_prot[0]
+    if template is None:
+        template = all_prot[0]
  
     if os.path.exists(out_dir) and len(os.listdir(out_dir)) > 0:
         for f in os.listdir('{}/{}'.format(out_dir, os.listdir(out_dir)[0])):
