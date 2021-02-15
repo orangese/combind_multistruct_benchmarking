@@ -240,8 +240,12 @@ def filter_properties(activities, ambiguous_stereo, molw_thresh):
 
 ################################################################################
 
-def collapse_duplicates(activities):
-    keys = ['SMILES', 'standard_type']
+def collapse_duplicates(activities, seperate_activity_types):
+    if seperate_activity_types:
+        keys = ['SMILES', 'standard_type']
+    else:
+        keys = ['SMILES']
+
     averages = activities.loc[:, keys+['standard_value']].groupby(keys).mean()
     activities = activities.groupby(keys, as_index=False).first()
     activities['standard_value'] = [averages.loc[tuple([row[key] for key in keys])]['standard_value']
@@ -250,19 +254,24 @@ def collapse_duplicates(activities):
 
 ################################################################################
 
-@click.command()
+@click.group()
+def main():
+    pass
+
+@main.command()
 @click.option('--protein-complex', is_flag=True)
 @click.option('--homologous', is_flag=True)
 @click.option('--ambiguous-stereo', is_flag=True)
 @click.option('--activity-type', default='all')
 @click.option('--affinity-thresh', default=10000)
 @click.option('--molw-thresh', default=500)
+@click.option('--output-fname')
 @click.argument('uniprot_or_chembl')
 @click.argument('chembldb', default='/oak/stanford/groups/rondror/users/jpaggi/pldb_data/raw/chembl_27.db')
 @click.argument('uniprot_chembl', default='/oak/stanford/groups/rondror/users/jpaggi/pldb_data/raw/uniprot-chembl.tsv')
-def main(protein_complex, homologous, ambiguous_stereo, activity_type,
-         affinity_thresh, molw_thresh,
-         uniprot_or_chembl, chembldb, uniprot_chembl):
+def query(protein_complex, homologous, ambiguous_stereo, activity_type,
+          affinity_thresh, molw_thresh, output_fname,
+          uniprot_or_chembl, chembldb, uniprot_chembl):
 
     if uniprot_or_chembl[:6] == 'CHEMBL':
         chembl = uniprot_or_chembl
@@ -271,7 +280,13 @@ def main(protein_complex, homologous, ambiguous_stereo, activity_type,
 
     if chembl is None:
         print('No ligands found.')
-        exit()
+        if output_fname:
+            with open(output_fname, 'w') as fp:
+                fp.write('No CHEMBL entry...\n')
+        return
+
+    if output_fname is None:
+        output_fname = '{}_{}.csv'.format(chembl, activity_type)
 
     activities = get_activities(chembl, chembldb, uniprot_chembl,
                                 protein_complex, homologous, affinity_thresh)
@@ -279,9 +294,17 @@ def main(protein_complex, homologous, ambiguous_stereo, activity_type,
     activities = filter_activities(activities, activity_type, molw_thresh)
     activities = get_properties(activities)
     activities = filter_properties(activities, ambiguous_stereo, molw_thresh)
-    activities = collapse_duplicates(activities)
-    activities = activities.sort_values('standard_value')
-    activities.to_csv('{}_{}.csv'.format(chembl, activity_type), index=False)
+    activities = activities.sort_values(['standard_value', 'ligand_chembl_id'])
+    activities.to_csv(output_fname, index=False)
+
+@main.command()
+@click.argument('input_csv')
+@click.argument('output_csv')
+@click.option('--seperate-activity-types', is_flag=True)
+def unique(input_csv, output_csv, seperate_activity_types):
+    activities = pd.read_csv(input_csv)
+    activities = collapse_duplicates(activities, seperate_activity_types)
+    activities.to_csv(output_csv, index=False)
 
 if __name__ == '__main__':
     main()
