@@ -9,8 +9,13 @@ MACROCYCLE_THRESH = 8
 
 class CHEMBLDB:
     def __init__(self, chembldb, uniprot_chembl):
+        # CHEMBL database was downloaded from the chembl website in sql format.
         self.conn = sqlite3.connect('file:{}?mode=ro'.format(chembldb), uri=True)
         self.cur = self.conn.cursor()
+        
+        # File of links from uniprot id to chembl id was downloaded from uniprot.
+        # I just searched for all uniprot entriies with a chembl cross-reference
+        # available.
         self.uniprot_chembl = pd.read_csv(uniprot_chembl, sep='\t', index_col=0)
         self.uniprot_chembl = self.uniprot_chembl['Cross-reference (ChEMBL)'].apply(lambda x: x.strip(';').split(';'))
 
@@ -43,6 +48,12 @@ class CHEMBLDB:
 
         self.cur.execute("SELECT assay_id FROM assays WHERE tid=? AND "+confidence, (tid,))
         return [row[0] for row in self.cur.fetchall()]
+
+    def assay_to_chemblid(self, assay):
+        self.cur.execute("SELECT chembl_id FROM assays WHERE assay_id=?", (assay,))
+        rows = self.cur.fetchall()
+        assert len(rows) == 1, rows
+        return rows[0][0]
 
     def assay_to_molregnos(self, assay):
         self.cur.execute("SELECT molregno FROM activities WHERE assay_id=?", (assay,))
@@ -83,18 +94,22 @@ class CHEMBLDB:
         activities = []
         tid = self.chembl_to_tid(chembl)
         for assay in self.tid_to_assays(tid, protein_complex, homologous):
+            assay_chembl_id = self.assay_to_chemblid(assay)
             for molregno in self.assay_to_molregnos(assay):
                 molw = self.molregno_to_molw(molregno)
                 smiles = self.molregno_to_smiles(molregno)
                 chembl_id = self.molregno_to_chemblid(molregno)
                 for activity in self.molregno_and_assay_to_activities(molregno, assay):
-                    activities += [[chembl_id, molw, smiles] + list(activity)]
+                    activities += [[assay_chembl_id, chembl_id, molw, smiles] + list(activity)]
         return pd.DataFrame(activities,
-                            columns=['ligand_chembl_id', 'mw_freebase', 'canonical_smiles',
-                                     'standard_type', 'standard_value',
+                            columns=['assay_chembl_id', 'ligand_chembl_id', 'mw_freebase',
+                                     'canonical_smiles', 'standard_type', 'standard_value',
                                      'standard_units', 'relation', 'comment'])
 
     def uniprot_to_chembl(self, uniprot):
+        if uniprot not in self.uniprot_chembl:
+            return None
+
         for chembl_id in self.uniprot_chembl.loc[uniprot]:
             tid = self.chembl_to_tid(chembl_id)
             target_type = self.tid_to_target_type(tid)
@@ -103,7 +118,7 @@ class CHEMBLDB:
 
 ################################################################################
 
-def get_chembl(uniprot, chembldb, uniprot_chembl):
+def get_chembl_id(uniprot, chembldb, uniprot_chembl):
     with CHEMBLDB(chembldb, uniprot_chembl) as chembldb:
         chembl = chembldb.uniprot_to_chembl(uniprot)
     return chembl
@@ -272,14 +287,39 @@ def main():
 def query(protein_complex, homologous, ambiguous_stereo, activity_type,
           affinity_thresh, molw_thresh, output_fname,
           uniprot_or_chembl, chembldb, uniprot_chembl):
+    """
+    protein_complex (bool): protein complexes will necessarily have a lower
+        confidence score in CHEMBL, so when looking for data for a complex
+        you have to lower the threshold.
+    homologous (bool): allow matches with a confidence score of 8. This means
+        that they weren't able to map the activity to a particular version of a
+        protein. For instance, if a paper reports "binding affinity to the D2
+        dopamine receptor", but doesn't specify human, rat, etc..
+    ambiguous_stereo (bool): allow ligands where the stereochemistry isn't
+        completely deteremined.
+    activity_type (str: IC50, Ki, Kd, EC50): specifies what kinds of measurements
+        to accept. If not specified, will give [IC50, Ki, Kd].
+    affinity_thresh (float): affinity value to assign to "Not actives" and
+        minimum affinity for which to accept ligands with a "greater than"
+        relation. 10000 (10 micro-molar) is generally a good option because this
+        is a standard threshold for binding in screens.
+    molw-thresh (float): specifies how large of molecules to include in the
+        results. 500 Da is a reasonable threshold to get "small molecules"
+    output_fname (str): where to put the results. By default,
+        CHEMBLID_ACTIVITYTYPE.csv
+    uniprot_or_chembl (str): target for which to get affinities.
+    chembldb (str): path to the chembl database
+    uniprot_chembl (str): path to file cross-referencing uniprot to chembl.
+    """
 
+    # Resolve chembl target id.
     if uniprot_or_chembl[:6] == 'CHEMBL':
         chembl = uniprot_or_chembl
     else:
-        chembl = get_chembl(uniprot_or_chembl, chembldb, uniprot_chembl)
+        chembl = get_chembl_id(uniprot_or_chembl, chembldb, uniprot_chembl)
 
     if chembl is None:
-        print('No ligands found.')
+        print('No CHEMBL entry...')
         if output_fname:
             with open(output_fname, 'w') as fp:
                 fp.write('No CHEMBL entry...\n')
@@ -288,13 +328,21 @@ def query(protein_complex, homologous, ambiguous_stereo, activity_type,
     if output_fname is None:
         output_fname = '{}_{}.csv'.format(chembl, activity_type)
 
+    # Look up affinities.
     activities = get_activities(chembl, chembldb, uniprot_chembl,
                                 protein_complex, homologous, affinity_thresh)
-
     activities = filter_activities(activities, activity_type, molw_thresh)
     activities = get_properties(activities)
     activities = filter_properties(activities, ambiguous_stereo, molw_thresh)
-    activities = activities.sort_values(['standard_value', 'ligand_chembl_id'])
+
+    if not activities.shape[0]:
+        print('No valid ligands...')
+        if output_fname:
+            with open(output_fname, 'w') as fp:
+                fp.write('No valid ligands...\n')
+        return
+
+    activities = activities.sort_values(['assay_chembl_id', 'ligand_chembl_id'])
     activities.to_csv(output_fname, index=False)
 
 @main.command()
@@ -302,7 +350,13 @@ def query(protein_complex, homologous, ambiguous_stereo, activity_type,
 @click.argument('output_csv')
 @click.option('--seperate-activity-types', is_flag=True)
 def unique(input_csv, output_csv, seperate_activity_types):
+    """
+    If seperate_activity_types, don't merge e.g. IC50's and Ki's.
+    """
     activities = pd.read_csv(input_csv)
+    # Since we're going to merge all the values, assay_chembl_id will no longer
+    # make sense.
+    activities = activities.drop(columns='assay_chembl_id')
     activities = collapse_duplicates(activities, seperate_activity_types)
     activities.to_csv(output_csv, index=False)
 
