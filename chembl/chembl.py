@@ -5,6 +5,7 @@ import numpy as np
 from schrodinger.structure import SmilesStructure
 import click
 
+# Macrocycles are hard to dock.
 MACROCYCLE_THRESH = 8
 
 class CHEMBLDB:
@@ -123,11 +124,7 @@ def get_chembl_id(uniprot, chembldb, uniprot_chembl):
         chembl = chembldb.uniprot_to_chembl(uniprot)
     return chembl
 
-def get_activities(chembl, chembldb, uniprot_chembl, protein_complex, homologous, affinity_thresh):
-    with CHEMBLDB(chembldb, uniprot_chembl) as chembldb:
-        activities = chembldb.chembl_to_activities(chembl, protein_complex, homologous)
-    activities['target_chembl_id'] = chembl
-
+def standardize_nonbinders(activities, affinity_thresh):
     # Set 'Not Active's to affinity_thresh
     activities.loc[activities['comment'].isin([None]), 'comment'] = ''
     duds = [('Not Active' in s) for s in activities['comment']]
@@ -135,13 +132,6 @@ def get_activities(chembl, chembldb, uniprot_chembl, protein_complex, homologous
     activities.loc[duds, 'standard_units'] = 'nM'
     activities.loc[duds, 'standard_value'] = affinity_thresh
     activities.loc[duds, 'relation'] = '='
-
-    # Standardize units to nM
-    m = {'M': 10**9, 'mM': 10**6, 'uM': 10**3, 'pM': 10**-3}
-    for unit, relation in m.items():
-        mask = activities['standard_units'] == unit
-        activities.loc[mask, 'standard_value'] *= relation
-        activities.loc[mask, 'standard_units'] = 'nM'
 
     # Most nonbinders don't have equality relation.
     mask  = activities['standard_value'] >= affinity_thresh
@@ -151,13 +141,27 @@ def get_activities(chembl, chembldb, uniprot_chembl, protein_complex, homologous
     # Cap affinity values.
     mask  = activities['standard_value'] >= affinity_thresh
     activities.loc[mask, 'standard_value'] = affinity_thresh
-    
+    return activities
+
+def get_activities(chembl, chembldb, uniprot_chembl, protein_complex, homologous, affinity_thresh):
+    with CHEMBLDB(chembldb, uniprot_chembl) as chembldb:
+        activities = chembldb.chembl_to_activities(chembl, protein_complex, homologous)
+    activities['target_chembl_id'] = chembl
+
+    # Standardize units to nM
+    m = {'M': 10**9, 'mM': 10**6, 'uM': 10**3, 'pM': 10**-3}
+    for unit, relation in m.items():
+        mask = activities['standard_units'] == unit
+        activities.loc[mask, 'standard_value'] *= relation
+        activities.loc[mask, 'standard_units'] = 'nM'
+
+    activities = standardize_nonbinders(activities, affinity_thresh)
+
     return activities
 
 ################################################################################
 
 def filter_activities(activities, activity_type, molw_thresh):
-
     if activity_type == 'all':
         activity_types = ['IC50', 'Ki', 'Kd']
     else:
