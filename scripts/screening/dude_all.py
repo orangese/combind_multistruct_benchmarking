@@ -14,53 +14,62 @@ for i in *; do cd $i; sbatch -p rondror -J sim             --wrap="python $COMBI
 for i in *; do cd $i; sbatch -p rondror -J sha -t 12:00:00 --wrap="python $COMBINDHOME/scripts/screening/run_dude.py shape all/all.maegz scores/all_rd1_shape_5"; cd -; done;
 """
 
+def srun(cmd):
+    print(cmd)
+    p = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+    print(p.stdout.strip())
+    print(p.stderr.strip())
+    if 'QOS policy' in p.stderr:
+        print('Detected sbatch submission error. Exiting.')
+        exit()
+
 def split_ligands(ligand_fname, root, max_ligands=500):
-	assert os.path.exists(root)
-	
-	ligands = pd.read_csv(ligand_fname, sep=' ')
-	n_files = ceil(ligands.shape[0] / max_ligands)
+    assert os.path.exists(root)
+    
+    ligands = pd.read_csv(ligand_fname, sep=' ')
+    n_files = ceil(ligands.shape[0] / max_ligands)
 
-	for i in range(n_files):
-		start = i*max_ligands
-		end = (i+1)*max_ligands
-		fname = '{}/{}.smi'.format(root, str(i).rjust(5, '0'))
+    for i in range(n_files):
+        start = i*max_ligands
+        end = (i+1)*max_ligands
+        fname = '{}/{}.smi'.format(root, str(i).rjust(5, '0'))
 
-		if not os.path.exists(fname):
-			ligands[start:end].to_csv(fname, index=False, sep=' ')
+        if not os.path.exists(fname):
+            ligands[start:end].to_csv(fname, index=False, sep=' ')
 
 def ligprep(root, protein):
-	for smiles in glob(root + '/*.smi'):
-		if 'dropped' in smiles: continue
-		mae = smiles.replace('.smi', '.maegz')
-		name = os.path.basename(smiles).split('.')[0]
-		if not os.path.exists(mae):
-			cmd = 'sbatch -p owners -J lp_{}_{} --wrap="combind ligprep {} {} --screen" --dependency=singleton'
-			cmd = cmd.format(protein, name, smiles, root)
-			print(cmd)
-			subprocess.run(cmd, shell=True)
+    for smiles in glob(root + '/*.smi'):
+        if 'dropped' in smiles: continue
+        mae = smiles.replace('.smi', '.maegz')
+        name = os.path.basename(smiles).split('.')[0]
+        if not os.path.exists(mae):
+            cmd = 'sbatch -p owners -J lp_{}_{} --wrap="combind ligprep {} {} --screen" --dependency=singleton'
+            cmd = cmd.format(protein, name, smiles, root)
+            print(cmd)
+            subprocess.run(cmd, shell=True)
 
 def dock(ligand_root, dock_root, protein):
-	for smiles in glob(ligand_root + '/*.smi'):
-		if 'dropped' in smiles: continue
-		mae = smiles.replace('.smi', '.maegz')
-		name = os.path.basename(smiles).split('.')[0]
-		pv = '{}/{}-to-XTAL/{}-to-XTAL_pv.maegz'.format(dock_root, name, name)
-		
-		if os.path.exists(mae) and not os.path.exists(pv):
-			cmd = 'sbatch -p owners -J dock_{}_{} --wrap="combind dock {} {} --screen" -t 12:00:00 --dependency=singleton'
-			cmd = cmd.format(protein, name, dock_root, mae)
-			print(cmd)
-			subprocess.run(cmd, shell=True)
+    for smiles in glob(ligand_root + '/*.smi'):
+        if 'dropped' in smiles: continue
+        mae = smiles.replace('.smi', '.maegz')
+        name = os.path.basename(smiles).split('.')[0]
+        pv = '{}/{}-to-XTAL/{}-to-XTAL_pv.maegz'.format(dock_root, name, name)
+        
+        if os.path.exists(mae) and not os.path.exists(pv):
+            cmd = 'sbatch -p owners -J dock_{}_{} --wrap="combind dock {} {} --screen" -t 12:00:00 --dependency=singleton'
+            cmd = cmd.format(protein, name, dock_root, mae)
+            print(cmd)
+            subprocess.run(cmd, shell=True)
 
 def featurize_single(dock_root, protein):
-	for pv in glob(dock_root + '/*/*_pv.maegz'):
-		ifp = pv.replace('_pv.maegz', '_ifp_rd1.csv')
-		name = os.path.basename(pv).split('-to-')[0]
-		if not os.path.exists(ifp):
-			cmd = 'sbatch -p owners -J f_{}_{} --wrap="combind featurize . {} --max-poses 100000000" -t 06:00:00 --mem=32GB --dependency=singleton'
-			cmd = cmd.format(protein, name, pv)
-			print(cmd)
-			subprocess.run(cmd, shell=True)
+    for pv in glob(dock_root + '/*/*_pv.maegz'):
+        ifp = pv.replace('_pv.maegz', '_ifp_rd1.csv')
+        name = os.path.basename(pv).split('-to-')[0]
+        if not os.path.exists(ifp):
+            cmd = 'sbatch -p owners -J f_{}_{} --wrap="combind featurize . {} --max-poses 100000000" -t 12:00:00 --mem=32GB --dependency=singleton'
+            cmd = cmd.format(protein, name, pv)
+            print(cmd)
+            subprocess.run(cmd, shell=True)
 
 def featurize(protein, scores):
     cwd = os.getcwd()
@@ -73,9 +82,8 @@ def featurize(protein, scores):
             cmd = ('combind featurize screen '
                    '{} bpp/binder_pv.maegz --no-mcss --screen')
             cmd = cmd.format(pv)
-            cmd = 'sbatch -p owners -t 12:00:00 --mem=32GB -J f2_{}_{} --dependency=singleton --wrap="{}"'.format(protein, name, cmd)
-            print(cmd)
-            subprocess.run(cmd, shell=True)
+            cmd = 'sbatch -p owners -t 12:00:00 -J f2_{}_{} --dependency=singleton --wrap="{}"'.format(protein, name, cmd)
+            srun(cmd)
     os.chdir(cwd)
 
 def screen(protein, features, scores, stats='/oak/stanford/groups/rondror/users/jpaggi/dude_stats'):
@@ -123,8 +131,8 @@ def screen(protein, features, scores, stats='/oak/stanford/groups/rondror/users/
             proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, encoding='utf-8')
 
             if 'Incomplete CT block' in proc.stderr:
-            	print('Removing {}'.format(anno_pv))
-            	os.remove(anno_pv)
+                print('Removing {}'.format(anno_pv))
+                os.remove(anno_pv)
 
         if os.path.exists(anno_pv) and not os.path.exists(glide_top):
             cmd = '$SCHRODINGER/utilities/glide_sort -best_by_title -o {} {}'
@@ -181,31 +189,29 @@ def merge(scores):
     os.chdir(cwd)
 
 if not os.path.exists('all'):
-	os.mkdir('all')
+    os.mkdir('all')
 if not os.path.exists('all/ligands'):
-	os.mkdir('all/ligands')
+    os.mkdir('all/ligands')
 if not os.path.exists('all/docking'):
-	os.mkdir('all/docking')
+    os.mkdir('all/docking')
 
 if len(sys.argv) == 2:
-	#split_ligands('all.smi', 'all/ligands')
-	#ligprep('all/ligands', sys.argv[1])
-	dock('all/ligands', 'all/docking', sys.argv[1])
-	featurize_single('all/docking', sys.argv[1])
-	featurize(sys.argv[1], 'scores/all_rd1_shape_5/0')
-	featurize(sys.argv[1], 'scores/all_rd1_shape_5/1')
-	featurize(sys.argv[1], 'scores/all_rd1_shape_5/2')
-	featurize(sys.argv[1], 'scores/all_rd1_shape_5/3')
-	featurize(sys.argv[1], 'scores/all_rd1_shape_5/4')
+    split_ligands('all.smi', 'all/ligands')
+    ligprep('all/ligands', sys.argv[1])
+    dock('all/ligands', 'all/docking', sys.argv[1])
+    featurize_single('all/docking', sys.argv[1])
+    featurize(sys.argv[1], 'scores/all_rd1_shape_0/0')
+    for n in [1, 3, 5, 10]:
+        for i in range(5):
+            scores = 'scores/all_rd1_shape_{}/{}'.format(n, i)
+            featurize(sys.argv[1], scores)
 
 if len(sys.argv) == 3 and sys.argv[2] == 'score':
-	screen(sys.argv[1], 'shape,contact,hbond,saltbridge', 'scores/all_rd1_shape_5/0')
-	merge('scores/all_rd1_shape_5/0')
-	screen(sys.argv[1], 'shape,contact,hbond,saltbridge', 'scores/all_rd1_shape_5/1')
-	merge('scores/all_rd1_shape_5/1')
-	screen(sys.argv[1], 'shape,contact,hbond,saltbridge', 'scores/all_rd1_shape_5/2')
-	merge('scores/all_rd1_shape_5/2')
-	screen(sys.argv[1], 'shape,contact,hbond,saltbridge', 'scores/all_rd1_shape_5/3')
-	merge('scores/all_rd1_shape_5/3')
-	screen(sys.argv[1], 'shape,contact,hbond,saltbridge', 'scores/all_rd1_shape_5/4')
-	merge('scores/all_rd1_shape_5/4')
+    scores = 'scores/all_rd1_shape_0/0'
+    screen(sys.argv[1], 'shape,contact,hbond,saltbridge', scores)
+    merge(scores)
+    for n in [1, 3, 5, 10]:
+        for i in range(5):
+            scores = 'scores/all_rd1_shape_{}/{}'.format(n, i)
+            screen(sys.argv[1], 'shape,contact,hbond,saltbridge', scores)
+            merge(scores)

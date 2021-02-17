@@ -25,7 +25,7 @@ def load_glide(cwd):
     return df
 
 def load_shape(cwd):
-    df = pd.read_csv(cwd+'/shape.csv')
+    df = pd.read_csv(cwd+'/shape_new.csv')
     df = df.set_index('ID')
     return df
 
@@ -84,7 +84,7 @@ def log_roc(x, y, lam=0.001):
 def roc(x, y):
     return metrics.auc(x, y)
 
-def ef(active, score, thresh=0.05):
+def ef(active, score, thresh=0.01):
     idx = np.argsort(-score)
     active = active[idx]
 
@@ -92,7 +92,7 @@ def ef(active, score, thresh=0.05):
     thresh = int(thresh)
 
     hit_rate = active[:thresh].mean()
-    base_rate = active.mean() 
+    base_rate = active.mean()
     return hit_rate / base_rate
 
 ############################################################################
@@ -133,17 +133,15 @@ def plot_cat_all(xtal_cut, active_cut, helpers=5, helpers_sim=5, minimum=10,
 
     data = []
     for protein in os.listdir('/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind'):
-
-
         if plot:
             _, (roc_ax, logroc_ax) = plt.subplots(1, 2, figsize=(12, 5))
         else:
             roc_ax, logroc_ax = None, None
         aucs, logaucs, ef5s = [], [], []
         for i in range(5):
-            cwd = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/{}/scores/rd1_shape_{}/{}'.format(protein, helpers, i if helpers else 0)
-            sim_cwd = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/{}/scores/rd1_all_{}/{}'.format(protein, helpers_sim, i)
-            input_csv = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/{}/subset.smi'.format(protein)
+            cwd = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/{}/scores/all_rd1_shape_{}/{}'.format(protein, helpers, i if helpers else 0)
+            sim_cwd = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/{}/scores/all_rd1_shape_{}/{}'.format(protein, helpers_sim, i)
+            input_csv = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/{}/all.smi'.format(protein)
 
             if not os.path.exists(cwd + '/combind.csv'): continue
             if not os.path.exists(cwd + '/glide.csv'): continue
@@ -152,8 +150,8 @@ def plot_cat_all(xtal_cut, active_cut, helpers=5, helpers_sim=5, minimum=10,
             if not os.path.exists(sim_cwd + '/similarity.csv'): continue
 
             
-            stats_2D = '/oak/stanford/groups/rondror/users/jpaggi/2D_stats/'
-            stats_SHAPE = '/oak/stanford/groups/rondror/users/jpaggi/SHAPE_stats/'
+            stats_2D = '/oak/stanford/groups/rondror/users/jpaggi/2D_stats_new/'
+            stats_SHAPE = '/oak/stanford/groups/rondror/users/jpaggi/SHAPE_stats_new/'
             nat_de = DensityEstimate.read('{}/nat_2D_{}_{}.de'.format(stats_2D, protein, helpers))
             ref_de = DensityEstimate.read('{}/ref_2D_{}_{}.de'.format(stats_2D, protein, helpers))
             nat_shape_de = DensityEstimate.read('{}/nat_SHAPE_{}_{}.de'.format(stats_SHAPE, protein, helpers))
@@ -193,6 +191,8 @@ def plot_cat_all(xtal_cut, active_cut, helpers=5, helpers_sim=5, minimum=10,
 
             df['N:2D+SHAPE']  = df['N:SHAPE_mean'] + df['N:2D_mean']
 
+            print(df.shape)
+
             if sum(df['ACTIVE']) <= minimum:
                 continue
 
@@ -211,7 +211,7 @@ def plot_cat_all(xtal_cut, active_cut, helpers=5, helpers_sim=5, minimum=10,
         ef5s = np.vstack(ef5s).T
 
         if not np.any(np.isnan(logaucs.mean(axis=1))):
-            data += [[protein] +  list(ef5s.mean(axis=1))]
+            data += [[protein] + list(ef5s.mean(axis=1))]
 
         if plot:
             for score, auc, logauc in zip(scores, aucs, logaucs):
@@ -272,4 +272,3 @@ def aggregrate(data, metric1, metric2, xlabel, thresh=0.02):
     plt.scatter(-thresh, y, marker='|', s=100, c='k')
     plt.scatter(-.5, y, marker='<', s=50, c='k')
     plt.show()
-

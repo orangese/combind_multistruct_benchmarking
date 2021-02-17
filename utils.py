@@ -23,7 +23,8 @@ def basename(path):
 def mp(function, unfinished, processes):
     if unfinished:
         with Pool(processes=processes) as pool:
-            pool.starmap(function, unfinished)
+            x = pool.starmap(function, unfinished)
+        return x
 
 def mkdir(path):
     if not os.path.exists(path):

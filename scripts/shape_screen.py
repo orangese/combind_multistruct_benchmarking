@@ -75,8 +75,8 @@ def screen(template, ligands, aligned):
 		os.system(cmd)
 
 	with StructureReader(out_mae) as sts, open(out_csv, 'w') as fp:
-		fp.write('ID,score\n')
+		fp.write('ID,variant,score\n')
 		for st in sts:
-			fp.write('{},{}\n'.format(st.title, st.property['r_phase_Shape_Sim']))
+			fp.write('{},{},{}\n'.format(st.title, st.property['s_lp_Variant'], st.property['r_phase_Shape_Sim']))
 
 main()

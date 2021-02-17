@@ -295,35 +295,37 @@ def shape(test_mae, root):
         active_mae = os.path.abspath('{}/shape/binder.maegz'.format(cwd))
         active_align_mae = os.path.abspath('{}/shape/binder-to-XTAL_lig_align.maegz'.format(cwd))
         test_align_csv = os.path.abspath('{}/shape/{}-to-binder-to-XTAL_lig_align_align.csv'.format(cwd, test_name))
-        shape_csv = '{}/shape.csv'.format(cwd)
+        shape_csv = '{}/shape_new.csv'.format(cwd)
 
         if os.path.exists(shape_csv):
             continue
 
-        if os.path.exists('{}/shape'.format(cwd)):
-            print('Shape not complete but temp directory exists. '
-                  'Remove directory and try again.')
-            print('{}/shape'.format(cwd))
-            continue
+        if not os.path.exists('{}/shape'.format(cwd)):
+            os.mkdir('{}/shape'.format(cwd))
 
-        os.mkdir('{}/shape'.format(cwd))
+        if not os.path.exists(active_mae):
+            active = pd.read_csv(active_smi, sep=' ')['ID']
+            extract('{}/bpp'.format(cwd), active, active_mae)
 
-        active = pd.read_csv(active_smi, sep=' ')['ID']
-        extract('{}/bpp'.format(cwd), active, active_mae)
+        if os.path.exists(active_mae) and not os.path.exists(active_align_mae):
+            cmd = 'python $COMBINDHOME/scripts/shape_screen.py screen {} {}'.format(template, active_mae)
+            run(cmd, cwd=cwd+'/shape', shell=True)
 
-        cmd = 'python $COMBINDHOME/scripts/shape_screen.py screen {} {}'.format(template, active_mae)
-        run(cmd, cwd=cwd+'/shape', shell=True)
+        if os.path.exists(active_align_mae) and not os.path.exists(test_align_csv):
+            cmd = 'python $COMBINDHOME/scripts/shape_screen.py screen {} {}'.format(active_align_mae, test_mae)
+            run(cmd, cwd=cwd+'/shape', shell=True)
 
-        cmd = 'python $COMBINDHOME/scripts/shape_screen.py screen {} {}'.format(active_align_mae, test_mae)
-        run(cmd, cwd=cwd+'/shape', shell=True)
-
-        df = pd.read_csv(test_align_csv)
-        df = df.set_index('ID')
-        mean = df.groupby('ID')['score'].mean()
-        df = df.groupby('ID')[['score']].max()
-        df['SHAPE_max'] = df.score
-        df['SHAPE_mean'] = mean
-        df = df[['SHAPE_mean', 'SHAPE_max']]
-        df.to_csv(shape_csv)
+        if os.path.exists(test_align_csv) and not os.path.exists(shape_csv):
+            df = pd.read_csv(test_align_csv)
+            mean = df.groupby(['ID', 'variant'])['score'].mean()
+            mean = mean.groupby('ID').max()
+            #mean = df.groupby('ID').mean()['score']
+            
+            df = df.groupby('ID')[['score']].max()
+            
+            df['SHAPE_max'] = df.score
+            df['SHAPE_mean'] = mean
+            df = df[['SHAPE_mean', 'SHAPE_max']]
+            df.to_csv(shape_csv)
 
 main()
