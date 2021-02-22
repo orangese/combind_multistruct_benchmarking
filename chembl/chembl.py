@@ -335,9 +335,12 @@ def query(protein_complex, homologous, ambiguous_stereo, activity_type,
     # Look up affinities.
     activities = get_activities(chembl, chembldb, uniprot_chembl,
                                 protein_complex, homologous, affinity_thresh)
-    activities = filter_activities(activities, activity_type, molw_thresh)
-    activities = get_properties(activities)
-    activities = filter_properties(activities, ambiguous_stereo, molw_thresh)
+    if activities.shape[0]:
+        activities = filter_activities(activities, activity_type, molw_thresh)
+
+    if activities.shape[0]:
+        activities = get_properties(activities)
+        activities = filter_properties(activities, ambiguous_stereo, molw_thresh)
 
     if not activities.shape[0]:
         print('No valid ligands...')
