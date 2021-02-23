@@ -281,8 +281,10 @@ def check_dock(smiles, grid, root):
 @click.option('--no-mcss', is_flag=True)
 @click.option('--no-shape', is_flag=True)
 @click.option('--processes', default=1)
+@click.option('--delete', is_flag=True)
+@click.option('--verify', is_flag=True)
 def featurize(root, poseviewers, ifp_version, mcss_version, shape_version,
-              screen, no_mcss, no_shape, processes, max_poses):
+              screen, no_mcss, no_shape, processes, max_poses, verify, delete):
     """
     Compute pose similarity features.
 
@@ -290,8 +292,6 @@ def featurize(root, poseviewers, ifp_version, mcss_version, shape_version,
 
     \b
     root/
-        gscore/
-        ifp/
         ifp-pair/
         shape/
         mcss/
@@ -309,6 +309,14 @@ def featurize(root, poseviewers, ifp_version, mcss_version, shape_version,
     features.compute_single_features(poseviewers, processes=processes)
     features.compute_pair_features(poseviewers, processes=processes,
                                    mcss=not no_mcss, shape=not no_shape)
+
+    if verify:
+        _features = ['hbond', 'saltbridge', 'contact']
+        if not no_shape:
+            _features += ['shape']
+        if not no_mcss:
+            _features += ['mcss']
+        features.load_features(pvs=poseviewers, features=_features, delete=delete)
 
 ################################################################################
 
@@ -341,7 +349,7 @@ def pose_prediction(root, out, ligands, alpha, gc50, max_poses,
 
     protein = Features(root, ifp_version=ifp_version, shape_version=shape_version,
                        mcss_version=mcss_version, max_poses=max_poses)
-    protein.load_features(features)
+    protein.load_features(pvs=poseviewers, features=features)
 
     if not ligands:
         ligands = list(protein.raw['gscore'].keys())

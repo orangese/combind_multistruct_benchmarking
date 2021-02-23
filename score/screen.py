@@ -1,4 +1,5 @@
 import numpy as np
+from utils import np_load
 
 def load_features_screen(features, gscore_fname, ifp_fname,
                          mcss_fname=None, shape_fname=None):
@@ -7,11 +8,11 @@ def load_features_screen(features, gscore_fname, ifp_fname,
     raw = {}
     for feature in features:
         if feature == 'mcss':
-            raw['mcss'] = np.load(mcss_fname)
+            raw['mcss'] = np_load(mcss_fname)
         elif feature == 'shape':
-            raw['shape'] = np.load(shape_fname)
+            raw['shape'] = np_load(shape_fname)
         else:
-            raw[feature] = np.load(ifp_fname.format(feature))
+            raw[feature] = np_load(ifp_fname.format(feature))
     return single, raw
 
 def screen(single, raw, stats, alpha, weights=None):

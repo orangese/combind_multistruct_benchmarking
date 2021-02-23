@@ -1,6 +1,24 @@
 from multiprocessing import Pool
 import os
+import numpy as np
 from schrodinger.structure import StructureReader
+
+def np_load(fname, halt=True, delete=False):
+    fname = os.path.abspath(fname)
+    try:
+        return np.load(fname)
+    except ValueError as e:
+        m = 'Cannot load file containing pickled data when allow_pickle=False'
+        if m in str(e):
+            print('{} is corrupt. Regenerate and try again.'.format(fname))
+            if delete:
+                os.remove(fname)
+        else:
+            print("Can't open {}".format(fname))
+            print(str(e))
+
+        if halt:
+            exit()
 
 def pv_path(root, name):
     if '_native' in name:

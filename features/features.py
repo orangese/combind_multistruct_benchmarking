@@ -2,7 +2,7 @@ import os
 import numpy as np
 from glob import glob
 from schrodinger.structure import StructureReader
-from utils import *
+from utils import basename, mp, mkdir, np_load
 
 IFP = {'rd1':    {'version'           : 'rd1',
                    'level'             : 'residue',
@@ -25,86 +25,99 @@ IFP = {'rd1':    {'version'           : 'rd1',
       }
 
 class Features:
+    """
+    Organize feature computation and loading.
+    """
     def __init__(self, root, ifp_version='rd1', shape_version='pharm_max',
-                 mcss_version='mcss16', max_poses=10000):
-        self.root = root
+                 mcss_version='mcss16', max_poses=10000, pv_root=None,
+                 ifp_features=['hbond', 'saltbridge', 'contact', 'pipi', 'pi-t']):
+        self.root = os.path.abspath(root)
+        if pv_root is None:
+            self.pv_root = self.root + '/docking'
+
         self.ifp_version = ifp_version
         self.shape_version = shape_version
         self.mcss_version = mcss_version
         self.mcss_file = '{}/features/{}.typ'.format(os.environ['COMBINDHOME'], mcss_version)
         self.max_poses = max_poses
+        self.ifp_features = ifp_features
 
         self.raw = {}
-        self.pair_energies = {}
-        self.single_energies = {}
 
-    def path(self, name, base=False, **kwargs):
-        if name == 'root':
-            return self.root
-
+    def path(self, name, base=False, pv=None, pv2=None):
         if base:
             return '{}/{}'.format(self.root, name)
-        elif name == 'rmsd':
-            return kwargs['pv'].replace('_pv.maegz', '_rmsd.npy')
+
+        if self.pv_root != self.root+'/docking':
+            if pv1 is not None:
+                pv = pv.replace(self.pv_root), self.root+'/single'
+            if pv2 is not None:
+                pv2 = pv2.replace(self.pv_root), self.root+'/single'
+
+        # single features
+        if name == 'rmsd':
+            return pv.replace('_pv.maegz', '_rmsd.npy')
         elif name == 'gscore':
-            return kwargs['pv'].replace('_pv.maegz', '_gscore.npy')
+            return pv.replace('_pv.maegz', '_gscore.npy')
         elif name == 'name':
-            return kwargs['pv'].replace('_pv.maegz', '_name.npy')
+            return pv.replace('_pv.maegz', '_name.npy')
         elif name == 'ifp':
-            return kwargs['pv'].replace('_pv.maegz', '_ifp_{}.csv'.format(self.ifp_version))
-        elif name == 'ifp-pair':
-            ifp1 = basename(self.path('ifp', pv=kwargs['pv1']))
-            ifp2 = basename(self.path('ifp', pv=kwargs['pv2']))
-            return '{}/ifp-pair/{}-{}-and-{}.npy'.format(self.root, '{}', ifp1, ifp2)
+            suffix = '_ifp_{}.csv'.format(self.ifp_version)
+            return pv.replace('_pv.maegz', suffix)
+
+        # pair features
         elif name == 'shape':
             return '{}/shape/shape-{}-and-{}.npy'.format(self.root,
-                basename(kwargs['pv1']), basename(kwargs['pv2']))
+                basename(pv), basename(pv2))
         elif name == 'mcss':
             return '{}/mcss/mcss-{}-and-{}.npy'.format(self.root,
-                basename(kwargs['pv1']), basename(kwargs['pv2']))
+                basename(pv), basename(pv2))
+        else:
+            ifp1 = basename(self.path('ifp', pv=pv))
+            ifp2 = basename(self.path('ifp', pv=pv2))
+            return '{}/ifp-pair/{}-{}-and-{}.npy'.format(self.root, name, ifp1, ifp2)
 
-    def load_features(self, features):
+    def get_poseviewers(self):
+        return glob(self.pv_root+'/*/*_pv.maegz')
+
+    def load_features(self, pvs=None, delete=False,
+                      features=['shape','mcss','hbond','saltbridge','contact']):
+        if pvs is None:
+            pvs = self.get_poseviewers()
+
         self.raw = {}
 
         self.raw['rmsd'] = {}
-        paths = self.path('rmsd', pv=self.root+'/docking/*/*_pv.maegz')
-        paths = glob(paths)
-        for path in paths:
-            name = basename(path)[:-5].replace('_pv', '')
-            self.raw['rmsd'][name] = np.load(path)
+        for pv in pvs:
+            name = basename(pv)
+            path = self.path('rmsd', pv=pv)
+            if os.path.exists(path):
+                self.raw['rmsd'][name] = np_load(path, delete=delete, halt=not delete)
 
         self.raw['gscore'] = {}
-        paths = self.path('gscore', pv=self.root+'/docking/*/*_pv.maegz')
-        paths = glob(paths)
-        for path in paths:
-            name = basename(path).replace('_gscore', '')
-            if '_pv' in name:
-                name = name.replace('_pv', '')
-            self.raw['gscore'][name] = np.load(path)
+        for pv in pvs:
+            name = basename(pv)
+            path = self.path('gscore', pv=pv)
+            self.raw['gscore'][name] = np_load(path, delete=delete, halt=not delete)
 
         for feature in features:
-            if feature in ['shape', 'mcss']:
-                paths = self.path(feature, pv1='*', pv2='*')
-            else:
-                paths = self.path('ifp-pair', pv1='*', pv2='*').format(feature)
-            paths = glob(paths)
-
             self.raw[feature] = {}
-            for i, path in enumerate(paths):
-                if not i % 100:
-                    print('loading', feature, i, 'of', len(paths))
-                _path = basename(path)[len(feature)+1:]
-                name1, name2 = _path.split('-and-')
-                name1 = name1.split('_ifp')[0]
-                name2 = name2.split('_ifp')[0]
-                name1 = name1.split('_pv')[0]
-                name2 = name2.split('_pv')[0]
-                self.raw[feature][(name1, name2)] = np.load(path)
+            for i, pv1 in enumerate(pvs):
+                for pv2 in pvs[i+1:]:
+                    path = self.path(feature, pv=pv1, pv2=pv2)
+                    name1 = basename(pv1)
+                    name2 = basename(pv2)
+                    self.raw[feature][(name1, name2)] = np_load(path, delete=delete, halt=not delete)
 
     def compute_single_features(self, pvs, processes=1):
-
+        # For single features, there is no need to keep sub-sets of ligands
+        # seperated,  so just merge them at the outset to simplify the rest of
+        # the method.
         if type(pvs[0]) == list:
             pvs = [pv for _pvs in pvs for pv in _pvs]
+
+        pvs = [os.path.abspath(pv) for pv in pvs]
+
         print('Extracting glide scores.')
         for pv in pvs:
             out = self.path('gscore', pv=pv)
@@ -129,60 +142,71 @@ class Features:
         if len(pvs) == 1:
             return
 
-        mkdir(self.path('root'))
+        mkdir(self.root)
 
+        # Maintain convention that pvs is a list of lists. This is helpful when
+        # computing features for a set of potentially overlapping sets of
+        # ligands. Only pairwise terms between docking results in the same
+        # sub-list will be computed.
         if type(pvs[0]) == str:
             pvs = [pvs]
+
+        pvs = [[os.path.abspath(pv) for pv in _pvs] for _pvs in pvs]
+
+        # Applies the given fxn to all pairs of docking results.
+        # Don't include None return values. These correspond to completed jobs.
+        def map_pairs(fxn):
+            x = set()
+            for _pvs in pvs:
+                for i, pv1 in enumerate(_pvs):
+                    for pv2 in _pvs[i+1:]:
+                        _x = fxn(pv1, pv2)
+                        if _x is not None:
+                            x.add(_x)
+            return x
 
         if ifp:
             print('Computing interaction similarities.')
             mkdir(self.path('ifp-pair', base=True))
-            unfinished = set()
-            for _pvs in pvs:
-                for i, pv1 in enumerate(_pvs):
-                    for pv2 in _pvs[i+1:]:
-                        ifp1 = self.path('ifp', pv=pv1)
-                        ifp2 = self.path('ifp', pv=pv2)
-                        for feature in ['hbond', 'saltbridge', 'contact', 'pipi', 'pi-t']:
-                            out = self.path('ifp-pair', pv1=pv1, pv2=pv2)
-                            out = out.format(feature)
-                            if not os.path.exists(out):
-                                unfinished.add((ifp1, ifp2, feature, out))
+            def f(pv1, pv2):
+                ifp1 = self.path('ifp', pv=pv1)
+                ifp2 = self.path('ifp', pv=pv2)
+                for feature in self.ifp_features:
+                    out = self.path(feature, pv=pv1, pv2=pv2)
+                    if not os.path.exists(out):
+                        return (ifp1, ifp2, feature, out)
+            unfinished = map_pairs(f)
             mp(self.compute_ifp_pair, unfinished, processes)
 
         if shape:
             print('Computing shape similarities.')
             mkdir(self.path('shape', base=True))
-            unfinished = set()
-            for _pvs in pvs:
-                for i, pv1 in enumerate(_pvs):
-                    for pv2 in _pvs[i+1:]:
-                        out = self.path('shape', pv1=pv1, pv2=pv2)
-                        if not os.path.exists(out):
-                            unfinished.add((pv1, pv2, out))
+            def f(pv1, pv2):
+                out = self.path('shape', pv=pv1, pv2=pv2)
+                if not os.path.exists(out):
+                    return (pv1, pv2, out)
+            unfinished = map_pairs(f)
             mp(self.compute_shape, unfinished, processes)
 
         if mcss:
             print('Computing mcss similarities.')
             mkdir(self.path('mcss', base=True))
-            unfinished = set()
-            for _pvs in pvs:
-                for i, pv1 in enumerate(_pvs):
-                    for pv2 in _pvs[i+1:]:
-                        out = self.path('mcss', pv1=pv1, pv2=pv2)
-                        if not os.path.exists(out):
-                            unfinished.add((pv1, pv2, out))
+            def f(pv1, pv2):
+                out = self.path('mcss', pv=pv1, pv2=pv2)
+                if not os.path.exists(out):
+                    return (pv1, pv2, out)
+            unfinished = map_pairs(f)
             mp(self.compute_mcss, unfinished, processes)
 
     def compute_name(self, pv, out):
-        gscores = []
+        names = []
         with StructureReader(pv) as sts:
             next(sts)
             for st in sts:
-                gscores += [st.property['s_m_title']]
-                if len(gscores) == self.max_poses:
+                names += [st.property['s_m_title']]
+                if len(names) == self.max_poses:
                     break
-        np.save(out, gscores)
+        np.save(out, names)
 
     def compute_gscore(self, pv, out):
         gscores = []
