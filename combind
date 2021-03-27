@@ -22,7 +22,8 @@ def main():
 
 @main.command()
 @click.argument('struct', default='')
-def structprep(struct):
+@click.option('--grid-struct')
+def structprep(struct, grid_struct):
     """
     Prepare structures and make a docking grid.
 
@@ -67,24 +68,29 @@ def structprep(struct):
 
     assert os.path.exists('structures'), 'No structures directory.'
 
-    if not struct:
-        struct = glob('structures/raw/*_prot.mae*')
-        if not struct:
-            struct = glob('structures/proteins/*_prot.mae*')
-        struct = sorted(struct)[0]
-        struct = struct.split('/')[-1].split('_prot')[0]
+    structs = sorted(glob('structures/raw/*_prot.mae*'))
+    structs = [struct.split('/')[-1].split('_prot')[0] for struct in structs]
 
-    struct_process()
-    struct_align(struct)
-    struct_sort()
+    if not struct:
+        struct = structs[0]
+
+    if not grid_struct:
+        grid_struct = struct
+
+    struct_process(structs)
+    struct_align(struct, structs)
+    struct_sort(structs)
     make_grid(struct)
 
 @main.command()
 @click.argument('smiles')
 @click.argument('root')
 @click.option('--screen', is_flag=True)
+@click.option('--ligand-names', default='ID')
+@click.option('--ligand-smiles', default='SMILES')
+@click.option('--delim', default=' ')
 @click.option('--processes', default=1)
-def ligprep(smiles, root, screen, processes):
+def ligprep(smiles, root, screen, ligand_names, ligand_smiles, delim, processes):
     """
     Prepare ligands for docking, from smiles.
 
@@ -110,24 +116,24 @@ def ligprep(smiles, root, screen, processes):
         if not os.path.exists(_mae):
             if os.path.abspath(_smiles) != os.path.abspath(smiles):
                 print('here')
-                ligands = pd.read_csv(smiles, sep=' ')
+                ligands = pd.read_csv(smiles, sep=delim)
                 with open(_smiles, 'w') as fp:
                     for _, ligand in ligands.iterrows():
-                        fp.write('{} {}\n'.format(ligand['SMILES'], ligand['ID']))
+                        fp.write('{} {}\n'.format(ligand[ligand_smiles], ligand[ligand_names]))
             print(_smiles)
             ligprep(_smiles)
     else:
-        ligands = pd.read_csv(smiles, sep=' ')
+        ligands = pd.read_csv(smiles, sep=delim)
         unfinished = []
         for _, ligand in ligands.iterrows():
-            _root = '{}/{}'.format(root, ligand['ID'])
-            _smiles = '{}/{}/{}.smi'.format(root, ligand['ID'], ligand['ID'])
+            _root = '{}/{}'.format(root, ligand[ligand_names])
+            _smiles = '{}/{}/{}.smi'.format(root, ligand[ligand_names], ligand[ligand_names])
             _mae = _smiles.replace('.smi', '.maegz')
-            
+
             if not os.path.exists(_mae):
                 mkdir(_root)
                 with open(_smiles, 'w') as fp:
-                    fp.write('{} {}\n'.format(ligand['SMILES'], ligand['ID']))
+                    fp.write('{} {}\n'.format(ligand[ligand_smiles], ligand[ligand_names]))
                 unfinished += [(_smiles,)]
         mp(ligprep, unfinished, processes)  
 

@@ -39,7 +39,6 @@ def ligprep(smiles):
         return
     ligprocess(mae_noname_file, mae_file)
 
-
 if __name__ == '__main__':
     import sys
     input_file, output_file = sys.argv[1:]

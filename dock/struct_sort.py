@@ -16,13 +16,10 @@ def split_complex(st, pdb_id):
         prot_st.title = '{}_prot'.format(pdb_id)
         prot_st.write(prot_path)
 
-def struct_sort():
-    if not os.path.exists('structures/aligned'):
-        return
-
-    for pdb_id in os.listdir('structures/aligned'):
-        opt_complex = 'structures/aligned/{}/rot-{}_query.mae'.format(pdb_id, pdb_id)
+def struct_sort(structs):
+    for struct in structs:
+        opt_complex = 'structures/aligned/{}/rot-{}_query.mae'.format(struct, struct)
 
         if os.path.exists(opt_complex):
             comp_st = next(StructureReader(opt_complex))
-            split_complex(comp_st, pdb_id)
+            split_complex(comp_st, struct)

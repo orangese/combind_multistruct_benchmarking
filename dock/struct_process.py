@@ -1,22 +1,20 @@
 import os
 from schrodinger.structure import StructureReader
+from subprocess import run
 
 command = '$SCHRODINGER/utilities/prepwizard -WAIT -rehtreat -watdist 0 {}_in.mae {}_out.mae'
-queue = 'rondror'
 
-def load_complex(pdb):
-    prot_in = 'structures/raw/{}_prot.mae'.format(pdb)
-    lig_in = 'structures/raw/{}_lig.mae'.format(pdb)
-    
+def load_complex(prot_in, lig_in, struct):
+
     prot_st = next(StructureReader(prot_in))
     
     if not os.path.exists(lig_in): 
-        prot_st.title = pdb
+        prot_st.title = struct
         return prot_st
 
     lig_st = next(StructureReader(lig_in))
 
-    assert len(lig_st.chain) == 1, pdb
+    assert len(lig_st.chain) == 1, struct
     for c in lig_st.chain:
         c.name = 'L'
 
@@ -27,35 +25,39 @@ def load_complex(pdb):
 
         c.name = alpha[alpha_count]
         alpha_count += 1
-    
+
     merged_st = lig_st.merge(prot_st)
-    merged_st.title = pdb
+    merged_st.title = struct
     return merged_st
 
-def struct_process():
-    if not os.path.exists('structures/raw'):
-        return
+def struct_process(structs,
+                   protein_in='structures/raw/{pdb}_prot.mae',
+                   ligand_in='structures/raw/{pdb}_lig.mae',
+                   processed_in='structures/processed/{pdb}/{pdb}_in.mae',
+                   processed_out='structures/processed/{pdb}/{pdb}_out.mae',
+                   processed_sh='structures/processed/{pdb}/process.sh'):
 
-    all_f = sorted(os.listdir('structures/raw'))
-    all_prot = [f.split('_')[0] for f in all_f if f.split('_')[1] == 'prot.mae']
+    for struct in structs:
+        _protein_in = protein_in.format(pdb=struct)
+        _ligand_in = ligand_in.format(pdb=struct)
+        _processed_in = processed_in.format(pdb=struct)
+        _processed_out = processed_out.format(pdb=struct)
+        _processed_sh = processed_sh.format(pdb=struct)
+        _workdir = os.path.dirname(_processed_sh)
 
-    for pdb in all_prot:
-        if pdb[0] == '.': continue
-
-        if os.path.exists('structures/processed/{}/{}_out.mae'.format(pdb, pdb)):
+        if os.path.exists(_processed_out):
             continue
-     
-        os.system('mkdir -p structures/processed')
-        os.system('rm -rf structures/processed/{}'.format(pdb))
-        os.system('mkdir structures/processed/{}'.format(pdb))
 
-        merged_st = load_complex(pdb)
-        merged_st.write('structures/processed/{}/{}_in.mae'.format(pdb, pdb))
+        print('processing', struct)
 
-        os.chdir('structures/processed/{}'.format(pdb))
-        print('processing', pdb)
-        with open('process_in.sh', 'w') as f:
+        os.system('mkdir -p {}'.format(os.path.dirname(_workdir)))
+        os.system('rm -rf {}'.format(_workdir))
+        os.system('mkdir {}'.format(_workdir))
+
+        merged_st = load_complex(_protein_in, _ligand_in, struct)
+        merged_st.write(_processed_in)
+
+        with open('{}/process_in.sh'.format(_workdir), 'w') as f:
             f.write('#!/bin/bash\n')
-            f.write(command.format(pdb, pdb))
-        os.system('sh process_in.sh')
-        os.chdir('../../..')
+            f.write(command.format(struct, struct))
+        run('sh process_in.sh', shell=True, cwd=_workdir)

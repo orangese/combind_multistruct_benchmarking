@@ -1,6 +1,10 @@
 import os
+from subprocess import run
 
-out_dir = 'structures/aligned'
+command = ('$SCHRODINGER/utilities/structalign '
+           '-asl "(not chain. L and not atom.element H) and (fillres within {0} chain. L)" '
+           '-asl_mobile "(not chain. L and not atom.element H) and (fillres within {0} chain. L)" '
+           '{1} {2}')
 
 def align_successful(out_dir, struct):
 
@@ -22,50 +26,38 @@ def align_successful(out_dir, struct):
             print('alignment failure', struct)
             return False
 
-def struct_align(template=None):
-    if not os.path.exists('structures/processed'):
-        return
+def struct_align(template, structs, dist=15.0, retry=True,
+                 processed_out='structures/processed/{pdb}/{pdb}_out.mae',
+                 align_dir='structures/aligned'):
 
-    all_prot = sorted([p for p in os.listdir('structures/processed') if p[0] != '.'])
-    if not len(all_prot):
-        return
-    if template is None:
-        template = all_prot[0]
- 
-    if os.path.exists(out_dir) and len(os.listdir(out_dir)) > 0:
-        for f in os.listdir('{}/{}'.format(out_dir, os.listdir(out_dir)[0])):
-            if f.split('_')[-1] == 'template.mae':
-                prot = f.split('_')[0]
-                template = prot.split('-')[-1]
-                break
-
-    template_path = 'structures/processed/{}/{}_out.mae'.format(template, template)
+    template_path = processed_out.format(pdb=template)
     if not os.path.exists(template_path):
         print('template not processed', template_path)
         return
 
-    for struct in all_prot:
-        query_path = 'structures/processed/{}/{}_out.mae'.format(struct, struct)
-        if not os.path.exists(query_path) or align_successful(out_dir, struct):
+    for struct in structs:
+        query_path = processed_out.format(pdb=struct)
+        if not os.path.exists(query_path) or align_successful(align_dir, struct):
             continue
 
-        os.system('mkdir -p {}'.format(out_dir))
-        os.system('rm -rf {}/{}'.format(out_dir, struct))
-        os.system('mkdir -p {}/{}'.format(out_dir, struct))
+        print('align', struct, template)
 
-        os.system('cp {} {}/{}/{}_template.mae'.format(template_path, out_dir, struct, template))
-        os.system('cp {} {}/{}/{}_query.mae'.format(query_path, out_dir, struct, struct))
-        
-        os.chdir('{}/{}'.format(out_dir, struct))
-        print('align', struct)
-                
-        with open('align_in.sh', 'w') as f:
-            f.write('#!/bin/bash\n'
-                    '$SCHRODINGER/utilities/structalign \\\n'
-                    '  -asl        "(not chain. L and not atom.element H) '
-                                'and (fillres within 15.0 chain. L)" \\\n'
-                    '  -asl_mobile "(not chain. L and not atom.element H) '
-                                'and (fillres within 15.0 chain. L)" \\\n'
-                    '  {}_template.mae {}_query.mae\n'.format(template, struct))
-        os.system('sh align_in.sh > align.out')
-        os.chdir('../../..')
+        os.system('mkdir -p {}'.format(align_dir))
+        os.system('rm -rf {}/{}'.format(align_dir, struct))
+        os.system('mkdir -p {}/{}'.format(align_dir, struct))
+
+        _workdir = '{}/{}'.format(align_dir, struct)
+        _template_fname = '{}_template.mae'.format(template)
+        _query_fname = '{}_query.mae'.format(struct)
+
+        os.system('cp {} {}/{}'.format(template_path, _workdir, _template_fname))
+        os.system('cp {} {}/{}'.format(query_path, _workdir, _query_fname))
+
+        with open('{}/align_in.sh'.format(_workdir), 'w') as f:
+            f.write(command.format(dist, _template_fname, _query_fname))
+        run('sh align_in.sh > align.out', shell=True, cwd=_workdir)
+
+        if retry and not align_successful(align_dir, struct):
+            print('Alignment failed. Trying again with a larger radius.')
+            struct_align(template, [struct], dist=25.0, retry=False,
+                         processed_out=processed_out, align_dir=align_dir)

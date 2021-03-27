@@ -26,7 +26,10 @@ def centroid(ligfile):
 def make_grid(pdb,
               PROTFILE='structures/proteins/{pdb}_prot.mae',
               LIGFILE='structures/ligands/{pdb}_lig.mae',
-              CWD='structures/grids/{pdb}'):
+              CWD='structures/grids/{pdb}',
+              grid_in=None):
+    if grid_in is None:
+        grid_in = GRID_IN
 
     cwd = os.path.abspath(CWD.format(pdb=pdb))
     zipfile = os.path.abspath(cwd+'/'+ZIPFILE.format(pdb=pdb))
@@ -38,6 +41,7 @@ def make_grid(pdb,
     if os.path.exists(zipfile):
         return # Done.
     if not (os.path.exists(ligfile) and os.path.exists(protfile)):
+        print(ligfile, protfile)
         return # Not ready.
 
     print('making grid', pdb)

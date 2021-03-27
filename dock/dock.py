@@ -31,8 +31,9 @@ def docking_failed(glide_log):
                'GLIDE WARNING: Skipping refinement, etc. because rough-score step failed.']
     return any(phrase in logtxt for phrase in phrases)
 
-def dock(grid, ligands, root, name, enhanced):
-    infile = GLIDE_ES4 if enhanced else GLIDE
+def dock(grid, ligands, root, name, enhanced, infile=None, reference=None):
+    if infile is None:
+        infile = GLIDE_ES4 if enhanced else GLIDE
     glide_in = '{}/{}.in'.format(root, name)
     glide_pv = '{}/{}_pv.maegz'.format(root, name)
     glide_log = '{}/{}.log'.format(root, name)
@@ -47,7 +48,7 @@ def dock(grid, ligands, root, name, enhanced):
     if not os.path.exists(root):
         os.system('mkdir {}'.format(root))
     with open(glide_in, 'w') as fp:
-        fp.write(infile.format(grid=grid, ligands=ligands))
+        fp.write(infile.format(grid=grid, ligands=ligands, reference=reference))
 
     subprocess.run(glide_cmd, cwd=root, shell=True)
 
