@@ -356,11 +356,16 @@ def query(protein_complex, homologous, ambiguous_stereo, activity_type,
 @click.argument('input_csv')
 @click.argument('output_csv')
 @click.option('--seperate-activity-types', is_flag=True)
-def unique(input_csv, output_csv, seperate_activity_types):
+@click.option('--IC50-factor', default=2.3)
+def unique(input_csv, output_csv, seperate_activity_types, ic50_factor):
     """
     If seperate_activity_types, don't merge e.g. IC50's and Ki's.
     """
     activities = pd.read_csv(input_csv)
+    
+    mask = (activities.standard_type == 'IC50') & (activities.standard_value >= 1000)
+    activities.loc[mask, 'standard_value'] /= ic50_factor
+
     # Since we're going to merge all the values, assay_chembl_id will no longer
     # make sense.
     activities = activities.drop(columns='assay_chembl_id')

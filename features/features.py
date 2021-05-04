@@ -109,7 +109,7 @@ class Features:
                     name2 = basename(pv2)
                     self.raw[feature][(name1, name2)] = np_load(path, delete=delete, halt=not delete)
 
-    def compute_single_features(self, pvs, processes=1):
+    def compute_single_features(self, pvs, ifp=True, processes=1):
         # For single features, there is no need to keep sub-sets of ligands
         # seperated,  so just merge them at the outset to simplify the rest of
         # the method.
@@ -130,13 +130,14 @@ class Features:
             if not os.path.exists(out):
                 self.compute_name(pv, out)
 
-        print('Computing interaction fingerprints.')
-        unfinished = []
-        for pv in pvs:
-            out = self.path('ifp', pv=pv)
-            if not os.path.exists(out):
-                unfinished += [(pv, out)]
-        mp(self.compute_ifp, unfinished, processes)
+        if ifp:
+            print('Computing interaction fingerprints.')
+            unfinished = []
+            for pv in pvs:
+                out = self.path('ifp', pv=pv)
+                if not os.path.exists(out):
+                    unfinished += [(pv, out)]
+            mp(self.compute_ifp, unfinished, processes)
 
     def compute_pair_features(self, pvs, processes=1, ifp=True, shape=True, mcss=True):
         if len(pvs) == 1:

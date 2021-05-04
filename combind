@@ -70,7 +70,7 @@ def structprep(struct, grid_struct):
 
     structs = sorted(glob('structures/raw/*_prot.mae*'))
     structs = [struct.split('/')[-1].split('_prot')[0] for struct in structs]
-
+    print(structs)
     if not struct:
         struct = structs[0]
 
