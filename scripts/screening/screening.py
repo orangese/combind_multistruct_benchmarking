@@ -25,7 +25,7 @@ def load_glide(cwd):
     return df
 
 def load_shape(cwd):
-    df = pd.read_csv(cwd+'/shape_new.csv')
+    df = pd.read_csv(cwd+'/shape.csv')
     df = df.set_index('ID')
     return df
 
@@ -36,7 +36,7 @@ def load_similarity(cwd):
     df = df[['XTAL', '2D_mean', '2D_max']]
     return df
 
-def load(input_csv, cwd, sim_cwd, xtal_cut=float('inf'), active_cut=float('inf')):
+def load(input_csv, cwd, sim_cwd, xtal_cut=float('inf'), active_cut=float('inf'), active_min_cut=0):
     df = pd.read_csv(input_csv, sep=' ')
     df['ACTIVE'] = df['ID'].str.contains('CHEMBL')
     df = df.set_index('ID')
@@ -54,6 +54,7 @@ def load(input_csv, cwd, sim_cwd, xtal_cut=float('inf'), active_cut=float('inf')
 
     df = df.fillna(0)
     df = df.loc[df['sim_2D_max'] < active_cut]
+    df = df.loc[df['sim_2D_max'] >= active_min_cut]
     df = df.loc[df['XTAL'] < xtal_cut]
     return df
 
@@ -63,16 +64,25 @@ def load(input_csv, cwd, sim_cwd, xtal_cut=float('inf'), active_cut=float('inf')
 # See https://pubmed.ncbi.nlm.nih.gov/20735049/
 # Used recently in https://pubmed.ncbi.nlm.nih.gov/28760952/
 def log_roc(x, y, lam=0.001):
-    # Get rid of duplicated x values and those less than lambda.
+    # We need to have a value at lambda.
+    for i in range(len(x)):
+        if x[i] > lam:
+            m = (y[i]-y[i-1]) / (x[i]-x[i-1])
+            b = y[i] - m*x[i]
+            x = np.array([lam] + list(x[i:]))
+            y = np.array([m*lam + b] + list(y[i:]))
+            break
+        elif x[i] == lam:
+            x = x[i:]
+            y = y[i:]
+            break
+    else:
+        assert False
+    
+    # Get rid of duplicated x values.
     idx = np.array(list(x[:-1] != x[1:]) + [True])
-    idx *= x >= lam
     x = x[idx]
     y = y[idx]
-
-    # We need to have a value at lambda, so set a dummy one, if we don't.
-    if x[0] != lam:
-        y = np.array([lam*y[0]/x[0]] + list(y))
-        x = np.array([lam]  + list(x))
 
     b = y[1:] - x[1:] * (y[1:] - y[:-1]) / (x[1:] - x[:-1])
     auc = np.sum((y[1:] - y[:-1]) / np.log(10))
@@ -97,7 +107,7 @@ def ef(active, score, thresh=0.01):
 
 ############################################################################
 
-def plot_cat(df, scores, colors, roc_ax=None, logroc_ax=None):
+def plot_cat(df, scores, colors=None, roc_ax=None, logroc_ax=None):
     aucs, logaucs, ef5s = [], [], []
     for score in scores:
         fpr, tpr, _ = metrics.roc_curve(df['ACTIVE'], df[score])
@@ -123,152 +133,111 @@ def plot_cat(df, scores, colors, roc_ax=None, logroc_ax=None):
 def Z(x):
     return (x - x.mean()) / np.sqrt(x.var())
 
-def plot_cat_all(xtal_cut, active_cut, helpers=5, helpers_sim=5, minimum=10,
-                 weight_shape=10.0, weight_2D=50.0, weight_combind=1.0, plot=True,
-                 scores = ['COMBIND', 'GLIDE', 'SHAPE_mean', '2D_mean', 'GLIDE+SHAPE', 'GLIDE+2D',
-                           'COMBIND+2D', 'COMBIND+SHAPE'],
-                 colors = {'COMBIND': 'g', 'GLIDE': 'b', 'SHAPE_mean':'m', '2D_mean': 'r',
-                           'GLIDE+SHAPE': 'c', 'GLIDE+2D':'orange', 'COMBIND+2D': 'k',
-                           'COMBIND+SHAPE': 'gray', 'COMBIND_GLIDE': 'lime', 'GLIDE_COMBIND': 'yellow'}):
+def R(x):
+    order = np.argsort(-x)
+    ranks = np.argsort(order)+1
+    return -ranks
+
+def plot_cat_all(xtal_cut, active_cut, helpers=5, helpers_sim=5,
+                 active_min_cut=0, minimum_active=10, minimum_decoy=100,
+                 metric='logroc', scores=None, minimum_repeats=1,
+                 stats_2D='/oak/stanford/groups/rondror/users/jpaggi/combindvs_initial_submission/2D_stats/',
+                 stats_SHAPE='/oak/stanford/groups/rondror/users/jpaggi/combindvs_initial_submission/SHAPE_stats/',
+                 root='/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind'):
 
     data = []
-    for protein in os.listdir('/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind'):
-        if plot:
-            _, (roc_ax, logroc_ax) = plt.subplots(1, 2, figsize=(12, 5))
-        else:
-            roc_ax, logroc_ax = None, None
+    for protein in os.listdir(root):
+        print(protein)
         aucs, logaucs, ef5s = [], [], []
         for i in range(5):
-            cwd = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/{}/scores/all_rd1_shape_{}/{}'.format(protein, helpers, i if helpers else 0)
-            sim_cwd = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/{}/scores/all_rd1_shape_{}/{}'.format(protein, helpers_sim, i)
-            input_csv = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUDE/combind/{}/all.smi'.format(protein)
+            cwd = '{}/{}/scores/all_rd1_shape_{}/{}'.format(root, protein, helpers, i if helpers else 0)
+            sim_cwd = '{}/{}/scores/all_rd1_shape_{}/{}'.format(root, protein, helpers_sim, i)
+            input_csv = '{}/{}/all.smi'.format(root, protein)
 
             if not os.path.exists(cwd + '/combind.csv'): continue
             if not os.path.exists(cwd + '/glide.csv'): continue
             if not os.path.exists(cwd + '/shape.csv'): continue
             if not os.path.exists(cwd + '/similarity.csv'): continue
             if not os.path.exists(sim_cwd + '/similarity.csv'): continue
-
             
-            stats_2D = '/oak/stanford/groups/rondror/users/jpaggi/2D_stats_new/'
-            stats_SHAPE = '/oak/stanford/groups/rondror/users/jpaggi/SHAPE_stats_new/'
             nat_de = DensityEstimate.read('{}/nat_2D_{}_{}.de'.format(stats_2D, protein, helpers))
             ref_de = DensityEstimate.read('{}/ref_2D_{}_{}.de'.format(stats_2D, protein, helpers))
             nat_shape_de = DensityEstimate.read('{}/nat_SHAPE_{}_{}.de'.format(stats_SHAPE, protein, helpers))
             ref_shape_de = DensityEstimate.read('{}/ref_SHAPE_{}_{}.de'.format(stats_SHAPE, protein, helpers))
 
-            df = load(input_csv, cwd, sim_cwd, xtal_cut=xtal_cut, active_cut=active_cut)
-            
-            df['COMBIND'] = (df['COMBIND']-df['COMBIND_GLIDE']) + weight_combind*df['COMBIND_GLIDE']
-            
-            df['GLIDE+SHAPE'] = df['GLIDE'] + weight_shape*df['SHAPE_mean']
-            df['GLIDE+2D']    = df['GLIDE'] + weight_2D*df['2D_mean']
-            
-            df['COMBIND+SHAPE'] = df['COMBIND'] + weight_shape*df['SHAPE_mean']
-            df['COMBIND+2D']    = df['COMBIND'] + weight_2D*df['2D_mean']
+            df = load(input_csv, cwd, sim_cwd, xtal_cut=xtal_cut,
+                      active_cut=active_cut, active_min_cut=active_min_cut)
 
-            df['Z:GLIDE+2D']    = Z(df['GLIDE']) + Z(df['2D_mean'])
-            df['Z:COMBIND+2D']  = Z(df['COMBIND']) + Z(df['2D_mean'])
-
-            df['Z:GLIDE+SHAPE']    = Z(df['GLIDE']) + Z(df['SHAPE_mean'])
-            df['Z:COMBIND+SHAPE']  = Z(df['COMBIND']) + Z(df['SHAPE_mean'])
-
-            df['Z:GLIDE+2D+SHAPE']    = Z(df['GLIDE']) + Z(df['SHAPE_mean']) + Z(df['2D_mean'])
-            df['Z:COMBIND+2D+SHAPE']  = Z(df['COMBIND']) + Z(df['SHAPE_mean']) + Z(df['2D_mean'])
-            df['Z:2D+SHAPE']  = Z(df['SHAPE_mean']) + Z(df['2D_mean'])
-
-            df['N:2D_mean'] = np.log(nat_de(df['2D_mean'])) - np.log(ref_de(df['2D_mean']))
-            df['N:SHAPE_mean'] = np.log(nat_shape_de(df['SHAPE_mean'])) - np.log(ref_shape_de(df['SHAPE_mean']))
-
-            df['N:GLIDE+2D']    = df['GLIDE'] + df['N:2D_mean']
-            df['N:COMBIND+2D']  = df['COMBIND'] + df['N:2D_mean']
-
-            df['N:GLIDE+SHAPE']    = df['GLIDE'] + df['N:SHAPE_mean']
-            df['N:COMBIND+SHAPE']  = df['COMBIND'] + df['N:SHAPE_mean']
-
-            df['N:GLIDE+2D+SHAPE']    = df['GLIDE'] + df['N:SHAPE_mean'] + df['N:2D_mean']
-            df['N:COMBIND+2D+SHAPE']  = df['COMBIND'] + df['N:SHAPE_mean'] + df['N:2D_mean']
-
-            df['N:2D+SHAPE']  = df['N:SHAPE_mean'] + df['N:2D_mean']
-
-            print(df.shape)
-
-            if sum(df['ACTIVE']) <= minimum:
+            if sum(df['ACTIVE']) <= minimum_active:
                 continue
 
-            _aucs, _logaucs, _ef5s = plot_cat(df, scores, colors, roc_ax=roc_ax, logroc_ax=logroc_ax)
+            if len(df)-sum(df['ACTIVE']) <= minimum_decoy:
+                continue
+
+            df['BEST'] = df['ACTIVE'].astype(int)
+
+            # Z-score
+            df['Z:COMBIND'] = Z(df['COMBIND'])
+            df['Z:GLIDE'] = Z(df['GLIDE'])
+            df['Z:2D'] = Z(df['2D_mean'])
+            df['Z:SHAPE'] = Z(df['SHAPE_mean'])
+            
+            df['Z:GLIDE+2D'] = df['Z:GLIDE'] + df['Z:2D']
+            df['Z:COMBIND+2D'] = df['Z:COMBIND'] + df['Z:2D']
+            df['Z:GLIDE+SHAPE'] = df['Z:GLIDE'] + df['Z:SHAPE']
+            df['Z:COMBIND+SHAPE'] = df['Z:COMBIND'] + df['Z:SHAPE']
+            df['Z:GLIDE+2D+SHAPE'] = df['Z:GLIDE'] + df['Z:SHAPE'] + df['Z:2D']
+            df['Z:COMBIND+2D+SHAPE'] = df['Z:COMBIND'] + df['Z:SHAPE'] + df['Z:2D']
+            df['Z:2D+SHAPE'] = df['Z:SHAPE'] + df['Z:2D']
+
+            # Product rank.
+            df['R:COMBIND'] = R(df['COMBIND'])
+            df['R:GLIDE'] = R(df['GLIDE'])
+            df['R:2D'] = R(df['2D_mean'])
+            df['R:SHAPE'] = R(df['SHAPE_mean'])
+
+            df['R:GLIDE+2D'] = -df['R:GLIDE'] * df['R:2D']
+            df['R:COMBIND+2D'] = -df['R:COMBIND'] * df['R:2D']
+            df['R:GLIDE+SHAPE'] = -df['R:GLIDE'] * df['R:SHAPE']
+            df['R:COMBIND+SHAPE'] = -df['R:COMBIND'] * df['R:SHAPE']
+            df['R:GLIDE+2D+SHAPE'] = df['R:GLIDE'] * df['R:2D'] * df['R:SHAPE']
+            df['R:COMBIND+2D+SHAPE'] = df['R:COMBIND'] * df['R:2D'] * df['R:SHAPE']
+            df['R:2D+SHAPE'] =  -df['R:2D'] * df['R:SHAPE']
+
+            # Naive bayes.
+            df['N:2D'] = np.log(nat_de(df['2D_mean'])) - np.log(ref_de(df['2D_mean']))
+            df['N:SHAPE'] = np.log(nat_shape_de(df['SHAPE_mean'])) - np.log(ref_shape_de(df['SHAPE_mean']))
+
+            df['N:GLIDE+2D'] = df['GLIDE'] + df['N:2D']
+            df['N:COMBIND+2D'] = df['COMBIND'] + df['N:2D']
+
+            df['N:GLIDE+SHAPE'] = df['GLIDE'] + df['N:SHAPE']
+            df['N:COMBIND+SHAPE'] = df['COMBIND'] + df['N:SHAPE']
+
+            df['N:GLIDE+2D+SHAPE'] = df['GLIDE'] + df['N:SHAPE'] + df['N:2D']
+            df['N:COMBIND+2D+SHAPE'] = df['COMBIND'] + df['N:SHAPE'] + df['N:2D']
+
+            df['N:2D+SHAPE'] = df['N:SHAPE'] + df['N:2D']
+
+            _aucs, _logaucs, _ef5s = plot_cat(df, scores)
             aucs += [_aucs]
             logaucs += [_logaucs]
             ef5s += [_ef5s]
 
-        if not aucs:
-            if plot:
-                plt.show()
+        if len(logaucs) < minimum_repeats:
             continue
 
         aucs = np.vstack(aucs).T
         logaucs = np.vstack(logaucs).T
         ef5s = np.vstack(ef5s).T
 
-        if not np.any(np.isnan(logaucs.mean(axis=1))):
-            data += [[protein] + list(ef5s.mean(axis=1))]
-
-        if plot:
-            for score, auc, logauc in zip(scores, aucs, logaucs):
-                label = '{} = {:.2f}'.format(score, np.mean(auc))
-                roc_ax.scatter(-100, 0, s=50, marker='s', color=colors[score], label=label)
-                label = '{} = {:.2f}'.format(score, np.mean(logauc))
-                logroc_ax.scatter(-100, 0, s=50, marker='s', color=colors[score], label=label)
-
-            roc_ax.scatter(-100, 0, s=0, label='# POS={}'.format(sum(df['ACTIVE'])))
-            roc_ax.scatter(-100, 0, s=0, label='# NEG={}'.format(sum(~df['ACTIVE'])))
-            logroc_ax.scatter(-100, 0, s=0, label='# POS={}'.format(sum(df['ACTIVE'])))
-            logroc_ax.scatter(-100, 0, s=0, label='# NEG={}'.format(sum(~df['ACTIVE'])))
-
-
-            roc_ax.set_ylim(0, 1)
-            roc_ax.set_xlim(0, 1)
-            roc_ax.legend(loc='lower right')
-            roc_ax.set_ylabel('true positive rate', size=15)
-            roc_ax.set_xlabel('false positive rate', size=15)
-            logroc_ax.set_ylim(0, 1)
-            logroc_ax.set_xlim(-3, 0)
-            logroc_ax.legend(loc='upper left')
-            logroc_ax.set_ylabel('true positive rate', size=15)
-            logroc_ax.set_xlabel('log10 false positive rate', size=15)
-            plt.suptitle(protein, size=20, y=0.96)
-            plt.show()
+        if metric == 'logroc':
+            _data = logaucs
+        elif metric == 'ef1':
+            _data = ef5s
+        elif metric == 'roc':
+            _data = aucs
+        else:
+            assert False, metric
+        data += [[protein] + list(_data.mean(axis=1))]
     return pd.DataFrame(data, columns=['protein']+scores)
-
-def aggregrate(data, metric1, metric2, xlabel, thresh=0.02):
-    diffs = data[metric1] - data[metric2]
-
-    win = np.sum(diffs > thresh)
-    lose = np.sum(diffs < -thresh)
-    tie = np.sum((diffs >= -thresh) & (diffs <= thresh))
-
-    ax = plt.axes()
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-
-    bins = np.linspace(-0.5, 0.5, 36)
-    plt.hist(diffs, bins=bins, edgecolor='b', color='white')
-    plt.xlabel(xlabel.format(metric1, metric2), size=16)
-    plt.ylabel('Count', size=16)
-    plt.yticks(size=14)
-    plt.xticks(size=14)
-    plt.axvline(0, c='k', lw=3)
-
-    y = ax.get_ylim()[1]
-    ax.text(-.25, y, 'losses={}'.format(lose), fontsize=20,
-            horizontalalignment='center', verticalalignment='bottom')
-
-    ax.text(.25, y, 'wins={}'.format(win), fontsize=20,
-            horizontalalignment='center', verticalalignment='bottom')
-    plt.plot([-.5, -thresh], [y, y], c='k')
-    plt.plot([thresh, .5], [y, y], c='k')
-    plt.scatter(thresh, y, marker='|', s=100, c='k')
-    plt.scatter(.5, y, marker='>', s=50, c='k')
-    plt.scatter(-thresh, y, marker='|', s=100, c='k')
-    plt.scatter(-.5, y, marker='<', s=50, c='k')
-    plt.show()

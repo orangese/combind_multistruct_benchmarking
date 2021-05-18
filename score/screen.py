@@ -68,5 +68,5 @@ def screen(single, raw, stats, alpha, weights=None):
     alpha /= 0.5 * n / (1 + (n-1)*0.5)
 
     pair_energy = (pair_energy*weights.reshape(1, -1)).mean(axis=1)
-    combind_energy = pair_energy - alpha*single
+    combind_energy = pair_energy/alpha - single
     return combind_energy

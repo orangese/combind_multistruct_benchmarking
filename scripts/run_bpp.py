@@ -94,20 +94,20 @@ for query, helper in helpers.items():
 features = 'mcss,hbond,saltbridge,contact'
 features = features.split(',')
 
-protein = Features('.', ifp_version='rd1', mcss_version='mcss16', max_poses=max_poses)
-protein.load_features(features)
 stats = read_stats('stats/', features)
 
 for _pvs in pvs:
-	ligands = [_pv.split('/')[-1].split('_pv')[0] for _pv in _pvs]
+	protein = Features('.', ifp_version='rd1', mcss_version='mcss16', max_poses=max_poses)
+	protein.load_features(pvs=_pvs, features=features)
+
+	ligands = [_pv.split('/')[-1].split('.')[0] for _pv in _pvs]
 	ps = PosePrediction(ligands, protein.raw, stats, [], features,
-	                    max_poses, 1.0, -8.0)
-	best_poses = ps.max_posterior(1000, 500)
-	probs = ps.get_poses_prob(best_poses)
+	                    max_poses, 1.0, -7.0)
+	best_poses = ps.max_posterior(1000, 50)
 
-	print(best_poses, probs)
+	print(best_poses)
 
-	out = 'scores/paper_conf/{}.csv'.format(ligands[0])
+	out = 'scores/paper_dev/{}.csv'.format(ligands[0])
 
 	with open(out, 'w') as fp:
 	    fp.write('ID,POSE,PROB,COMBIND_RMSD,GLIDE_RMSD,BEST_RMSD\n')
@@ -121,5 +121,5 @@ for _pvs in pvs:
 	            grmsd, crmsd, brmsd = None, None, None
 	        fp.write(','.join(map(str, [ligand,
 	                                    best_poses[ligand],
-	                                    probs[ligand],
+	                                    0.0,
 	                                    crmsd, grmsd, brmsd]))+ '\n')

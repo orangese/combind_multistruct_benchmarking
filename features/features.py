@@ -169,15 +169,16 @@ class Features:
         if ifp:
             print('Computing interaction similarities.')
             mkdir(self.path('ifp-pair', base=True))
-            def f(pv1, pv2):
-                ifp1 = self.path('ifp', pv=pv1)
-                ifp2 = self.path('ifp', pv=pv2)
-                for feature in self.ifp_features:
+            for feature in self.ifp_features:
+                def f(pv1, pv2):
+                    ifp1 = self.path('ifp', pv=pv1)
+                    ifp2 = self.path('ifp', pv=pv2)
+                
                     out = self.path(feature, pv=pv1, pv2=pv2)
                     if not os.path.exists(out):
                         return (ifp1, ifp2, feature, out)
-            unfinished = map_pairs(f)
-            mp(self.compute_ifp_pair, unfinished, processes)
+                unfinished = map_pairs(f)
+                mp(self.compute_ifp_pair, unfinished, processes)
 
         if shape:
             print('Computing shape similarities.')

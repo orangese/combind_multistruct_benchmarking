@@ -295,7 +295,7 @@ def shape(test_mae, root):
         active_mae = os.path.abspath('{}/shape/binder.maegz'.format(cwd))
         active_align_mae = os.path.abspath('{}/shape/binder-to-XTAL_lig_align.maegz'.format(cwd))
         test_align_csv = os.path.abspath('{}/shape/{}-to-binder-to-XTAL_lig_align_align.csv'.format(cwd, test_name))
-        shape_csv = '{}/shape_new.csv'.format(cwd)
+        shape_csv = '{}/shape.csv'.format(cwd)
 
         if os.path.exists(shape_csv):
             continue
@@ -319,7 +319,6 @@ def shape(test_mae, root):
             df = pd.read_csv(test_align_csv)
             mean = df.groupby(['ID', 'variant'])['score'].mean()
             mean = mean.groupby('ID').max()
-            #mean = df.groupby('ID').mean()['score']
             
             df = df.groupby('ID')[['score']].max()
             

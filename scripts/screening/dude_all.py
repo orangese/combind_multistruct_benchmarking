@@ -6,8 +6,11 @@ import pandas as pd
 from math import ceil
 
 """
+for i in *; do cd $i; sbatch -p rondror --wrap="python ~/combind/scripts/screening/dude_all.py $i"; cd -; done;
 for i in *; do cd $i; python ~/combind/scripts/screening/dude_all.py $i; cd -; done;
+
 for i in *; do cd $i; sbatch -p rondror --wrap="python ~/combind/scripts/screening/dude_all.py $i score"; cd -; done;
+for i in *; do cd $i; python ~/combind/scripts/screening/dude_all.py $i score; cd -; done;
 
 for i in *; do cd $i; sbatch -p rondror --wrap="$SCHRODINGER/utilities/structcat -o all/all.maegz all/ligands/[0-9][0-9][0-9][0-9][0-9].maegz"; cd -; done;
 for i in *; do cd $i; sbatch -p rondror -J sim             --wrap="python $COMBINDHOME/scripts/screening/run_dude.py similarity all.smi scores/all_rd1_shape_5"; cd -; done;
@@ -25,7 +28,7 @@ def srun(cmd):
 
 def split_ligands(ligand_fname, root, max_ligands=500):
     assert os.path.exists(root)
-    
+
     ligands = pd.read_csv(ligand_fname, sep=' ')
     n_files = ceil(ligands.shape[0] / max_ligands)
 
@@ -76,13 +79,32 @@ def featurize(protein, scores):
     os.chdir(scores)
     for pv in glob('../../../all/docking/*/*_pv.maegz'):
         name = os.path.basename(pv).split('-to-')[0]
-        shape = 'screen/shape/shape-{}-to-XTAL_pv-and-binder_pv.npy'.format(name)
         ifp = pv.replace('_pv.maegz', '_ifp_rd1.csv')
-        if os.path.exists(ifp) and not os.path.exists(shape):
+        shape = 'screen/shape/shape-{}-to-XTAL_pv-and-binder_pv.npy'.format(name)
+        ifp_pair = ['screen/ifp-pair/{}-{}-to-XTAL_ifp_rd1-and-binder_ifp_rd1.npy'.format(feature, name)
+                    for feature in ['hbond', 'saltbridge', 'contact']]
+        done = all(os.path.exists(x) for x in ifp_pair)
+        done = done and os.path.exists(shape)
+        if os.path.exists(ifp) and not done:
             cmd = ('combind featurize screen '
                    '{} bpp/binder_pv.maegz --no-mcss --screen')
             cmd = cmd.format(pv)
             cmd = 'sbatch -p owners -t 12:00:00 -J f2_{}_{} --dependency=singleton --wrap="{}"'.format(protein, name, cmd)
+            srun(cmd)
+    os.chdir(cwd)
+
+def verify_featurize(protein, scores):
+    cwd = os.getcwd()
+    os.chdir(scores)
+    for pv in glob('../../../all/docking/*/*_pv.maegz'):
+        name = os.path.basename(pv).split('-to-')[0]
+        anno_pv = 'screen/anno/{}_pv.maegz'.format(os.path.basename(pv).split('_pv')[0])
+        if not os.path.exists(anno_pv):
+            shape = 'screen/shape/shape-{}-to-XTAL_pv-and-binder_pv.npy'.format(name)
+            ifp = pv.replace('_pv.maegz', '_ifp_rd1.csv')
+            cmd = ('combind featurize screen --verify --delete '
+                   '{} bpp/binder_pv.maegz --no-mcss --screen')
+            cmd = cmd.format(pv)
             srun(cmd)
     os.chdir(cwd)
 
@@ -163,7 +185,13 @@ def merge(scores):
             cmd = '$SCHRODINGER/utilities/glide_sort -best_by_title -use_prop_d r_i_combind_score -o {} {}'
             cmd = cmd.format(combind_pv, ' '.join(fnames))
             print(cmd)
-            subprocess.run(cmd, shell=True)
+            proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, encoding='utf-8')
+
+            for line in proc.stderr.split('\n'):
+                if 'Incomplete CT block' in line:
+                    file = line.split("'")[1]
+                    print('Removing {}'.format(file))
+                    os.remove(file)
 
     if not os.path.exists(glide_pv):
         fnames = ['screen/glide/{}-to-XTAL_pv.maegz'.format(name) for name in names]
@@ -196,17 +224,24 @@ if not os.path.exists('all/docking'):
     os.mkdir('all/docking')
 
 if len(sys.argv) == 2:
-    split_ligands('all.smi', 'all/ligands')
-    ligprep('all/ligands', sys.argv[1])
-    dock('all/ligands', 'all/docking', sys.argv[1])
-    featurize_single('all/docking', sys.argv[1])
+    # split_ligands('all.smi', 'all/ligands')
+    # ligprep('all/ligands', sys.argv[1])
+    # dock('all/ligands', 'all/docking', sys.argv[1])
+    #featurize_single('all/docking', sys.argv[1])
     featurize(sys.argv[1], 'scores/all_rd1_shape_0/0')
     for n in [1, 3, 5, 10]:
         for i in range(5):
             scores = 'scores/all_rd1_shape_{}/{}'.format(n, i)
             featurize(sys.argv[1], scores)
 
-if len(sys.argv) == 3 and sys.argv[2] == 'score':
+elif len(sys.argv) == 3 and sys.argv[2] == 'verify':
+    verify_featurize(sys.argv[1], 'scores/all_rd1_shape_0/0')
+    for n in [1, 3, 5, 10]:
+        for i in range(5):
+            scores = 'scores/all_rd1_shape_{}/{}'.format(n, i)
+            verify_featurize(sys.argv[1], scores)
+
+elif len(sys.argv) == 3 and sys.argv[2] == 'score':
     scores = 'scores/all_rd1_shape_0/0'
     screen(sys.argv[1], 'shape,contact,hbond,saltbridge', scores)
     merge(scores)

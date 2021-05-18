@@ -18,33 +18,34 @@ data_root = '/oak/stanford/groups/rondror/projects/ligand-docking/combind_vs/DUD
 mode = 'shape'
 
 if mode == 'shape':
-    stats_root = '/oak/stanford/groups/rondror/users/jpaggi/SHAPE_stats_new'
-    template='{}/{}/scores/all_rd1_shape_{}/{}/shape_new.csv'
+    stats_root = '/oak/stanford/groups/rondror/users/jpaggi/SHAPE_stats'
+    template='{}/{}/scores/all_rd1_shape_{}/{}/shape.csv'
     out = '{}/{}_SHAPE_{}_{}.de'
     metric = 'SHAPE_mean'
 else:
     assert mode == '2D'
-    stats_root = '/oak/stanford/groups/rondror/users/jpaggi/2D_stats_new'
+    stats_root = '/oak/stanford/groups/rondror/users/jpaggi/2D_stats'
     template='{}/{}/scores/all_rd1_shape_{}/{}/similarity.csv'
     out = '{}/{}_2D_{}_{}.de'
     metric = 'active_sim_mean'
 
-
 def compute_stats(protein, n):
     print('compute', protein)
     nat, ref = [], []
-    for i in range(5):
+    for i in range(1):
         fname = template.format(data_root, protein, n, i)
         df = pd.read_csv(fname).set_index('ID')
         X = df[metric]
         active = df.index.str.contains('CHEMBL')
         _nat = DensityEstimate(domain=(0, 1), sd=0.01, reflect=True).fit(X[active])
         _ref = DensityEstimate(domain=(0, 1), sd=0.01, reflect=True).fit(X[~active])
+        _nat.n_samples = 1
+        _ref.n_samples = 1
         nat += [_nat]
         ref += [_ref]
     return protein, DensityEstimate.merge(nat), DensityEstimate.merge(ref)
 
-for n in [5]: #[0, 1, 3, 5, 10]:
+for n in [0, 1, 3, 5, 10]:
     stats = mp(compute_stats, [(x, n) for x in dude], 24)
 
     for protein in dude:
