@@ -53,6 +53,6 @@ def make_grid(pdb,
     x, y, z = centroid(ligfile)
 
     with open(infile, 'w') as fp:
-        fp.write(GRID_IN.format(x=x, y=y, z=z, pdb=pdb, prot=protfile))
+        fp.write(grid_in.format(x=x, y=y, z=z, pdb=pdb, prot=protfile))
 
     subprocess.run(cmd, cwd=cwd, shell=True)
