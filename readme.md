@@ -53,7 +53,7 @@ chemical structure.
 ```
 combind structprep
 combind ligprep ligands.smi ligands
-combind dock structures/grids/PDBID/PDBID.zip docking ligands/*/*.maegz
+combind dock --grid structures/grids/PDBID/PDBID.zip docking ligands/*/*.maegz
 ```
 
 ### Binding pose featurization
