@@ -109,7 +109,33 @@ class Features:
                     name2 = basename(pv2)
                     self.raw[feature][(name1, name2)] = np_load(path, delete=delete, halt=not delete)
 
-    def compute_single_features(self, pvs, ifp=True, processes=1):
+    def is_single_complete(self, pvs, ifp=True):
+        class IsDone:
+            def __init__(self):
+                self.is_done = True
+
+            def __call__(self, f, x, p):
+                if len(x):
+                    self.is_done = False
+
+        is_done = IsDone()
+        self.compute_single_features(pvs, ifp=ifp, run=is_done)
+        return is_done.is_done
+
+    def is_pair_complete(self, pvs, ifp=True, shape=True, mcss=True):
+        class IsDone:
+            def __init__(self):
+                self.is_done = True
+
+            def __call__(self, f, x, p):
+                if len(x):
+                    self.is_done = False
+
+        is_done = IsDone()
+        self.compute_pair_features(pvs, ifp=ifp, shape=shape, mcss=mcss, run=is_done)
+        return is_done.is_done
+
+    def compute_single_features(self, pvs, ifp=True, processes=1, run=mp):
         # For single features, there is no need to keep sub-sets of ligands
         # seperated,  so just merge them at the outset to simplify the rest of
         # the method.
@@ -137,9 +163,9 @@ class Features:
                 out = self.path('ifp', pv=pv)
                 if not os.path.exists(out):
                     unfinished += [(pv, out)]
-            mp(self.compute_ifp, unfinished, processes)
+            run(self.compute_ifp, unfinished, processes)
 
-    def compute_pair_features(self, pvs, processes=1, ifp=True, shape=True, mcss=True):
+    def compute_pair_features(self, pvs, processes=1, ifp=True, shape=True, mcss=True, run=mp):
         if len(pvs) == 1:
             return
 
@@ -178,7 +204,7 @@ class Features:
                     if not os.path.exists(out):
                         return (ifp1, ifp2, feature, out)
                 unfinished = map_pairs(f)
-                mp(self.compute_ifp_pair, unfinished, processes)
+                run(self.compute_ifp_pair, unfinished, processes)
 
         if shape:
             print('Computing shape similarities.')
@@ -188,7 +214,7 @@ class Features:
                 if not os.path.exists(out):
                     return (pv1, pv2, out)
             unfinished = map_pairs(f)
-            mp(self.compute_shape, unfinished, processes)
+            run(self.compute_shape, unfinished, processes)
 
         if mcss:
             print('Computing mcss similarities.')
@@ -198,7 +224,7 @@ class Features:
                 if not os.path.exists(out):
                     return (pv1, pv2, out)
             unfinished = map_pairs(f)
-            mp(self.compute_mcss, unfinished, processes)
+            run(self.compute_mcss, unfinished, processes)
 
     def compute_name(self, pv, out):
         names = []

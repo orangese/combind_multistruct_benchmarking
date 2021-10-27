@@ -6,37 +6,18 @@ from schrodinger.structure import StructureReader, StructureWriter
 
 CMD = '$SCHRODINGER/shape_screen -shape {poses1} -screen {poses2} -inplace {typing} {norm} -distinct -NOJOBID'
 
-
-def key(st):
-    if 'i_i_glide_posenum' not in st.property:
-        return st.title
-
-    if 'i_m_source_file_index' in st.property:
-        source_file_index = st.property['i_m_source_file_index']
-    else:
-        source_file_index = 0
-
-    if 's_lp_Variant' in st.property:
-        lp_Variant = st.property['s_lp_Variant']
-    else:
-        lp_Variant = ''
-    
-    return (source_file_index,
-            st.property['i_i_glide_posenum'],
-            lp_Variant)
-
-
-def write_and_count(pv_in, pv_out, max_poses):
+def write_and_name(pv_in, pv_out, max_poses):
     titles = []
     with StructureReader(pv_in) as sts, StructureWriter(pv_out) as writer:
         next(sts)
         for i, st in enumerate(sts):
-            writer.append(st)
-            titles += [key(st)]
-            if len(titles) == max_poses:
-                print('max reached')
+            if i == max_poses:
                 break
-    assert len(set(titles)) == len(titles)
+            assert '-conf-' not in st.title
+
+            st.title = st.title + '-conf-{}'.format(i)
+            writer.append(st)
+            titles += [st.title]
     return titles
 
 def shape(pv1, pv2, version='pharm_max', max_poses=float('inf')):
@@ -66,8 +47,8 @@ def shape(pv1, pv2, version='pharm_max', max_poses=float('inf')):
         output = wd+'/poses1_align.maegz'
         log    = wd+'/poses1_shape.log'
 
-        ligands1 = write_and_count(pv1, poses1, max_poses)
-        ligands2 = write_and_count(pv2, poses2, max_poses)
+        ligands1 = write_and_name(pv1, poses1, max_poses)
+        ligands2 = write_and_name(pv2, poses2, max_poses)
 
 
         cmd = CMD.format(poses1=os.path.basename(poses1),
@@ -85,6 +66,6 @@ def shape(pv1, pv2, version='pharm_max', max_poses=float('inf')):
         with StructureReader(output) as sts:
             for k, st in enumerate(sts):
                 i = k % len(ligands1)
-                j = ligands2.index(key(st))
+                j = int(st.title.split('-conf-')[-1])
                 sims[i, j] = st.property['r_phase_Shape_Sim']
     return sims

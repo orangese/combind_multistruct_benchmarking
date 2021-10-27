@@ -80,7 +80,7 @@ def structprep(struct, grid_struct):
     struct_process(structs)
     struct_align(struct, structs)
     struct_sort(structs)
-    make_grid(struct)
+    make_grid(grid_struct)
 
 @main.command()
 @click.argument('smiles')
@@ -120,7 +120,7 @@ def ligprep(smiles, root, screen, ligand_names, ligand_smiles, delim, processes)
                 with open(_smiles, 'w') as fp:
                     for _, ligand in ligands.iterrows():
                         fp.write('{} {}\n'.format(ligand[ligand_smiles], ligand[ligand_names]))
-            print(_smiles)
+            print( _smiles)
             ligprep(_smiles)
     else:
         ligands = pd.read_csv(smiles, sep=delim)
