@@ -2,7 +2,7 @@ import os
 from schrodinger.structure import StructureReader
 from subprocess import run
 
-command = '$SCHRODINGER/utilities/prepwizard -WAIT -rehtreat -watdist 0 {}_in.mae {}_out.mae'
+command = '$SCHRODINGER/utilities/prepwizard -WAIT -noimpref -rehtreat -watdist 0 {}_in.mae {}_out.mae'
 
 def load_complex(prot_in, lig_in, struct):
 
