@@ -30,7 +30,7 @@ def make_grid(pdb,
               grid_in=None):
     if grid_in is None:
         grid_in = GRID_IN
-
+    print('here!')
     cwd = os.path.abspath(CWD.format(pdb=pdb))
     zipfile = os.path.abspath(cwd+'/'+ZIPFILE.format(pdb=pdb))
     infile = os.path.abspath(cwd+'/'+INFILE.format(pdb=pdb))
