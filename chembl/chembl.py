@@ -286,8 +286,8 @@ def main():
 @click.option('--molw-thresh', default=500)
 @click.option('--output-fname')
 @click.argument('uniprot_or_chembl')
-@click.argument('chembldb', default='/oak/stanford/groups/rondror/users/jpaggi/pldb_data/raw/chembl_27.db')
-@click.argument('uniprot_chembl', default='/oak/stanford/groups/rondror/users/jpaggi/pldb_data/raw/uniprot-chembl.tsv')
+@click.argument('chembldb', default='/oak/stanford/groups/rondror/projects/ligand-docking/chembl/chembl_30.db')
+@click.argument('uniprot_chembl', default='/oak/stanford/groups/rondror/projects/ligand-docking/chembl/uniprot-chembl.tsv')
 def query(protein_complex, homologous, ambiguous_stereo, activity_type,
           affinity_thresh, molw_thresh, output_fname,
           uniprot_or_chembl, chembldb, uniprot_chembl):
