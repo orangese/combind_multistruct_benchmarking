@@ -1,0 +1,367 @@
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+No valid ligands...
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 285 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Activity', 'EC50', '%max', 'Inhibition', 'Ratio EC50'}
+Removing 1 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 2 rows b/c mw_freebase > 600
+Removing 0 rows b/c standard_units != nM
+Set of offending values is set()
+Removing 4 rows b/c relation != =
+Set of offending values is {'>'}
+Removing 24 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 63 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 602 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'kon', 'Activation (% of control)', 'pKb', 'koff', 'Inhibition (% of control)', 'fKi', '% Inhibition of Control Specific Binding (Mean n=2)', 'Inhibition', 'EC50', 'Ke', 'pA2', '% of Control Agonist Response (Mean n=2)', '% Inhibition of Control Agonist Response (Mean n=2)', 'T1/2', 'Activity', 'IP', '% Ctrl', 'logIC50', 'Kinact', 'Emax', 'Drug uptake'}
+Removing 26 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 549 rows b/c mw_freebase > 600
+Removing 0 rows b/c standard_units != nM
+Set of offending values is set()
+Removing 56 rows b/c relation != =
+Set of offending values is {'<', '>=', '>'}
+Removing 531 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 148 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 3597 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Efficacy', 'Maximum response', 'Log Ki', 'Ke', 'pKi', 'Imax', 'log(ratio)', 'Intrinsic activity', 'pIC50', 'Inhibition', 'Selectivity ratio', 'EC50', '% Ctrl', 'Ratio EC50', 'Relative efficacy', 'Kb', 'Activity', '%max', '% Inhibition of Control Specific Binding (Mean n=2)', 'pEC50', 'Emax', 'Bmax', 'Ke(app)', 'pKb'}
+Removing 160 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 97 rows b/c mw_freebase > 600
+Removing 2 rows b/c standard_units != nM
+Set of offending values is {'µM'}
+Removing 264 rows b/c relation != =
+Set of offending values is {'>', None, '<', '>='}
+Removing 408 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 628 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 947 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'pEC50', 'EC50', '% Inhibition of Control Specific Binding (Mean n=2)', 'Activation (% of control)', 'Inhibition', 'pKB', '% of Control Agonist Response (Mean n=2)', 'Emax', 'Bmax', '% Ctrl', 'Log EC50', 'Inhibition (% of control)', '% Inhibition of Control Agonist Response (Mean n=2)', 'pKi', 'KB', 'Intrinsic activity', 'Kb', 'Activity', 'Ratio', '% Inhibition of Control Specific Binding', 'pKb'}
+Removing 26 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 32 rows b/c mw_freebase > 600
+Removing 12 rows b/c standard_units != nM
+Set of offending values is {'µM'}
+Removing 87 rows b/c relation != =
+Set of offending values is {None, '>=', '>', '<'}
+Removing 32 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 286 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 7304 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'EC50', 'Inverse agonism', '% Inhibition of Control Specific Binding (Mean n=2)', 'Efficacy', 'Imax', 'Kb', 'Kieq', 'logEC50', 'Displacement', 'Ratio', 'pKi', 'FC', 'Intrinsic activity', 'Inhibition', 'SC50', 'Ratio EC50', '% Ctrl', 'Emax', 'pEC50', 'EC', 'Ratio Ki', 'Activity', 'Bmax'}
+Removing 280 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 168 rows b/c mw_freebase > 600
+Removing 2 rows b/c standard_units != nM
+Set of offending values is {'µM'}
+Removing 467 rows b/c relation != =
+Set of offending values is {'<=', '>', '<'}
+Removing 813 rows b/c molw > 500
+Removing 2 rows b/c macrocycle
+Removing 1152 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 2954 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'% of Control Agonist Response (Mean n=2)', 'Inhibition (% of control)', 'Potency', 'Log 1/Kd', 'log(Tau/KA)', 'Activity', 'EC50', 'Imax', 'Kb', 'FC', 'Activation (% of control)', 'Intrinsic activity', 'Efficacy', 'INH', 'Ratio', 'Emax', 'Ratio Ki', '% Inhibition of Control Specific Binding (Mean n=2)', 'Inhibition', 'K0.5', '% Ctrl', 'Ratio EC50', '% Inhibition of Control Agonist Response (Mean n=2)'}
+Removing 100 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 34 rows b/c mw_freebase > 600
+Removing 0 rows b/c standard_units != nM
+Set of offending values is set()
+Removing 138 rows b/c relation != =
+Set of offending values is {'<', None, '>', '>='}
+Removing 80 rows b/c molw > 500
+Removing 128 rows b/c macrocycle
+Removing 266 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 27 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Imax', 'Activity', 'Inhibition'}
+Removing 0 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 11 rows b/c mw_freebase > 600
+Removing 0 rows b/c standard_units != nM
+Set of offending values is set()
+Removing 0 rows b/c relation != =
+Set of offending values is set()
+Removing 82 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 2 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 99 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Inhibition', 'Activity', '% Ctrl', 'Emax', 'EC50'}
+Removing 0 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 20 rows b/c mw_freebase > 600
+Removing 12 rows b/c standard_units != nM
+Set of offending values is {'µM'}
+Removing 4 rows b/c relation != =
+Set of offending values is {'<', '>'}
+Removing 124 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 6 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 854 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Ratio', 'pKi', '% Inhibition of Control Specific Binding (Mean n=2)', 'Activity', 'Log Ki', 'Imax', '% Ctrl', 'IA', 'ECmax', 'Ratio Ki', 'KiL', 'KiH', 'EC50', 'Inhibition', 'Kb', 'IAr', 'Intrinsic activity', 'Emax'}
+Removing 12 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 6 rows b/c mw_freebase > 600
+Removing 0 rows b/c standard_units != nM
+Set of offending values is set()
+Removing 45 rows b/c relation != =
+Set of offending values is {'>', '>=', '<'}
+Removing 46 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 207 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 763 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Activity', 'IA', 'Intrinsic activity', 'EC50', 'ECmax', 'Log Ki', 'pKi', 'Imax', 'Ratio Ki', '% Inhibition of Control Specific Binding (Mean n=2)', 'Emax', 'IAr', 'Inhibition', 'Kb', 'Ratio'}
+Removing 12 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 6 rows b/c mw_freebase > 600
+Removing 0 rows b/c standard_units != nM
+Set of offending values is set()
+Removing 13 rows b/c relation != =
+Set of offending values is {'>'}
+Removing 47 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 212 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 49 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Activity', 'Inhibition', '% Ctrl'}
+Removing 2 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 128 rows b/c canonical_smiles is None
+Removing 269 rows b/c mw_freebase > 600
+Removing 0 rows b/c standard_units != nM
+Set of offending values is set()
+Removing 1 rows b/c relation != =
+Set of offending values is {'>'}
+Removing 135 rows b/c molw > 500
+Removing 11 rows b/c macrocycle
+Removing 577 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 655 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'PR', 'Relative potency', 'MEC', 'CF', 'Activity', 'EC50', 'Inhibition', 'pKb', 'ED50', '% Ctrl', 'Ratio IC50'}
+Removing 11 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 15 rows b/c mw_freebase > 600
+Removing 12 rows b/c standard_units != nM
+Set of offending values is {'µM'}
+Removing 45 rows b/c relation != =
+Set of offending values is {'>=', '<', '>'}
+Removing 50 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 164 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 597 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Activation (% of control)', 'EC50', 'Activity', 'Ratio IC50', 'FC', '% of Control Agonist Response (Mean n=2)', 'Inhibition (% of control)', '% Inhibition of Control Agonist Response (Mean n=2)', 'Inhibition', 'Kb'}
+Removing 36 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 58 rows b/c mw_freebase > 600
+Removing 5 rows b/c standard_units != nM
+Set of offending values is {'µM'}
+Removing 91 rows b/c relation != =
+Set of offending values is {'>', '>=', '<'}
+Removing 432 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 89 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 693 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'A2', 'Ratio IC50', 'pA2', 'pKi', 'Intrinsic activity', 'EC50', 'pKb', '% Ctrl', 'Kb', 'Emax', '% Inhibition of Control Specific Binding (Mean n=2)', 'KB', 'Activity', 'Inhibition'}
+Removing 34 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 136 rows b/c mw_freebase > 600
+Removing 0 rows b/c standard_units != nM
+Set of offending values is set()
+Removing 33 rows b/c relation != =
+Set of offending values is {'>', '<', '>='}
+Removing 115 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 65 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 575 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Emax', 'Intrinsic activity', 't1/2', 'K', 'pKb', 'Inhibition', 'T1/2', 'Efficacy', 'Kb', 'Activity', 'FC', 'Ratio IC50', 'Bmax', 'EC50'}
+Removing 69 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 24 rows b/c mw_freebase > 600
+Removing 0 rows b/c standard_units != nM
+Set of offending values is set()
+Removing 54 rows b/c relation != =
+Set of offending values is {'<', None, '>', '>='}
+Removing 410 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 333 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 11 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Inhibition'}
+Removing 0 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 1 rows b/c mw_freebase > 600
+Removing 0 rows b/c standard_units != nM
+Set of offending values is set()
+Removing 1 rows b/c relation != =
+Set of offending values is {'>'}
+Removing 11 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 4 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 3949 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Log Ki', 'Activity', 'pKb', 'Maximal effect', 'pKi', 'Imax', 'Ratio Ki', 'Activation (% of control)', 'Ratio EC50', 'Efficacy', 'cAMP', 'Intrinsic activity', 'cAMP increase', '%max', '% Inhibition of Control Specific Binding (Mean n=2)', 'Inhibition', 'FC', '% of Control Agonist Response (Mean n=2)', 'pEC50', 'Max', 'pD2', 'Emax', 'EC50', '% Ctrl', '% Inhibition of Control Agonist Response (Mean n=2)', 'IA', 'Ratio', 'Inhibition (% of control)', 'Kb'}
+Removing 137 rows b/c standard_value is na
+Removing 1 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 50 rows b/c mw_freebase > 600
+Removing 24 rows b/c standard_units != nM
+Set of offending values is {'%', 'µM'}
+Removing 279 rows b/c relation != =
+Set of offending values is {'>=', None, '<', '>'}
+Removing 386 rows b/c molw > 500
+Removing 4 rows b/c macrocycle
+Removing 1032 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 659 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Activity', 'pEC50', 'Inhibition', 'pKi', 'Ratio', 'pKb', 'Intrinsic activity', 'EC50', 'Kb', 'Efficacy', '% Ctrl', 'KB', '% Inhibition of Control Specific Binding (Mean n=2)', 'Log EC50'}
+Removing 24 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 26 rows b/c mw_freebase > 600
+Removing 13 rows b/c standard_units != nM
+Set of offending values is {'µM'}
+Removing 104 rows b/c relation != =
+Set of offending values is {'>', None, '<'}
+Removing 5 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 176 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 1380 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Ratio EC50', 'Inhibition', 'FC', 'max activation', 'Fold change', 'EC50', 'Emax', 'Efficacy', 'Activity'}
+Removing 0 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 0 rows b/c mw_freebase > 600
+Removing 0 rows b/c standard_units != nM
+Set of offending values is set()
+Removing 0 rows b/c relation != =
+Set of offending values is set()
+Removing 3 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 0 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+No valid ligands...
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 1847 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Emax', 'Potentiation', 'Activity', 'Imax', 'TIME', 'max activation', 'FC', 'Rmax', 'K', 'Ratio Ki', 'Inhibition', '%max', 'Efficacy', 'EC80', 'EC50', 'Ratio EC50'}
+Removing 3 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 0 rows b/c mw_freebase > 600
+Removing 0 rows b/c standard_units != nM
+Set of offending values is set()
+Removing 2 rows b/c relation != =
+Set of offending values is {'<'}
+Removing 17 rows b/c molw > 500
+Removing 1 rows b/c macrocycle
+Removing 31 rows b/c ambiguous stereochemistry
+/share/software/user/restricted/schrodinger/2021-1/internal/lib/python3.8/site-packages/pandas/core/computation/expressions.py:203: UserWarning: evaluating in Python space because the '*' operator is not supported by numexpr for the bool dtype, use '&' instead
+  warnings.warn(
+Removing 952 rows b/c standard_type not in ['IC50', 'Ki', 'Kd']
+Set of offending values is {'Ratio EC50', 'Activity', 'Inhibition', '% Inhibition of Control Specific Binding (Mean n=2)', 'Emax', 'Ratio', 'EC50', '% Ctrl', 'Kb'}
+Removing 32 rows b/c standard_value is na
+Removing 0 rows b/c standard_value is 0
+Removing 0 rows b/c canonical_smiles is None
+Removing 21 rows b/c mw_freebase > 600
+Removing 0 rows b/c standard_units != nM
+Set of offending values is set()
+Removing 40 rows b/c relation != =
+Set of offending values is {'>', '<', '>=', None}
+Removing 26 rows b/c molw > 500
+Removing 0 rows b/c macrocycle
+Removing 79 rows b/c ambiguous stereochemistry
+
+(1). SAVING LIGANDS TO ligands/CHEMBL3559707.csv...
+
+(2). SAVING LIGANDS TO ligands/CHEMBL1878.csv...
+
+(3). SAVING LIGANDS TO ligands/CHEMBL249.csv...
+
+(4). SAVING LIGANDS TO ligands/CHEMBL224.csv...
+
+(5). SAVING LIGANDS TO ligands/CHEMBL1867.csv...
+
+(6). SAVING LIGANDS TO ligands/CHEMBL253.csv...
+
+(7). SAVING LIGANDS TO ligands/CHEMBL2056.csv...
+
+(8). SAVING LIGANDS TO ligands/CHEMBL4330.csv...
+
+(9). SAVING LIGANDS TO ligands/CHEMBL1798.csv...
+
+(10). SAVING LIGANDS TO ligands/CHEMBL1945.csv...
+
+(11). SAVING LIGANDS TO ligands/CHEMBL1946.csv...
+
+(12). SAVING LIGANDS TO ligands/CHEMBL250.csv...
+
+(13). SAVING LIGANDS TO ligands/CHEMBL2069.csv...
+
+(14). SAVING LIGANDS TO ligands/CHEMBL3710.csv...
+
+(15). SAVING LIGANDS TO ligands/CHEMBL1836.csv...
+
+(16). SAVING LIGANDS TO ligands/CHEMBL5071.csv...
+
+(17). SAVING LIGANDS TO ligands/CHEMBL2150838.csv...
+
+(18). SAVING LIGANDS TO ligands/CHEMBL214.csv...
+
+(19). SAVING LIGANDS TO ligands/CHEMBL1942.csv...
+
+(20). SAVING LIGANDS TO ligands/CHEMBL5409.csv...
+
+(21). SAVING LIGANDS TO ligands/CHEMBL2111463.csv...
+
+(22). SAVING LIGANDS TO ligands/CHEMBL5137.csv...
+
+(23). SAVING LIGANDS TO ligands/CHEMBL1881.csv...
