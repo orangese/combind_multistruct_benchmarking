@@ -1,0 +1,11 @@
+SMILES ID
+CCOC(=O)CCc1ccc(OC[C@H](O)CNC(C)(C)Cc2ccc3ccccc3c2)c(C#N)c1.Cl 44541355 3e-06
+C#CCOc1ccc2c(c1)c(-c1ccc(C(C)C)cc1)nc(=S)n2Cc1cccc(OCCO)c1 10028311 0.0004
+COCCn1c(-c2ccc(C(C)C)cc2)nc2c(C(F)(F)F)c(Cc3nccs3)cc(OC)c21 49865681 0.002
+C[C@@H](OC[C@H](O)CNC(C)(C)Cc1ccc2ccccc2c1)c1ccccc1-c1ccc(C(=O)O)cc1 51346981 0.004
+COCCn1c(-c2ccc(C(C)C)cc2)nc2c(Br)c(Cc3ccccc3)cc(OC)c21 11488770 0.005
+Cc1ccc([C@@H](C)OC[C@H](O)CNC(C)(C)Cc2ccc3ccccc3c2)c2c1O[C@@H]1[C@@H](C(=O)O)[C@H]21 122636685 0.00745
+COc1ccc(CC(C)(C)NC[C@H](O)COc2cccc3[nH]c(=O)[nH]c23)cc1 44583033 0.011
+Cc1ccc([C@@H](C)OC[C@H](O)CNC(C)(C)CC2Cc3ccccc3C2)c2c1O[C@@H]1[C@@H](C(=O)O)[C@H]21 122636646 0.02
+Cc1ccc([C@@H](C)OC[C@H](O)CNC(C)(C)CCCc2ccccc2)c2c1O[C@@H]1[C@@H](C(=O)O)[C@H]21 122636663 0.028399999999999998
+C#CCNc1ccc2c(c1)c(-c1ccc(C(C)C)cc1)nc(=O)n2C(C)C 45141172 0.03

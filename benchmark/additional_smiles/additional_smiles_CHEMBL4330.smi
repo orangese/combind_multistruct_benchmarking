@@ -1,6 +1,6 @@
-SMILES ID
-O=C(O)CNC(=O)c1c(O)c2c(n(Cc3ccc(C(F)(F)F)cc3)c1=O)COC2 54746913
-O=C(/C=C/c1c(C(=O)O)[nH]c2cc(Cl)cc(Cl)c12)OC1CCCCC1 127043410
-O=C(Nc1cccc2c(=O)cc(-c3nn[nH]n3)oc12)c1ccc(OCCCCc2ccccc2)cc1 4887
-CCCCC/C=C\C/C=C\C=C\C=C\[C@@H](Sc1ccc(C(=O)O)cc1)[C@@H](O)CCCC(=O)O 5311015
-O=C(CCc1c(C(=O)O)[nH]c2ccccc12)Nc1cccc(/C=C/c2ccc3ccc(Cl)cc3n2)c1 127043237
+SMILES ID UM_ACTIVITY
+O=C(O)CNC(=O)c1c(O)c2c(n(Cc3ccc(C(F)(F)F)cc3)c1=O)COC2 54746913 4.5
+O=C(/C=C/c1c(C(=O)O)[nH]c2cc(Cl)cc(Cl)c12)OC1CCCCC1 127043410 10.0
+O=C(Nc1cccc2c(=O)cc(-c3nn[nH]n3)oc12)c1ccc(OCCCCc2ccccc2)cc1 4887 3.62
+CCCCC/C=C\C/C=C\C=C\C=C\[C@@H](Sc1ccc(C(=O)O)cc1)[C@@H](O)CCCC(=O)O 5311015 0.3
+O=C(CCc1c(C(=O)O)[nH]c2ccccc12)Nc1cccc(/C=C/c2ccc3ccc(Cl)cc3n2)c1 127043237 10.0

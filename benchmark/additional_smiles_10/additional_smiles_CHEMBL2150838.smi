@@ -1,0 +1,11 @@
+SMILES ID
+C[C@H](NC(=O)CCCc1ccc2cccnc2n1)c1ccc(-c2cccc(Cl)c2)cc1 71460332 0.011
+CN1CCN(Cc2ccc(-c3cccc(C(=O)Nc4ccccc4CC(=O)O)c3)cc2)CC1 138811017 0.025
+O=C(CCCc1ccc2cccnc2n1)NCc1cc(-c2ccc(F)c(C(F)(F)F)c2)no1 53358901 0.035
+Clc1cccc(-c2ccc(-c3nnc(CCCc4ccc5cccnc5n4)o3)cc2)c1 71456641 0.04
+O=C(CCCc1ccc2cccnc2n1)NCc1cnc(-c2ccc(F)c(C(F)(F)F)c2)nc1 71462033 0.049
+O=C(O)Cc1ccccc1NC(=O)c1cccc(-c2ccc(Cl)c(O[C@@H]3CCCNC3)c2F)c1 162659507 0.076
+FC(F)(F)c1ccc(-c2nnc(CCCCc3ccc4cccnc4n3)o2)cc1C(F)(F)F 71456642 0.17
+O=C(CCCc1ccc2cccnc2n1)NCc1ncc(-c2ccc(F)c(C(F)(F)F)c2)cn1 71451310 0.2
+O=C(CCCc1ccc2cccnc2n1)NCc1cnn(-c2ccc(F)c(C(F)(F)F)c2)c1 71462034 0.21
+O=C(CCCc1ccc2cccnc2n1)NCc1nnc(-c2ccc(F)c(C(F)(F)F)c2)s1 71458496 0.27

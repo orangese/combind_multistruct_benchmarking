@@ -1,0 +1,11 @@
+SMILES ID
+CC(=O)N[C@H]1CC[C@@](CO[C@H](C)c2cc(C(F)(F)F)cc(C(F)(F)F)c2)(c2ccccc2)NC1 10288987 1e-05
+COc1ccc(OC(F)(F)F)cc1CN[C@H]1CCCN[C@H]1c1ccccc1.Cl.Cl 90664465 1.2e-05
+COc1ccc(-n2nnnc2C(F)(F)F)cc1CN[C@H]1CCCN[C@H]1c1ccccc1.Cl.Cl 6918330 2.512e-05
+Cc1cc(F)ccc1[C@H]1CNCCN1C(=O)N(C)[C@H](C)c1cc(C(F)(F)F)cc(C(F)(F)F)c1 9832383 3.0200000000000002e-05
+C[C@@H](O[C@H]1CN2C(=O)CC[C@H]2[C@@H]1c1ccc(F)cc1)c1cc(C(F)(F)F)cc(C(F)(F)F)c1 16663280 6e-05
+C[C@@H](O[C@H]1OCCN(Cc2n[nH]c(O)n2)[C@H]1c1ccccc1)c1cc(F)cc(C(F)(F)F)c1 135419433 0.0001
+CC(=O)N[C@H]1C[C@@](CO[C@H](C)c2cc(C(F)(F)F)cc(C(F)(F)F)c2)(c2ccccc2)C1 10173872 0.0001
+COc1ccc(N(C)S(C)(=O)=O)cc1CN[C@H]1CCCN[C@H]1c1ccccc1 10363809 0.00011
+FC(F)(F)c1cc(CO[C@H]2OCCN(Cn3cncn3)[C@H]2c2ccccc2)cc(C(F)(F)F)c1 44295002 0.00013000000000000002
+C[C@@H](O[C@H]1CC[C@@H]2CNC[C@H]2[C@@H]1c1ccc(F)cc1)c1cc(C(F)(F)F)cc(C(F)(F)F)c1 24993312 0.00015

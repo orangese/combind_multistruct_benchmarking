@@ -1,0 +1,11 @@
+SMILES ID
+CCCCC[C@H](O)/C=C/[C@H]1[C@H](O)CC(=O)[C@@H]1C/C=C\CCCC(=O)O 5280360 0.00033
+CCN1CCOc2ccc(C(=O)Nc3nnc(-c4c(Cl)cccc4Cl)s3)cc21 44250281 0.0012590000000000001
+O=C(/C=C/c1ccccc1Cc1ccc2ccccc2c1)NS(=O)(=O)c1cccs1 9954562 0.0013000000000000002
+CCn1ncc2c(F)cc(-c3ccc([C@@]4(C)CCCNC4=O)c(=O)[nH]3)cc21 91668213 0.002
+O=C(COc1cccc2[nH]cc(Sc3ccc4ccccc4c3)c12)NS(=O)(=O)c1ccccc1 44570232 0.0022
+COc1ccc(C/C=C/c2ccccc2/C=C/C(=O)NS(=O)(=O)c2cccs2)cc1 22008966 0.0024
+CCn1ncc2c(F)cc(-c3ccc(C(/C=C4\OC(=O)NC4=O)(CC)CC)c(=O)[nH]3)cc21 137477676 0.003
+O=C(O)/C=C/c1ccccc1Cc1ccc2cc(OCc3ccccc3)ccc2c1 21198692 0.0032
+COc1cccc(Oc2cccc3c2c(/C=C/C(=O)NS(=O)(=O)c2ccc(F)c(F)c2)cn3C)c1 44564843 0.0044
+CC(C)[C@H](C[C@H]1OC(=O)NC1=O)c1ccc(-c2ccc3cccc(F)c3c2)[nH]c1=O 137487263 0.006

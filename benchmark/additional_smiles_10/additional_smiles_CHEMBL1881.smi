@@ -1,0 +1,11 @@
+SMILES ID
+CCCCC[C@H](O)/C=C/[C@H]1[C@H](O)CC(=O)[C@@H]1C/C=C\CCCC(=O)O 5280360 0.00103
+O=C(NO)c1ccc(CNC(=O)c2[nH]c(-c3ccoc3)cc2-c2ccc(F)cc2)cc1 51039069 0.0011
+O=C(NO)c1ccc(CNC(=O)c2[nH]c(-c3ccccc3)cc2-c2ccc(F)cc2)o1 51039071 0.0015
+C=CCC1([C@@H](O)C/C=C/[C@H]2[C@H](O)C[C@@H](Cl)[C@@H]2C/C=C\CCCC(=O)O)CCC1 5311228 0.0017
+C[C@@H]1COc2c(Cl)cc(-n3ccc4cc(F)ccc43)cc2CN1Cc1cc[nH]c(=O)c1 122180297 0.002
+COc1ccc(-c2cc(-c3ccccc3)[nH]c2C(=O)Nc2ccc(C(=O)NO)o2)cc1 51039072 0.0031000000000000003
+O=C(NO)c1ccc(CNC(=O)c2[nH]c(-c3cccs3)cc2-c2ccc(F)cc2)nc1 51039068 0.0038
+O=C(O)/C=C/c1ccccc1/C=C/c1ccccc1OCc1ccccc1 11210487 0.008
+COc1ccc(-c2cc(-c3ccccc3)[nH]c2C(=O)Nc2cccc(CC(=O)NO)c2)cc1 84973026 0.0092
+O=C(NO)c1ccc(CNC(=O)c2[nH]c(-c3ccc(O)cc3)cc2-c2ccoc2)cc1 84973025 0.0094

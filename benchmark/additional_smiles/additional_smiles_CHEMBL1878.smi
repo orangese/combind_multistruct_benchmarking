@@ -1,21 +1,21 @@
-SMILES ID
-Cc1nc(-c2ccccc2O)n(CCc2cccc(F)c2)c(=O)c1C(C)C 135430131
-COCCn1c(-c2ccc(C(C)C)cc2)nc2c(Br)c(Cc3ccccc3)cc(OC)c21 11488770
-CC(C)(Cc1nc2ccccc2[nH]1)NC[C@@H](O)[C@H]1CCCN1Cc1cccc(C#N)c1 44405899
-CC(C)(Cc1cc2ccccc2s1)NC[C@@H](O)[C@H]1CCCN1Cc1cccc(C#N)c1 44405854
-COc1ccc2c(c1)c(-c1ccc(C3CC3)cc1)nc(=O)n2C(C)C 45139808
-Cc1ccc([C@@H](C)OC[C@H](O)CNC(C)(C)Cc2ccc3ccccc3c2)c2c1O[C@@H]1[C@@H](C(=O)O)[C@H]21 122636685
-CCOC(=O)CCc1ccc(OC[C@H](O)CNC(C)(C)Cc2ccc3ccccc3c2)c(C#N)c1.Cl 44541355
-CC(C)(Cc1ccc(F)cc1)NC[C@@H](O)COc1ccc(OC(F)(F)F)cc1 44405902
-Cc1ccc([C@@H](C)OC[C@H](O)CNC(C)(C)CCSc2ccccc2)c2c1O[C@@H]1[C@@H](C(=O)O)[C@H]21 122636699
-Cc1ccc([C@@H](C)OC[C@H](O)CNC(C)(C)CCCc2ccccc2)c2c1O[C@@H]1[C@@H](C(=O)O)[C@H]21 122636663
-O=c1c2cc(F)ccc2nc(-c2ccccc2O)n1CCc1cccc(F)c1 135492578
-C#CCNc1ccc2c(c1)c(-c1ccc(C(C)C)cc1)nc(=O)n2C(C)C 45141172
-Cc1ccc([C@@H](C)OC[C@H](O)CNC(C)(C)CC2Cc3ccccc3C2)c2c1O[C@@H]1[C@@H](C(=O)O)[C@H]21 122636646
-C[C@@H](OC[C@H](O)CNC(C)(C)Cc1ccc2ccccc2c1)c1ccccc1-c1ccc(C(=O)O)cc1 51346981
-C#CCOc1ccc2c(c1)c(-c1ccc(C(C)C)cc1)nc(=S)n2Cc1cccc(OCCO)c1 10028311
-CC(C)(Cc1cc2ccccc2s1)NC[C@H](O)COc1ccccc1C#N 44405804
-COc1ccc(CC(C)(C)NC[C@H](O)COc2cccc3[nH]c(=O)[nH]c23)cc1 44583033
-CC(C)(Cc1ccc2ccccc2c1)NC[C@@H](O)[C@H]1CCCN1Cc1cccc([N+](=O)[O-])c1O 44405889
-CC(C)(Cc1csc2ccccc12)NC[C@@H](O)[C@H]1CCCN1Cc1cccc(C#N)c1 44405884
-COCCn1c(-c2ccc(C(C)C)cc2)nc2c(C(F)(F)F)c(Cc3nccs3)cc(OC)c21 49865681
+SMILES ID UM_ACTIVITY
+Cc1nc(-c2ccccc2O)n(CCc2cccc(F)c2)c(=O)c1C(C)C 135430131 0.095
+COCCn1c(-c2ccc(C(C)C)cc2)nc2c(Br)c(Cc3ccccc3)cc(OC)c21 11488770 0.005
+CC(C)(Cc1nc2ccccc2[nH]1)NC[C@@H](O)[C@H]1CCCN1Cc1cccc(C#N)c1 44405899 2.84
+CC(C)(Cc1cc2ccccc2s1)NC[C@@H](O)[C@H]1CCCN1Cc1cccc(C#N)c1 44405854 0.27
+COc1ccc2c(c1)c(-c1ccc(C3CC3)cc1)nc(=O)n2C(C)C 45139808 3.3000000000000003
+Cc1ccc([C@@H](C)OC[C@H](O)CNC(C)(C)Cc2ccc3ccccc3c2)c2c1O[C@@H]1[C@@H](C(=O)O)[C@H]21 122636685 0.00745
+CCOC(=O)CCc1ccc(OC[C@H](O)CNC(C)(C)Cc2ccc3ccccc3c2)c(C#N)c1.Cl 44541355 3e-06
+CC(C)(Cc1ccc(F)cc1)NC[C@@H](O)COc1ccc(OC(F)(F)F)cc1 44405902 3.3000000000000003
+Cc1ccc([C@@H](C)OC[C@H](O)CNC(C)(C)CCSc2ccccc2)c2c1O[C@@H]1[C@@H](C(=O)O)[C@H]21 122636699 0.0508
+Cc1ccc([C@@H](C)OC[C@H](O)CNC(C)(C)CCCc2ccccc2)c2c1O[C@@H]1[C@@H](C(=O)O)[C@H]21 122636663 0.028399999999999998
+O=c1c2cc(F)ccc2nc(-c2ccccc2O)n1CCc1cccc(F)c1 135492578 0.19
+C#CCNc1ccc2c(c1)c(-c1ccc(C(C)C)cc1)nc(=O)n2C(C)C 45141172 0.03
+Cc1ccc([C@@H](C)OC[C@H](O)CNC(C)(C)CC2Cc3ccccc3C2)c2c1O[C@@H]1[C@@H](C(=O)O)[C@H]21 122636646 0.02
+C[C@@H](OC[C@H](O)CNC(C)(C)Cc1ccc2ccccc2c1)c1ccccc1-c1ccc(C(=O)O)cc1 51346981 0.004
+C#CCOc1ccc2c(c1)c(-c1ccc(C(C)C)cc1)nc(=S)n2Cc1cccc(OCCO)c1 10028311 0.0004
+CC(C)(Cc1cc2ccccc2s1)NC[C@H](O)COc1ccccc1C#N 44405804 0.06
+COc1ccc(CC(C)(C)NC[C@H](O)COc2cccc3[nH]c(=O)[nH]c23)cc1 44583033 0.011
+CC(C)(Cc1ccc2ccccc2c1)NC[C@@H](O)[C@H]1CCCN1Cc1cccc([N+](=O)[O-])c1O 44405889 0.14
+CC(C)(Cc1csc2ccccc12)NC[C@@H](O)[C@H]1CCCN1Cc1cccc(C#N)c1 44405884 1.0
+COCCn1c(-c2ccc(C(C)C)cc2)nc2c(C(F)(F)F)c(Cc3nccs3)cc(OC)c21 49865681 0.002
