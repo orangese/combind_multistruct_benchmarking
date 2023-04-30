@@ -3,10 +3,10 @@ import os
 from timeit import default_timer as timer
 import pandas as pd
 import pubchempy as pcp
-from schrodinger.structure import SmilesStructure
+#from schrodinger.structure import SmilesStructure
 
 sys.path.insert(1, "../")
-from features.mcss import compute_mcss, n_atoms
+#from features.mcss import compute_mcss, n_atoms
 
 # units in terms of micromolar for better numerical stability
 units = {"µm": 0, "um": 0, "nm": -3, "pm": -6, "fm": -9}
@@ -22,20 +22,20 @@ def mcss_size(smiles1, smiles2):
     return n_atoms(mcss_st) / min(n_atoms(m1), n_atoms(m2))
 
 
-def select_helpers(smiless, n_helpers, chembl_id):
+def select_helpers(smiless, n_helpers, chembl_id, ref=None):
     # smiless is a list of smiles strings sorted by affinity (best first)
-    chosen_smiless = set()
+    chosen_smiless = []
     for	smiles in smiless:
         if n_helpers is not None and len(chosen_smiless) == n_helpers:
             return chosen_smiless
-        
         try:
             for chosen_smiles in chosen_smiless:
-                if mcss_size(smiles, chosen_smiles) > 0.8:
+                if ref is None and mcss_size(smiles, chosen_smiles) > 0.8:
                     break
             else:
-                chosen_smiless.add(smiles)
-                print(f"({chembl_id}) Total {len(chosen_smiless)} helper ligands so far")
+                if ref is None or smiles in ref:
+                    chosen_smiless.append(smiles)
+                    print(f"({chembl_id}) Total {len(chosen_smiless)} helper ligands so far")
         except ValueError:
             print(f"({chembl_id}) Invalid SMILES '{smiles}', skipping...")
 
@@ -54,6 +54,11 @@ def filter_from_benchmark(benchmark_dir, n_helper, out_dir):
             data["activity"] = [val * (10 ** units[unit.lower()]) for val, unit 
                                 in zip(data["standard_value"], data["standard_units"])]
             data.sort_values("activity", inplace=True)
+#            print(data["standard_value"], data["standard_units"])
+#            print(data["activity"])
+            data.sort_values("activity", inplace=True)
+#            print(f"Max activity: {data['activity'].max()} um, min activity: {data['activity'].min()} um")
+
         except KeyError:
             print(f"No ligand data found for {f}, skipping...")
             with open(outfile, "w+") as dummy:
@@ -61,12 +66,18 @@ def filter_from_benchmark(benchmark_dir, n_helper, out_dir):
             return
 
         # Filter top ligands
-        ligands = select_helpers(data["canonical_smiles"], n_helper, chembl_id)
+        with open(outfile, "r") as rref:
+            ligands = [l.split() for i, l in enumerate(rref.readlines()) if i != 0]
+        #ligands = select_helpers(data["canonical_smiles"], n_helper, chembl_id, ref)
         with open(outfile, "w+") as dump:
-            dump.write("SMILES ID\n")
-            for lig in ligands:
-                cid = pcp.get_compounds(lig, "smiles")[0].cid
-                dump.write(f"{lig} {cid}\n")
+             dump.write("SMILES ID UM_ACTIVITY\n")
+             for lig, cid in ligands:
+                activity = float(data["activity"][data["canonical_smiles"] == lig].values[0])
+                dump.write(f"{lig} {cid.rstrip()} {activity}\n")
+#             for lig in ligands:
+#                 cid = pcp.get_compounds(lig, "smiles")[0].cid
+#                 activity = float(data["activity"][data["canonical_smiles"] == lig].values[0])
+#                 dump.write(f"{lig} {cid} {activity}\n")
 
     for f in os.listdir(benchmark_dir):
         filter_single(f)
