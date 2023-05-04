@@ -2,7 +2,6 @@ import shutil
 import os
 import glob
 import sys
-import pymol2
 
 def aff_map(map_file):
 	mapping = {}
@@ -35,8 +34,47 @@ def highest_aff(p, prot_path, affmap, combind_dir, combind2_dir):
     return lig_path, helper
 
 
-def extract(protlig, out, lig_id, backup=True):
+def extract_schro(protlig, out, lig_id, backup=True):
     """protlig should be xxxx-to-AF_xxxx_pv.maegz"""
+    from schrodinger import structure
+
+    if backup:
+        shutil.copyfile(out, out.replace("_prot.mae", "_prot.mae.backup"))
+
+    # get only the first ligand (best pose)
+    lig = structure.StructureReader.read(protlig, index=0)
+
+    # get only the original protein structure
+    prot = structure.StructureReader.read(out, index=0)
+
+    with structure.StructureWriter(out) as writer:
+        writer.append(prot)
+        writer.append(lig)
+
+    input(f"press to coninute, ust did, {protlig} {out} {lig_id}")
+#     prot = None
+#     with structure.StructureReader(protlig) as reader:
+#         for i, st in enumerate(reader):
+#             print(st, i, protlig)
+#             print(st.title)
+#             if prot is None:
+#                 prot = st
+#             else:
+#                 print(prot)
+#     raise ValueError
+#     print(ligs, protlig)
+#     lig = prot.extract(lig_id)
+#     lig.append_to_file(out)
+#
+#     # load original structure
+#     original = next(structure.StructureReader(out))
+#     original.write(out)
+
+
+def extract_pymol(protlig, out, lig_id, backup=True):
+    """protlig should be xxxx-to-AF_xxxx_pv.maegz"""
+    import pymol2
+
     if backup:
         shutil.copyfile(out, out.replace("_prot.mae", "_prot.mae.backup"))
 
@@ -50,7 +88,24 @@ def extract(protlig, out, lig_id, backup=True):
         # load original structure
         pymol.cmd.load(out)
         pymol.cmd.save(out)
-#         input(f"press to coninute, ust did, {protlig} {out} {lig_id}")
+
+
+def extract_lig(protlig, lig_dest, lig_id, backup=True):
+    """protlig should be xxxx-to-AF_xxxx_pv.maegz"""
+    import pymol2
+
+    if backup:
+        shutil.copyfile(lig_dest, lig_dest.replace("_lig.mae", "_lig.mae.bk"))
+
+    with pymol2.PyMOL() as pymol:
+        # load ligand pose
+        pymol.cmd.load(protlig, "prot")
+
+        pymol.cmd.copy("lig", f"prot.{lig_id}")
+        pymol.cmd.delete("prot")
+
+        pymol.cmd.save(lig_dest)
+
 
 if __name__ == "__main__":
     try:
@@ -67,7 +122,10 @@ if __name__ == "__main__":
     for f in os.listdir(out):
         # these should be protein name directories
         prot_to_replace = glob.glob(os.path.join(out, f, "structures/raw/AF_*_prot.mae"))[0]
+        lig_dest = prot_to_replace.replace("_prot.mae", "_lig.mae")
         # we're going to add the helper ligand pose to this structure
 
         ref_pose, lig_id = highest_aff(f, prot_to_replace, affmap, combind, combind2)
-        extract(ref_pose, prot_to_replace, lig_id)
+        #if f != "NK1R": continue
+#         extract_schro(ref_pose, prot_to_replace, lig_id, backup=False)
+        extract_lig(ref_pose, lig_dest, lig_id)
