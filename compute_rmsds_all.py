@@ -33,6 +33,7 @@ import os
 from schrodinger.structure import StructureReader
 
 def split_complex(st, pdb_id, template):
+    print(f"splitting complex: {pdb_id}, {template}")
     os.system('mkdir -p structures/proteins structures/ligands')
     lig_path = 'structures/ligands/{}_lig_to_{}.mae'.format(pdb_id, template)
     prot_path = 'structures/proteins/{}_prot_to_{}.mae'.format(pdb_id, template)
@@ -122,6 +123,8 @@ def struct_align_all(template, structs, dist=15.0, retry=True,
                  processed_out='structures/processed/{pdb}/{pdb}_out.mae',
                  align_dir='structures/aligned'):
 
+    print(f"struct_align_all: {template=} {structs=}")
+
     template_path = processed_out.format(pdb=template)
     if not os.path.exists(template_path):
         print('template not processed', template_path)
@@ -149,7 +152,7 @@ def struct_align_all(template, structs, dist=15.0, retry=True,
             f.write(command.format(dist, _template_fname, _query_fname))
         run('sh align_in_to_{}.sh > align_to_{}.out'.format(template, template), shell=True, cwd=_workdir)
 
-        if retry and not align_successful(align_dir, struct):
-            print('Alignment failed. Trying again with a larger radius.')
-            struct_align_all(template, [struct], dist=25.0, retry=False,
-                         processed_out=processed_out, align_dir=align_dir)
+        #if retry and not align_successful(align_dir, struct):
+        #    print('Alignment failed. Trying again with a larger radius.')
+        #    struct_align_all(template, [struct], dist=25.0, retry=False,
+        #                 processed_out=processed_out, align_dir=align_dir)
