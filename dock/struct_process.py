@@ -1,3 +1,4 @@
+import shutil
 import os
 from schrodinger.structure import StructureReader
 from subprocess import run
@@ -9,16 +10,20 @@ command = command_min
 
 #hack to not include ligands here!
 def should_include_lig(struct):
-    if "_" in struct:
-        print('modeled_struct!')
-        return False
-    return True
+    return True #False
+    # if "_" in struct:
+    #     print('modeled_struct!')
+    #     return False
+    # return True
 
 def load_complex(prot_in, lig_in, struct):
 
     prot_st = next(StructureReader(prot_in))
-    
+    prot_st.title = struct
+
+    # if raw/[]_lig.mae doesn't exist, then don't include it!
     if not os.path.exists(lig_in): 
+        print(f"{lig_in=} doesn't exist, exiting with struct_to_use=None")
         prot_st.title = struct
         return prot_st, None
 
@@ -36,8 +41,17 @@ def load_complex(prot_in, lig_in, struct):
         c.name = alpha[alpha_count]
         alpha_count += 1
     struct_to_use = None
-    
+
+    # if not should_include_lig, then do a dummy merge (assume
+    # the correct ligand is already in the protein, or you don't want to minimize)
+    # note: this is the same behavior as if the raw/[]_lig.mae
+    # file just never existed in the first place
     if not should_include_lig(struct):
+        # this should happen iff
+        # 1) there is NO LIGAND in the prot_in file and you want to keep it that way,
+        # i.e., you don't want to run minimization around the ligand
+        # 2) there is LIGAND in prot_in file, and you want to minimize around it
+        print(f"using struct_to_use as struct from {prot_in}, title={struct}")
         prot_st.title = struct
         struct_to_use = prot_st.copy()
 
@@ -70,16 +84,20 @@ def struct_process(structs,
         os.system('mkdir -p {}'.format(os.path.dirname(_workdir)))
         os.system('rm -rf {}'.format(_workdir))
         os.system('mkdir {}'.format(_workdir))
+
         (merged_st, struct_to_use)= load_complex(_protein_in, _ligand_in, struct)
+        # merged_st has both the protein and ligan, saved in processed/{}_in.mae
         
         merged_st.write(_processed_in_merged)
         
         if  struct_to_use is None:
+            print(f"writing merged_st to {_processed_in_to_use}")
             merged_st.write(_processed_in_to_use)
         else:
+            print(f"writing struct_to_use to {_processed_in_to_use}")
             struct_to_use.write(_processed_in_to_use)
 
-
+        print(f"struct_process, {_protein_in=}, {_ligand_in=}, {command.format(struct, struct)=}")
         with open('{}/process_in.sh'.format(_workdir), 'w') as f:
             f.write('#!/bin/bash\n')
             f.write(command.format(struct, struct))

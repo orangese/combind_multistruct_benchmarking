@@ -177,6 +177,7 @@ def dock(grid, root, ligands, screen, processes):
         name = '{}-to-{}'.format(basename(ligand), basename(grid))
         _root = '{}/{}'.format(root, name)
         unfinished += [(grid, ligand, _root, name, not screen)]
+    print(unfinished)
     mp(dock, unfinished, processes)
 
 @main.command()

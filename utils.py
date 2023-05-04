@@ -59,10 +59,16 @@ def basename(path):
     return x
 
 def mp(function, unfinished, processes):
-    if unfinished:
-        with Pool(processes=processes) as pool:
-            x = pool.starmap(function, unfinished)
-        return x
+    try:
+        if unfinished:
+            with Pool(processes=processes) as pool:
+                x = pool.starmap(function, unfinished)
+            return x
+    except RuntimeError as e:
+        print(f"Note: {str(e)}")
+        print("Default to single threaded process instead")
+
+        return [function(*args) for args in unfinished]
 
 def mkdir(path):
     if not os.path.exists(path):
